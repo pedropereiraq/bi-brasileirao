@@ -234,10 +234,17 @@ def gravar_jogos(jogos: list[dict], serie: str, ano: int) -> tuple[Path, bool]:
     cfg.garantir_pastas()
     destino = cfg.caminho_jogos_corrente(serie, ano)
     conteudo = serializar(jogos)
-    anterior = destino.read_text(encoding="utf-8-sig") if destino.exists() else None
+    # Leitura e escrita com `newline=""` dos dois lados: sem isso a leitura
+    # traduziria CRLF em LF e a comparação diria "não mudou" para um arquivo
+    # que na verdade está gravado diferente do que serializamos.
+    anterior = None
+    if destino.exists():
+        with destino.open("r", encoding="utf-8-sig", newline="") as f:
+            anterior = f.read()
     if anterior == conteudo:
         return destino, False
-    destino.write_text(conteudo, encoding="utf-8-sig", newline="")
+    with destino.open("w", encoding="utf-8-sig", newline="") as f:
+        f.write(conteudo)
     return destino, True
 
 
