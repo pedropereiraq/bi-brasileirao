@@ -1,0 +1,86 @@
+name: Coleta e recálculo
+
+# Coleta a edição corrente, reconstrói o banco inteiro, confere contra a
+# classificação oficial e versiona o resultado. A publicação do site entra
+# neste mesmo fluxo na fase 2.
+on:
+  schedule:
+    # Horários em UTC. O Brasil está em UTC-3.
+    - cron: "0 6 * * *"   # 03:00 de Brasília — depois dos jogos da noite
+    - cron: "0 15 * * *"  # 12:00 de Brasília — rede de segurança
+  workflow_dispatch:
+    inputs:
+      ano:
+        description: "Ano da edição a coletar (vazio = ano corrente)"
+        required: false
+        type: string
+
+concurrency:
+  # Duas coletas simultâneas brigariam pelo push. A segunda espera.
+  group: coleta
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: America/Sao_Paulo
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Definir o ano da edição
+        id: edicao
+        run: |
+          ano="${{ inputs.ano }}"
+          [ -z "$ano" ] && ano=$(date +%Y)
+          echo "ano=$ano" >> "$GITHUB_OUTPUT"
+          echo "Coletando a edição de $ano"
+
+      - name: Coletar
+        id: coleta
+        run: python -m bi coletar --ano ${{ steps.edicao.outputs.ano }}
+
+      - name: Reconstruir o banco
+        run: python -m bi construir
+
+      - name: Conferir contra a classificação oficial
+        run: python -m bi conferir --ano ${{ steps.edicao.outputs.ano }}
+
+      - name: Rodar os testes do motor
+        run: pytest -q
+
+      - name: Versionar o que mudou
+        run: |
+          git config user.name  "coletor"
+          git config user.email "coletor@users.noreply.github.com"
+          git add dados/
+          if git diff --cached --quiet; then
+            echo "Nada mudou desde a última coleta."
+            exit 0
+          fi
+          git commit -m "dados: coleta de $(date '+%d/%m/%Y %H:%M')"
+          git push
+
+      # A API do Sofascore recusa cliente sem assinatura TLS de navegador, e o
+      # runner do GitHub roda em IP de datacenter. O `curl_cffi` resolve a
+      # primeira metade; se a recusa for por faixa de IP, ela aparece aqui.
+      - name: Diagnóstico da falha de coleta
+        if: failure() && steps.coleta.outcome == 'failure'
+        run: |
+          echo "::error::A coleta falhou. Se a mensagem acima traz HTTP 403, a"
+          echo "::error::API recusou o IP do runner. Plano B em docs/decisoes.md:"
+          echo "::error::runner self-hosted na máquina do projeto."

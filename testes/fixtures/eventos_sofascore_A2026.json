@@ -1,0 +1,386 @@
+[
+ {
+  "id": 15237901,
+  "roundInfo": {
+   "round": 2
+  },
+  "startTimestamp": 1770228000,
+  "status": {
+   "type": "postponed"
+  },
+  "homeTeam": {
+   "id": 1967,
+   "name": "Athletico"
+  },
+  "awayTeam": {
+   "id": 1957,
+   "name": "Corinthians"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 15369877,
+  "roundInfo": {
+   "round": 2
+  },
+  "startTimestamp": 1771540200,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1967,
+   "name": "Athletico"
+  },
+  "awayTeam": {
+   "id": 1957,
+   "name": "Corinthians"
+  },
+  "homeScore": {
+   "current": 0
+  },
+  "awayScore": {
+   "current": 1
+  }
+ },
+ {
+  "id": 15237923,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1772042400,
+  "status": {
+   "type": "postponed"
+  },
+  "homeTeam": {
+   "id": 1955,
+   "name": "Bahia"
+  },
+  "awayTeam": {
+   "id": 21845,
+   "name": "Chapecoense"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 15237915,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1772042400,
+  "status": {
+   "type": "postponed"
+  },
+  "homeTeam": {
+   "id": 1958,
+   "name": "Botafogo"
+  },
+  "awayTeam": {
+   "id": 1962,
+   "name": "Vitória"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 15237914,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1772042400,
+  "status": {
+   "type": "postponed"
+  },
+  "homeTeam": {
+   "id": 5981,
+   "name": "Flamengo"
+  },
+  "awayTeam": {
+   "id": 21982,
+   "name": "Mirassol"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 16390771,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1784327400,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1955,
+   "name": "Bahia"
+  },
+  "awayTeam": {
+   "id": 21845,
+   "name": "Chapecoense"
+  },
+  "homeScore": {
+   "current": 2
+  },
+  "awayScore": {
+   "current": 0
+  }
+ },
+ {
+  "id": 16390770,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1784845800,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1958,
+   "name": "Botafogo"
+  },
+  "awayTeam": {
+   "id": 1962,
+   "name": "Vitória"
+  },
+  "homeScore": {
+   "current": 0
+  },
+  "awayScore": {
+   "current": 0
+  }
+ },
+ {
+  "id": 16890992,
+  "roundInfo": {
+   "round": 4
+  },
+  "startTimestamp": 1788388200,
+  "status": {
+   "type": "notstarted"
+  },
+  "homeTeam": {
+   "id": 5981,
+   "name": "Flamengo"
+  },
+  "awayTeam": {
+   "id": 21982,
+   "name": "Mirassol"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 15237932,
+  "roundInfo": {
+   "round": 5
+  },
+  "startTimestamp": 1773266400,
+  "status": {
+   "type": "postponed"
+  },
+  "homeTeam": {
+   "id": 1967,
+   "name": "Athletico"
+  },
+  "awayTeam": {
+   "id": 1958,
+   "name": "Botafogo"
+  },
+  "homeScore": {
+   "current": null
+  },
+  "awayScore": {
+   "current": null
+  }
+ },
+ {
+  "id": 15651590,
+  "roundInfo": {
+   "round": 5
+  },
+  "startTimestamp": 1774823400,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1967,
+   "name": "Athletico"
+  },
+  "awayTeam": {
+   "id": 1958,
+   "name": "Botafogo"
+  },
+  "homeScore": {
+   "current": 4
+  },
+  "awayScore": {
+   "current": 1
+  }
+ },
+ {
+  "id": 15237889,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769637600,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1977,
+   "name": "Atlético Mineiro"
+  },
+  "awayTeam": {
+   "id": 1963,
+   "name": "Palmeiras"
+  },
+  "homeScore": {
+   "current": 2
+  },
+  "awayScore": {
+   "current": 2
+  }
+ },
+ {
+  "id": 15237891,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769637600,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1982,
+   "name": "Coritiba"
+  },
+  "awayTeam": {
+   "id": 1999,
+   "name": "Red Bull Bragantino"
+  },
+  "homeScore": {
+   "current": 0
+  },
+  "awayScore": {
+   "current": 1
+  }
+ },
+ {
+  "id": 15237890,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769637600,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1966,
+   "name": "Internacional"
+  },
+  "awayTeam": {
+   "id": 1967,
+   "name": "Athletico"
+  },
+  "homeScore": {
+   "current": 0
+  },
+  "awayScore": {
+   "current": 1
+  }
+ },
+ {
+  "id": 15237892,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769637600,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1962,
+   "name": "Vitória"
+  },
+  "awayTeam": {
+   "id": 2012,
+   "name": "Remo"
+  },
+  "homeScore": {
+   "current": 2
+  },
+  "awayScore": {
+   "current": 0
+  }
+ },
+ {
+  "id": 15237884,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769639400,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 1961,
+   "name": "Fluminense"
+  },
+  "awayTeam": {
+   "id": 5926,
+   "name": "Grêmio"
+  },
+  "homeScore": {
+   "current": 2
+  },
+  "awayScore": {
+   "current": 1
+  }
+ },
+ {
+  "id": 15237893,
+  "roundInfo": {
+   "round": 1
+  },
+  "startTimestamp": 1769641200,
+  "status": {
+   "type": "finished"
+  },
+  "homeTeam": {
+   "id": 21845,
+   "name": "Chapecoense"
+  },
+  "awayTeam": {
+   "id": 1968,
+   "name": "Santos"
+  },
+  "homeScore": {
+   "current": 4
+  },
+  "awayScore": {
+   "current": 2
+  }
+ }
+]
