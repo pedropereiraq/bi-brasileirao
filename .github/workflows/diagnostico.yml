@@ -1,0 +1,21 @@
+name: Diagnóstico de fontes
+
+# Roda o mesmo diagnóstico que se roda local, mas do runner. A diferença entre
+# as duas saídas é exatamente o efeito do IP de datacenter.
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m ferramentas.diagnostico_fontes
