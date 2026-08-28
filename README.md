@@ -105,16 +105,50 @@ O banco inteiro ocupa 6,4 MB.
 
 ## Automação
 
-`.github/workflows/coleta.yml` roda duas vezes por dia (03:00 e 12:00 de
-Brasília), coleta, reconstrói, confere, roda os testes e versiona o que mudou.
-`.github/workflows/testes.yml` roda a suíte em cada push.
+| Workflow | Onde roda | Quando |
+|---|---|---|
+| `coleta.yml` | **runner self-hosted** (máquina do projeto) | 03:00 e 12:00 de Brasília, e sob demanda |
+| `testes.yml` | runner hospedado pelo GitHub | a cada push |
 
-**Um risco conhecido:** a API do Sofascore recusa cliente que não tenha
-assinatura TLS de navegador — daí o `curl_cffi` no lugar do `requests`. Isso
-resolve a impressão digital, não um eventual bloqueio por faixa de IP, e o
-runner do GitHub roda em IP de datacenter. Se a coleta falhar com 403 no Actions
-e funcionar na máquina local, é isso: o plano B está em
-[docs/decisoes.md](docs/decisoes.md).
+A coleta faz o ciclo inteiro: coleta, reconstrói, confere contra a
+classificação oficial, roda os 74 testes e só então commita. Se qualquer etapa
+falhar, nada é versionado.
+
+### Por que a coleta não roda na nuvem
+
+Sofascore e ogol **recusam IP de datacenter**. Foi medido, não suposto: o mesmo
+código, com a mesma assinatura TLS, responde 200 da máquina do projeto e 403 de
+três IPs de runner diferentes. Um proxy em Cloudflare Workers foi escrito,
+deployado e testado — também recusado, porque as fontes checam assinatura TLS
+além do IP, e um Worker não controla a sua.
+
+A tabela completa das medições está em [docs/decisoes.md](docs/decisoes.md),
+seção 1. Para refazê-las a qualquer momento:
+
+```bash
+python -m ferramentas.diagnostico_fontes
+```
+
+### O runner
+
+Registrado como `dellpeu`, em `C:\actions-runner`, com as etiquetas
+`self-hosted, windows, casa`. Os passos do workflow são escritos em PowerShell,
+não em bash: o runner é Windows e o `bash.exe` do Git não está no PATH da
+máquina.
+
+A coleta commita a partir do clone do runner
+(`C:\actions-runner\_work\...`), que é outro diretório. Depois de uma coleta,
+o clone de trabalho precisa de `git pull`.
+
+Se a máquina estiver desligada no horário agendado, o job fica na fila e roda
+quando ela voltar.
+
+### Uma propriedade a saber
+
+`id_jogo` é posicional, como no Excel (`B2026.251`). Quando um jogo é remarcado,
+a renumeração desloca todos os seguintes, e o diff da coleta fica maior do que
+o fato. Não é erro: a identidade estável de um jogo é o `sofascore_id`, que não
+muda com o remarcamento.
 
 ---
 
