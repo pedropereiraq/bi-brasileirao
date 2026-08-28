@@ -29,9 +29,21 @@ class ErroNuvem(RuntimeError):
     """Falha ao falar com o depósito. Nunca silenciada."""
 
 
+def _limpar(valor: str) -> str:
+    """
+    Tira BOM e espaço em volta de valor vindo de variável de ambiente.
+
+    Segredo de CI passa por vários intermediários antes de chegar aqui, e mais
+    de um deles gosta de acrescentar um BOM invisível — o PowerShell 5.1 põe um
+    em tudo que passa por pipe. O sintoma é feio e distante da causa: o
+    `curl_cffi` estoura ao codificar o cabeçalho em latin-1.
+    """
+    return valor.strip().lstrip("﻿").strip()
+
+
 def _endereco() -> tuple[str, str]:
-    url = os.environ.get("BI_NUVEM_URL", "").rstrip("/")
-    chave = os.environ.get("BI_NUVEM_CHAVE", "")
+    url = _limpar(os.environ.get("BI_NUVEM_URL", "")).rstrip("/")
+    chave = _limpar(os.environ.get("BI_NUVEM_CHAVE", ""))
     if not url or not chave:
         raise ErroNuvem(
             "BI_NUVEM_URL e BI_NUVEM_CHAVE precisam estar definidas — "
