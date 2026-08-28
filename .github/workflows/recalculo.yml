@@ -1,0 +1,103 @@
+name: Recálculo
+
+# Disparado pelo botão "Atualizar" do site, através da função /api/coletar.
+#
+# Roda em runner comum do GitHub, e não na máquina de ninguém, porque **não
+# fala com o Sofascore**: quem busca é o navegador de quem apertou o botão, e o
+# JSON bruto já está guardado no depósito da Cloudflare. Este job só lê de lá,
+# normaliza e recalcula — e isso funciona de qualquer IP.
+#
+# Ver docs/decisoes.md, seção 1, para a medição que levou a este desenho.
+on:
+  workflow_dispatch:
+    inputs:
+      ano:
+        description: "Ano da edição a recalcular (vazio = ano corrente)"
+        required: false
+        type: string
+
+concurrency:
+  # Dois recálculos ao mesmo tempo brigariam pelo push. O segundo espera.
+  group: recalculo
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  recalcular:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: America/Sao_Paulo
+      PYTHONIOENCODING: utf-8
+      BI_NUVEM_URL: ${{ vars.BI_NUVEM_URL }}
+      BI_NUVEM_CHAVE: ${{ secrets.BI_NUVEM_CHAVE }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Definir o ano da edição
+        id: edicao
+        run: |
+          ano="${{ inputs.ano }}"
+          [ -z "$ano" ] && ano=$(date +%Y)
+          echo "ano=$ano" >> "$GITHUB_OUTPUT"
+          echo "Recalculando a edição de $ano"
+
+      - name: Ler o bruto depositado e reconstruir o banco
+        id: recalculo
+        run: python -m bi recalcular --ano ${{ steps.edicao.outputs.ano }}
+
+      - name: Rodar os testes do motor
+        run: pytest -q
+
+      - name: Versionar o que mudou
+        id: versao
+        run: |
+          git config user.name  "recalculo"
+          git config user.email "recalculo@users.noreply.github.com"
+          git add dados/
+          if git diff --cached --quiet; then
+            echo "Nada mudou desde o último recálculo."
+            echo "mudou=nao" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "mudou=sim" >> "$GITHUB_OUTPUT"
+          git commit -m "dados: recálculo de $(date '+%d/%m/%Y %H:%M')"
+          # O push pode chegar atrasado se alguém empurrou nesse meio-tempo.
+          git pull --rebase --autostash origin main
+          git push
+
+      - name: Avisar o site que terminou
+        if: always()
+        run: |
+          situacao='${{ job.status }}'
+          python - <<'PY'
+          import json, os
+          from curl_cffi import requests
+          url, chave = os.environ.get("BI_NUVEM_URL"), os.environ.get("BI_NUVEM_CHAVE")
+          if not url or not chave:
+              raise SystemExit(0)
+          corpo = {
+              "ano": "${{ steps.edicao.outputs.ano }}",
+              "mudou": "${{ steps.versao.outputs.mudou }}",
+              "execucao": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+          }
+          if "${{ job.status }}" != "success":
+              corpo["erro"] = "o recálculo falhou; ver a execução"
+          try:
+              requests.post(url.rstrip("/") + "/api/concluido",
+                            headers={"x-chave": chave, "content-type": "application/json"},
+                            data=json.dumps(corpo), timeout=30)
+          except Exception as e:
+              print("aviso não entregue:", type(e).__name__)
+          PY

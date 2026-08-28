@@ -103,11 +103,57 @@ Qualquer coletor de HTML neste projeto precisa validar o conteúdo, não o statu
 O código do worker fica em `ferramentas/proxy-cloudflare/`, documentado, caso a
 situação mude. Não está em uso.
 
-### 1.4 Consequência
+### 1.4 O bloqueio é pelo `Referer`, e o navegador resolve
 
-A coleta não roda em runner hospedado pelo GitHub. Ela roda em
-`runs-on: self-hosted`, na máquina do projeto, que é o IP que as fontes aceitam.
-Os testes continuam na nuvem — não vão à rede.
+A conclusão anterior — coleta em runner self-hosted — durou pouco, porque a
+medição estava incompleta. Faltava separar o que exatamente causa o 403:
+
+| Requisição | Resposta |
+|---|---|
+| Sem `Referer` nem `Origin` | **200** |
+| Com `Origin: https://example.com` | **200** |
+| Com `Referer: https://example.com/` | **403** |
+
+Não é só o IP: é o **`Referer`**. E o Sofascore devolve
+`access-control-allow-origin: *`, ou seja, autoriza leitura por CORS.
+
+Um navegador pode suprimir o `Referer` com `referrerPolicy: "no-referrer"`. E o
+navegador de quem usa o site está num IP residencial. As duas metades da
+checagem se resolvem de uma vez, do lado do cliente.
+
+Medido num Chrome real, numa página hospedada em `example.com`:
+**14 de 14 requisições, Séries A e B, rodadas 1 a 38, 141 eventos, em 4,5 s.**
+Depois, no site em produção: as 76 rodadas das duas séries em **24 segundos**,
+385 e 383 eventos — os mesmos números que o coletor Python obtém da API. Os
+CSVs normalizados saíram idênticos pelos dois caminhos.
+
+O ogol não serve por este caminho: não manda cabeçalho de CORS, então o
+navegador não deixa ler a resposta. Não faz falta.
+
+### 1.5 Consequência: quem coleta é o navegador
+
+```
+Você ou o Fred abrem o site      → Cloudflare Access autentica por e-mail
+        ↓ aperta "Atualizar"
+O NAVEGADOR busca as 76 rodadas no Sofascore          (~25 s)
+        ↓ POST /api/coletar
+O site guarda o JSON íntegro no KV, antes de qualquer normalização
+        ↓ workflow_dispatch
+GitHub Actions, em runner comum, lê o depósito e recalcula com o motor Python
+        ↓
+Dados versionados. O site mostra quando foi.
+```
+
+Não há runner self-hosted, não há dependência de máquina ligada, não há proxy
+pago. O recálculo roda em runner hospedado pelo GitHub porque **não fala com o
+Sofascore**: ele lê o depósito, que é alcançável de qualquer IP.
+
+A regra do bruto continua valendo, só mudou de lugar: `/api/coletar` grava no
+KV antes de fazer qualquer outra coisa, e só depois pede o recálculo.
+
+O runner self-hosted foi desregistrado e o `coleta.yml` removido. O comando
+`python -m bi atualizar` continua existindo para uso manual na máquina do
+projeto, que é o caminho de contingência se o site sair do ar.
 
 O que se perde: a coleta passa a depender de a máquina estar ligada. O que se
 ganha: continua de graça e sem mudar uma linha do coletor. Um job agendado que

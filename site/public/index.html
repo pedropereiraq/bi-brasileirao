@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BI Brasileirão — atualização</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+
+<main>
+  <header>
+    <p class="marca">ECBahiaNumeros · Podcast45</p>
+    <h1>BI Brasileirão</h1>
+    <p class="explicacao">
+      Os dados só mudam quando alguém aperta o botão. A busca acontece
+      <strong>neste navegador</strong> — é o que faz a fonte aceitar a requisição.
+      Deixe a aba aberta até terminar.
+    </p>
+  </header>
+
+  <section class="painel">
+    <button id="atualizar" type="button">Atualizar dados</button>
+    <div id="progresso" class="progresso" hidden>
+      <div class="barra"><span id="barra"></span></div>
+      <p id="passo" class="passo"></p>
+    </div>
+    <p id="recado" class="recado" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="estado">
+    <h2>Situação</h2>
+    <dl id="situacao">
+      <div><dt>Série A</dt><dd data-campo="A">—</dd></div>
+      <div><dt>Série B</dt><dd data-campo="B">—</dd></div>
+      <div><dt>Recálculo</dt><dd data-campo="recalculo">—</dd></div>
+    </dl>
+  </section>
+
+  <footer>
+    <p>
+      Apertar o botão faz este navegador baixar as 38 rodadas das duas séries
+      (uns 25 segundos), entregar o resultado bruto ao site e pedir o recálculo.
+      O recálculo roda com o mesmo motor validado contra a planilha histórica e
+      leva alguns minutos.
+    </p>
+    <p class="nota">
+      Se aparecer erro 403, esta conexão está sendo recusada pela fonte. VPN
+      corporativa e rede de datacenter costumam causar isso — tente de uma
+      conexão doméstica.
+    </p>
+  </footer>
+</main>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

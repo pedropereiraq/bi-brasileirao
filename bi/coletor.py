@@ -253,10 +253,16 @@ def _outros_snapshots(atual: Path, serie: str, ano: int) -> list[Path]:
     return [p for p in cfg.BRUTO.glob(f"{serie}_{ano}_*.json*") if p != atual]
 
 
-def executar(serie: str, ano: int) -> dict:
-    """Coleta -> snapshot bruto -> normalização -> CSV. Devolve um resumo."""
-    print(f"coletando Série {serie} {ano}...")
-    eventos = coletar(serie, ano)
+def processar(eventos: list[dict], serie: str, ano: int) -> dict:
+    """
+    Snapshot bruto -> normalização -> CSV. Devolve um resumo.
+
+    Separado de `coletar()` de propósito: os eventos podem ter vindo da API
+    aqui mesmo, ou do navegador de quem apertou "Atualizar" no site — o
+    Sofascore recusa IP de datacenter, então quem busca é o navegador, e este
+    caminho recebe o mesmo JSON bruto por outro transporte. A normalização é
+    uma só, aconteça o que acontecer.
+    """
     caminho_bruto = gravar_bruto(eventos, serie, ano)  # antes de normalizar
     print(f"  {len(eventos)} eventos brutos -> {caminho_bruto.name}")
 
@@ -283,6 +289,12 @@ def executar(serie: str, ano: int) -> dict:
         "jogos": len(jogos), "realizados": realizados, "mudou": mudou,
         "bruto": caminho_bruto, "csv": destino,
     }
+
+
+def executar(serie: str, ano: int) -> dict:
+    """Busca na API e processa. Só funciona de um IP que o Sofascore aceite."""
+    print(f"coletando Série {serie} {ano}...")
+    return processar(coletar(serie, ano), serie, ano)
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -1,0 +1,21 @@
+# Site do BI, publicado no Cloudflare Pages.
+#
+# O que roda aqui é a página de operação e as funções de /api. A coleta em si
+# acontece no navegador de quem aperta o botão — ver public/coleta.js e
+# docs/decisoes.md seção 1.
+name = "bi-brasileirao"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "public"
+
+# Depósito do JSON bruto e do estado. Guardado antes de qualquer normalização.
+[[kv_namespaces]]
+binding = "DEPOSITO"
+id = "415b7478447c439a84a2a2daf877bd43"
+
+[vars]
+# Repositório que recebe o pedido de recálculo.
+GITHUB_REPO = "pedropereiraq/bi-brasileirao"
+
+# Segredos, gravados fora do arquivo:
+#   npx wrangler pages secret put CHAVE          segredo compartilhado com o GitHub
+#   npx wrangler pages secret put GITHUB_TOKEN   PAT com permissão de actions:write

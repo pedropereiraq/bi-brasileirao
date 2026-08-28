@@ -10,8 +10,9 @@ hoje roda em Power BI para Python, com publicação como site estático.
 
 ## O que já funciona
 
-- Coleta da edição corrente (Séries A e B) na API pública do Sofascore, com
-  snapshot bruto versionado a cada coleta que traz novidade.
+- Atualização sob demanda: um botão no site, coleta feita pelo navegador de
+  quem aperta, recálculo na nuvem. Sem máquina ligada e sem proxy pago.
+- Snapshot bruto versionado a cada coleta que traz novidade.
 - Camada canônica com **35.865 jogos**, de 1937 a 2026.
 - Três tabelas fato em parquet, com todas as combinações de variação.
 - **74 testes**, incluindo a reprodução das 30.400 linhas da matriz do Excel.
@@ -41,9 +42,11 @@ classificação oficial. Os passos também rodam soltos:
 
 | Comando | O que faz |
 |---|---|
-| `python -m bi coletar --ano 2026` | baixa a edição corrente das duas séries |
+| `python -m bi coletar --ano 2026` | busca no Sofascore (só de IP residencial) |
+| `python -m bi ingerir --ano 2026` | lê o bruto que o navegador depositou na nuvem |
 | `python -m bi construir` | refaz canônico e derivadas a partir dos jogos |
 | `python -m bi conferir --ano 2026` | compara nossa tabela com a oficial |
+| `python -m bi recalcular --ano 2026` | ingerir + construir — o que o GitHub roda |
 | `pytest -q` | roda os 74 testes (não vai à rede) |
 
 ---
@@ -58,7 +61,11 @@ bi/                 pacote Python
   canonico.py       histórico + coleta -> jogos.parquet, clubes.parquet
   motor.py          acumulação e classificação
   derivadas.py      as três tabelas fato
+  nuvem.py          lê o bruto que o navegador depositou na Cloudflare
   conferencia.py    nossa classificação x a oficial
+site/               Cloudflare Pages — página de operação e funções de /api
+  public/           index.html, app.js, coleta.js (a coleta roda aqui)
+  functions/api/    coletar, bruto, estado, concluido
 dados/
   bruto/sofascore/  snapshots .json.gz, um por coleta com novidade
   corrente/         CSV da edição em andamento, saída do coletor
@@ -103,45 +110,54 @@ O banco inteiro ocupa 6,4 MB.
 
 ---
 
-## Automação
+## Como os dados são atualizados
+
+Não há coleta agendada. Os dados mudam quando alguém aperta **Atualizar** no
+site — e quem coleta é o navegador de quem apertou.
+
+```
+Site (Cloudflare Pages, atrás do Access)
+        ↓ aperta "Atualizar"
+O NAVEGADOR busca as 76 rodadas no Sofascore          (~25 s)
+        ↓ POST /api/coletar
+O site guarda o JSON íntegro no KV, antes de normalizar
+        ↓ workflow_dispatch
+GitHub Actions lê o depósito e recalcula com o motor Python
+        ↓
+Dados versionados no repositório
+```
+
+**Por que o navegador.** O Sofascore recusa requisição que traga `Referer` de
+outro site — e recusa IP de datacenter. Um navegador resolve as duas coisas: está
+num IP residencial e pode suprimir o `Referer` com `referrerPolicy:
+"no-referrer"`. Foi medido: 76 rodadas em 24 segundos, produzindo CSVs
+idênticos aos que o coletor Python produz da API.
+
+**Por que o recálculo pode rodar na nuvem.** Porque ele não fala com o
+Sofascore: lê o depósito da Cloudflare, que responde de qualquer IP. Assim o
+motor Python continua sendo o único, com os 74 testes valendo.
 
 | Workflow | Onde roda | Quando |
 |---|---|---|
-| `coleta.yml` | **runner self-hosted** (máquina do projeto) | 03:00 e 12:00 de Brasília, e sob demanda |
+| `recalculo.yml` | runner hospedado pelo GitHub | quando o botão é apertado |
 | `testes.yml` | runner hospedado pelo GitHub | a cada push |
 
-A coleta faz o ciclo inteiro: coleta, reconstrói, confere contra a
-classificação oficial, roda os 74 testes e só então commita. Se qualquer etapa
-falhar, nada é versionado.
-
-### Por que a coleta não roda na nuvem
-
-Sofascore e ogol **recusam IP de datacenter**. Foi medido, não suposto: o mesmo
-código, com a mesma assinatura TLS, responde 200 da máquina do projeto e 403 de
-três IPs de runner diferentes. Um proxy em Cloudflare Workers foi escrito,
-deployado e testado — também recusado, porque as fontes checam assinatura TLS
-além do IP, e um Worker não controla a sua.
-
-A tabela completa das medições está em [docs/decisoes.md](docs/decisoes.md),
-seção 1. Para refazê-las a qualquer momento:
+A medição completa que levou a este desenho — incluindo o proxy em Cloudflare
+Workers que foi escrito, testado e descartado — está em
+[docs/decisoes.md](docs/decisoes.md), seção 1. Para refazê-la:
 
 ```bash
 python -m ferramentas.diagnostico_fontes
 ```
 
-### O runner
+### Contingência
 
-Registrado como `dellpeu`, em `C:\actions-runner`, com as etiquetas
-`self-hosted, windows, casa`. Os passos do workflow são escritos em PowerShell,
-não em bash: o runner é Windows e o `bash.exe` do Git não está no PATH da
-máquina.
+Se o site sair do ar, a coleta continua possível da máquina do projeto, que tem
+IP residencial:
 
-A coleta commita a partir do clone do runner
-(`C:\actions-runner\_work\...`), que é outro diretório. Depois de uma coleta,
-o clone de trabalho precisa de `git pull`.
-
-Se a máquina estiver desligada no horário agendado, o job fica na fila e roda
-quando ela voltar.
+```bash
+python -m bi atualizar
+```
 
 ### Uma propriedade a saber
 

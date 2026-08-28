@@ -1,0 +1,141 @@
+:root {
+  --fundo: #f7f7f5;
+  --papel: #ffffff;
+  --tinta: #16181d;
+  --tinta-fraca: #5c6270;
+  --borda: #e2e3e0;
+  --acento: #0b6b3a;
+  --acento-tinta: #ffffff;
+  --bom: #0b6b3a;
+  --ruim: #a4262c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #14161a;
+    --papel: #1c1f25;
+    --tinta: #ecedf0;
+    --tinta-fraca: #99a0ad;
+    --borda: #2c3038;
+    --acento: #2f9e63;
+    --acento-tinta: #0d1a12;
+    --bom: #5fc48a;
+    --ruim: #e2707a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--tinta);
+  font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+}
+
+.marca {
+  margin: 0;
+  font-size: .75rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+h1 {
+  margin: .35rem 0 .75rem;
+  font-size: 1.85rem;
+  letter-spacing: -.02em;
+}
+
+.explicacao { margin: 0; color: var(--tinta-fraca); }
+.explicacao strong { color: var(--tinta); font-weight: 600; }
+
+.painel {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--papel);
+  border: 1px solid var(--borda);
+  border-radius: .75rem;
+}
+
+button {
+  width: 100%;
+  padding: .85rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--acento-tinta);
+  background: var(--acento);
+  border: 0;
+  border-radius: .5rem;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: .55; cursor: progress; }
+
+.progresso { margin-top: 1.1rem; }
+
+.barra {
+  height: .4rem;
+  background: var(--borda);
+  border-radius: .2rem;
+  overflow: hidden;
+}
+.barra span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--acento);
+  transition: width .25s ease-out;
+}
+
+.passo {
+  margin: .5rem 0 0;
+  font-size: .85rem;
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+}
+
+.recado { margin: 1rem 0 0; font-size: .9rem; }
+.recado.bom { color: var(--bom); }
+.recado.ruim { color: var(--ruim); }
+.recado:empty { margin: 0; }
+
+.estado h2 {
+  font-size: .75rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  margin: 0 0 .6rem;
+}
+
+dl { margin: 0; border-top: 1px solid var(--borda); }
+dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--borda);
+}
+dt { color: var(--tinta-fraca); font-size: .9rem; }
+dd { margin: 0; font-size: .9rem; text-align: right; font-variant-numeric: tabular-nums; }
+
+footer {
+  margin-top: 2.5rem;
+  font-size: .82rem;
+  line-height: 1.6;
+  color: var(--tinta-fraca);
+}
+footer p { margin: 0 0 .7rem; }
+.nota {
+  padding: .7rem .85rem;
+  background: var(--papel);
+  border: 1px solid var(--borda);
+  border-radius: .5rem;
+}
