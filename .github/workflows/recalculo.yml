@@ -80,7 +80,6 @@ jobs:
       - name: Avisar o site que terminou
         if: always()
         run: |
-          situacao='${{ job.status }}'
           python - <<'PY'
           import json, os
           from curl_cffi import requests
