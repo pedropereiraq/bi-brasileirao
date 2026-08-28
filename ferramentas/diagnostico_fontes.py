@@ -56,7 +56,7 @@ def testar_sofascore_hosts() -> None:
 
 def testar_requests_simples() -> None:
     """Controle: sem assinatura de navegador, o esperado é 403 em qualquer IP."""
-    import requests
+    from curl_cffi import requests
 
     try:
         r = requests.get("https://api.sofascore.com" + CAMINHO_A, timeout=30,
@@ -73,7 +73,7 @@ def testar_ge_globo() -> None:
     A página do ge é renderizada no servidor: a classificação vem no HTML.
     Se ela passar do runner, é fonte alternativa viável para as duas séries.
     """
-    import requests
+    from curl_cffi import requests
 
     cabecalhos = {
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -97,7 +97,7 @@ def testar_ge_globo() -> None:
 
 def testar_api_globo() -> None:
     """A API que a planilha usava. A especificação diz que saiu do ar; conferir."""
-    import requests
+    from curl_cffi import requests
 
     candidatos = [
         "https://api.globoesporte.globo.com/tabela/campeonato-brasileiro/2026"
@@ -118,7 +118,7 @@ def testar_api_globo() -> None:
 
 def testar_wikipedia() -> None:
     """Último recurso: a Wikipédia mantém a grade de resultados das duas séries."""
-    import requests
+    from curl_cffi import requests
 
     url = ("https://pt.wikipedia.org/w/api.php?action=parse&format=json"
            "&prop=wikitext&page=Campeonato_Brasileiro_de_Futebol_de_2026_-"
@@ -139,7 +139,7 @@ def main() -> int:
     print(f"python {sys.version.split()[0]} em {platform.system()} "
           f"{platform.machine()}")
     try:
-        import requests
+        from curl_cffi import requests
         ip = requests.get("https://api.ipify.org?format=json", timeout=15).json()
         print(f"IP de saída: {ip.get('ip')}")
     except Exception as e:
