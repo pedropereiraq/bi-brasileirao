@@ -44,18 +44,41 @@ digital de TLS.
 Por isso o coletor usa `curl_cffi`, que reproduz a assinatura TLS do Chrome.
 Trocar por `requests` derruba a coleta inteira.
 
-### 1.2 Ponto de falha ainda em aberto: o IP do runner
+### 1.2 O IP do runner do GitHub é bloqueado — medido, não suposto
 
-O `curl_cffi` resolve a impressão digital. Não resolve bloqueio por faixa de IP,
-e o runner do GitHub Actions roda em IP de datacenter da Azure. Se a coleta
-passar a devolver 403 **no Actions e não na máquina local**, é isso.
+O `curl_cffi` resolve a impressão digital. Não resolve bloqueio por faixa de IP.
+Medido em 28/08/2026 com `ferramentas/diagnostico_fontes.py`, rodando o mesmo
+script nos dois lugares:
 
-Plano B, em ordem de preferência:
+| Fonte | Local (177.193.x.x) | Runner (172.184.x.x, Azure) |
+|---|---|---|
+| Sofascore, 5 assinaturas TLS | 200 | **403 em todas** |
+| Sofascore, `www.sofascore.com` e `api.sofascore.app` | 200 | **403** |
+| ge.globo, HTML das Séries A e B | 200 | 200 |
+| Wikipédia | 200 | 200 |
+| `api.globoesporte.globo.com` | 500 | 500 |
 
-1. **Runner self-hosted** na máquina do projeto — mesmo IP residencial que
-   funciona hoje. É a solução mais direta e não custa nada.
-2. Proxy residencial na chamada do coletor.
-3. Coleta manual local (`python -m bi atualizar`) e push, enquanto se resolve.
+Ou seja: o bloqueio é da faixa de IP, não do cliente. Nenhuma assinatura TLS e
+nenhum host alternativo passa de um runner da nuvem.
+
+**Por que o ge.globo não substitui o Sofascore:** a página traz a classificação
+pronta e os jogos da rodada corrente, mas não a lista completa das 380 partidas
+com rodada e data. O projeto reconstrói tudo a partir da lista de jogos, então
+classificação pronta não serve como fonte — serve, no máximo, como conferência.
+A `api.globoesporte`, que traria a lista, responde 500 em todos os slugs
+testados, inclusive com o slug de fase correto extraído do HTML do próprio ge
+(`fase-unica-campeonato-brasileiro-2026`).
+
+**Consequência:** a coleta não roda em runner hospedado pelo GitHub. Ela roda em
+`runs-on: self-hosted`, na máquina do projeto, que é o IP que a API aceita. Os
+testes continuam na nuvem — não vão à rede.
+
+O que se perde: a coleta passa a depender de a máquina estar ligada. O que se
+ganha: continua de graça e sem mudar uma linha do coletor. Um job agendado que
+não encontra runner disponível fica na fila e roda quando a máquina voltar.
+
+A alternativa que devolveria a independência da máquina é um proxy residencial
+pago (~US$ 3/mês) injetado em `_obter`. Fica registrada, não implementada.
 
 O workflow de coleta imprime esse diagnóstico quando a etapa falha.
 

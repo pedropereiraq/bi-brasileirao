@@ -116,6 +116,51 @@ def testar_api_globo() -> None:
                       f"{type(e).__name__}: {str(e)[:60]}")
 
 
+def testar_ogol() -> None:
+    """
+    ogol.com.br — o calendário completo das duas séries, em tabela HTML
+    renderizada no servidor. Era a fonte da planilha via IMPORTHTML.
+
+    É a única candidata que entrega a **lista de jogos** com rodada, data e
+    placar, que é o que o projeto reconstrói. Paginada em 8 páginas de ~50
+    jogos; aqui se testa a primeira e a última.
+    """
+    import io
+
+    import pandas as pd
+    from curl_cffi import requests
+
+    cabecalhos = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/140.0.0.0 Safari/537.36"),
+        "Accept-Language": "pt-BR,pt;q=0.9",
+    }
+    edicoes = [("A", "brasileirao-serie-a-2026", 210277),
+               ("B", "brasileirao-serie-b-2026", 210278)]
+    for serie, apelido, edicao in edicoes:
+        for pagina in (1, 8):
+            url = (f"https://www.ogol.com.br/edicao/{apelido}/{edicao}/calendario"
+                   f"?fase_in=0&equipa=0&estado=&filtro=&op=calendario&page={pagina}")
+            try:
+                r = requests.get(url, headers=cabecalhos, timeout=30,
+                                 impersonate="chrome")
+                if not r.ok:
+                    registrar(f"ogol Série {serie} página {pagina}", "NAO",
+                              f"HTTP {r.status_code}")
+                    continue
+                tabela = pd.read_html(io.StringIO(r.text))[0].dropna(
+                    axis=1, how="all")
+                jogos = tabela[tabela.get("Fase").astype(str).str.match(r"R\d+$")]
+                registrar(f"ogol Série {serie} página {pagina}",
+                          "OK" if len(jogos) > 10 else "NAO",
+                          f"HTTP {r.status_code}, {len(jogos)} jogos, "
+                          f"rodadas {sorted(set(jogos['Fase']))[:3]}")
+            except Exception as e:
+                registrar(f"ogol Série {serie} página {pagina}", "ERRO",
+                          f"{type(e).__name__}: {str(e)[:60]}")
+
+
 def testar_wikipedia() -> None:
     """Último recurso: a Wikipédia mantém a grade de resultados das duas séries."""
     from curl_cffi import requests
@@ -152,6 +197,7 @@ def main() -> int:
         ("Sofascore — controle sem assinatura", testar_requests_simples),
         ("ge.globo — HTML renderizado no servidor", testar_ge_globo),
         ("api.globoesporte — a fonte antiga", testar_api_globo),
+        ("ogol.com.br — calendário completo", testar_ogol),
         ("Wikipédia", testar_wikipedia),
     ]:
         print(f"{titulo}:")
