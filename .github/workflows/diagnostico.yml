@@ -19,3 +19,6 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m ferramentas.diagnostico_fontes
+        env:
+          BI_PROXY_URL: ${{ vars.BI_PROXY_URL }}
+          BI_PROXY_CHAVE: ${{ secrets.BI_PROXY_CHAVE }}

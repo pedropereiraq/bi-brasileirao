@@ -1,0 +1,8 @@
+# Proxy de teste. Só existe para responder se o egresso da Cloudflare passa
+# pelo bloqueio de IP das fontes. Ver worker.js.
+name = "bi-brasileirao-proxy"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# A chave compartilhada não mora aqui. Ela é gravada como secret:
+#   npx wrangler secret put CHAVE

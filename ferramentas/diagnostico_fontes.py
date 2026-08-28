@@ -161,6 +161,45 @@ def testar_ogol() -> None:
                           f"{type(e).__name__}: {str(e)[:60]}")
 
 
+def testar_proxy_cloudflare() -> None:
+    """
+    Passa pelo Worker da Cloudflare, se ele estiver configurado.
+
+    É a pergunta que o proxy existe para responder: rodando do runner, cujo IP
+    as fontes recusam, o egresso da Cloudflare passa? O `x-status-origem` diz o
+    que a fonte respondeu ao Worker — é esse número que importa, não o do proxy.
+    """
+    import os
+    import urllib.parse
+
+    from curl_cffi import requests
+
+    url_proxy = os.environ.get("BI_PROXY_URL")
+    chave = os.environ.get("BI_PROXY_CHAVE")
+    if not url_proxy or not chave:
+        registrar("proxy Cloudflare", "-",
+                  "BI_PROXY_URL/BI_PROXY_CHAVE não definidas; pulado")
+        return
+
+    alvos = [
+        ("sofascore", "https://api.sofascore.com" + CAMINHO_A),
+        ("ogol", "https://www.ogol.com.br/edicao/brasileirao-serie-a-2026"
+                 "/210277/calendario"),
+    ]
+    for nome, alvo in alvos:
+        url = f"{url_proxy}?alvo={urllib.parse.quote(alvo, safe='')}"
+        try:
+            r = requests.get(url, headers={"x-chave": chave}, timeout=40)
+            origem = r.headers.get("x-status-origem", "?")
+            passou = origem == "200"
+            registrar(f"proxy Cloudflare -> {nome}", "OK" if passou else "NAO",
+                      f"proxy HTTP {r.status_code}, origem HTTP {origem}, "
+                      f"{len(r.content)//1024} KB")
+        except Exception as e:
+            registrar(f"proxy Cloudflare -> {nome}", "ERRO",
+                      f"{type(e).__name__}: {str(e)[:60]}")
+
+
 def testar_wikipedia() -> None:
     """Último recurso: a Wikipédia mantém a grade de resultados das duas séries."""
     from curl_cffi import requests
@@ -198,6 +237,7 @@ def main() -> int:
         ("ge.globo — HTML renderizado no servidor", testar_ge_globo),
         ("api.globoesporte — a fonte antiga", testar_api_globo),
         ("ogol.com.br — calendário completo", testar_ogol),
+        ("proxy Cloudflare Workers", testar_proxy_cloudflare),
         ("Wikipédia", testar_wikipedia),
     ]:
         print(f"{titulo}:")

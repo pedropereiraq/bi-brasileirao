@@ -50,28 +50,35 @@ O `curl_cffi` resolve a impressão digital. Não resolve bloqueio por faixa de I
 Medido em 28/08/2026 com `ferramentas/diagnostico_fontes.py`, rodando o mesmo
 script nos dois lugares:
 
-| Fonte | Local (177.193.x.x) | Runner (172.184.x.x, Azure) |
-|---|---|---|
-| Sofascore, 5 assinaturas TLS | 200 | **403 em todas** |
-| Sofascore, `www.sofascore.com` e `api.sofascore.app` | 200 | **403** |
-| ge.globo, HTML das Séries A e B | 200 | 200 |
-| Wikipédia | 200 | 200 |
-| `api.globoesporte.globo.com` | 500 | 500 |
+| Fonte | Tem lista de jogos? | Local (177.193.x.x) | Runner (Azure) |
+|---|---|---|---|
+| Sofascore, 5 assinaturas TLS, 3 hosts | sim | 200 | **403 em todas** |
+| **ogol.com.br**, calendário paginado | **sim** | 200 | **403** |
+| ge.globo, HTML das Séries A e B | não | 200 | 200 |
+| Wikipédia | parcial | 200 | 200 |
+| `api.globoesporte.globo.com` | — | 500 | 500 |
 
-Ou seja: o bloqueio é da faixa de IP, não do cliente. Nenhuma assinatura TLS e
-nenhum host alternativo passa de um runner da nuvem.
+Três IPs de runner diferentes foram sorteados nos testes (172.184.211.26,
+48.211.210.117) e todos deram o mesmo resultado. O bloqueio é da faixa de IP,
+não do cliente: mesmo código, mesmos cabeçalhos e mesma assinatura TLS passam
+da máquina do projeto e não passam da nuvem.
 
-**Por que o ge.globo não substitui o Sofascore:** a página traz a classificação
-pronta e os jogos da rodada corrente, mas não a lista completa das 380 partidas
-com rodada e data. O projeto reconstrói tudo a partir da lista de jogos, então
-classificação pronta não serve como fonte — serve, no máximo, como conferência.
-A `api.globoesporte`, que traria a lista, responde 500 em todos os slugs
-testados, inclusive com o slug de fase correto extraído do HTML do próprio ge
-(`fase-unica-campeonato-brasileiro-2026`).
+**Nenhuma fonte que carrega a lista de jogos é alcançável de um runner
+hospedado pelo GitHub.** As duas que carregam — Sofascore e ogol — bloqueiam
+datacenter. As duas que passam não servem como fonte:
+
+- **ge.globo** traz a classificação pronta e os jogos da rodada corrente, mas
+  não as 380 partidas com rodada e data. Classificação pronta não serve a um
+  projeto que reconstrói tudo a partir dos jogos — serve como conferência.
+- **Wikipédia** traz a grade de resultados, sem rodada nem data confiáveis, e
+  com atraso de edição comunitária.
+- A **`api.globoesporte`**, que traria a lista, responde 500 em todos os slugs
+  testados, inclusive com o slug de fase correto extraído do HTML do próprio ge
+  (`fase-unica-campeonato-brasileiro-2026`).
 
 **Consequência:** a coleta não roda em runner hospedado pelo GitHub. Ela roda em
-`runs-on: self-hosted`, na máquina do projeto, que é o IP que a API aceita. Os
-testes continuam na nuvem — não vão à rede.
+`runs-on: self-hosted`, na máquina do projeto, que é o IP que as fontes aceitam.
+Os testes continuam na nuvem — não vão à rede.
 
 O que se perde: a coleta passa a depender de a máquina estar ligada. O que se
 ganha: continua de graça e sem mudar uma linha do coletor. Um job agendado que
