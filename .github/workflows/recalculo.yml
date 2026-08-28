@@ -15,6 +15,10 @@ on:
         description: "Ano da edição a recalcular (vazio = ano corrente)"
         required: false
         type: string
+      pedido_em:
+        description: "Carimbo do pedido, devolvido ao site para correlação"
+        required: false
+        type: string
 
 concurrency:
   # Dois recálculos ao mesmo tempo brigariam pelo push. O segundo espera.
@@ -88,6 +92,7 @@ jobs:
               raise SystemExit(0)
           corpo = {
               "ano": "${{ steps.edicao.outputs.ano }}",
+              "pedido_em": "${{ inputs.pedido_em }}",
               "mudou": "${{ steps.versao.outputs.mudou }}",
               "execucao": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
           }

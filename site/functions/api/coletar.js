@@ -12,6 +12,8 @@
  * duplicá-la daria a falsa impressão de que o Access pode ser dispensado.
  */
 
+import { lerDeposito, gravarDeposito, gravarRecalculo } from "./_estado.js";
+
 const SERIES = new Set(["A", "B"]);
 const MAXIMO_EVENTOS = 1000; // uma edição tem ~385; folga sem virar depósito de lixo
 
@@ -49,26 +51,34 @@ export async function onRequestPost({ request, env }) {
     metadata: { depositado_em: agora, eventos: eventos.length },
   });
 
-  // 2. Registrar o estado, para o site saber o que mostrar.
-  const estado = (await env.DEPOSITO.get("estado", "json")) ?? {};
-  estado[`${serie}:${ano}`] = { depositado_em: agora, eventos: eventos.length };
-  estado.ultimo_deposito = agora;
-  estado.recalculo = { situacao: "pedido", em: agora };
-  await env.DEPOSITO.put("estado", JSON.stringify(estado));
+  // 2. Registrar o depósito. Esta função é a única que escreve nesta chave.
+  const deposito = await lerDeposito(env);
+  deposito[`${serie}:${ano}`] = { depositado_em: agora, eventos: eventos.length };
+  deposito.ultimo = agora;
+  await gravarDeposito(env, deposito);
 
-  // 3. Pedir o recálculo. Se falhar, o bruto continua guardado e um novo
-  //    pedido (ou o próprio GitHub) resolve depois — por isso não é fatal.
+  // 3. Marcar o recálculo como pedido, carimbado com este instante. O carimbo
+  //    volta pelo workflow e é o que permite a /api/concluido saber se o aviso
+  //    que chegou é deste pedido ou de um anterior, já superado.
+  await gravarRecalculo(env, { situacao: "pedido", em: agora, pedido_em: agora });
+
+  // 4. Pedir o recálculo. Se falhar, o bruto continua guardado e um novo
+  //    pedido resolve depois — por isso não é fatal.
   let recalculo = "não pedido";
   try {
-    recalculo = await pedirRecalculo(env, ano);
+    recalculo = await pedirRecalculo(env, ano, agora);
   } catch (e) {
     recalculo = `falhou: ${e.message}`;
+    await gravarRecalculo(env, {
+      situacao: "não foi possível pedir", em: agora, pedido_em: agora,
+      erro: e.message,
+    });
   }
 
   return json(200, { guardado: eventos.length, em: agora, recalculo });
 }
 
-async function pedirRecalculo(env, ano) {
+async function pedirRecalculo(env, ano, pedidoEm) {
   if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
     return "sem GITHUB_TOKEN/GITHUB_REPO configurados";
   }
@@ -82,7 +92,10 @@ async function pedirRecalculo(env, ano) {
         "content-type": "application/json",
         "user-agent": "bi-brasileirao-site",
       },
-      body: JSON.stringify({ ref: "main", inputs: { ano: String(ano) } }),
+      body: JSON.stringify({
+        ref: "main",
+        inputs: { ano: String(ano), pedido_em: pedidoEm },
+      }),
     }
   );
   if (resposta.status === 204) return "pedido";
