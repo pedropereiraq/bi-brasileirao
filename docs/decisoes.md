@@ -76,7 +76,36 @@ datacenter. As duas que passam não servem como fonte:
   testados, inclusive com o slug de fase correto extraído do HTML do próprio ge
   (`fase-unica-campeonato-brasileiro-2026`).
 
-**Consequência:** a coleta não roda em runner hospedado pelo GitHub. Ela roda em
+### 1.3 Proxy em Cloudflare Workers: testado e descartado
+
+Hipótese: Sofascore e ogol estão hospedados na Cloudflare; um Worker faz a
+requisição de dentro da rede dela, e talvez esse egresso seja tratado de outro
+jeito. O worker foi escrito, deployado e medido em 28/08/2026.
+
+| | Máquina do projeto | Cloudflare Worker |
+|---|---|---|
+| Sofascore | 200, dados reais | **403, `"reason": "challenge"`** |
+| ogol | 200, 281 KB com a tabela | **200 com página "Serviço Temporariamente Suspenso"** |
+
+As duas medições foram feitas no mesmo minuto, então não é indisponibilidade da
+fonte: é recusa ao egresso da Cloudflare.
+
+**Por que não passa:** as fontes checam **duas** coisas independentes, e o Worker
+só resolve uma. A prova está no próprio diagnóstico — `sofascore requests puro`
+dá 403 **da máquina do projeto**, do IP aceito, porque a assinatura TLS não é de
+navegador. Um Worker não consegue apresentar assinatura de Chrome: ele usa a
+pilha TLS da Cloudflare, e isso não é configurável.
+
+**O detalhe que vale guardar:** o ogol devolveu **HTTP 200 com página de bloqueio
+no corpo**. Um coletor que confie no código de status grava lixo em silêncio.
+Qualquer coletor de HTML neste projeto precisa validar o conteúdo, não o status.
+
+O código do worker fica em `ferramentas/proxy-cloudflare/`, documentado, caso a
+situação mude. Não está em uso.
+
+### 1.4 Consequência
+
+A coleta não roda em runner hospedado pelo GitHub. Ela roda em
 `runs-on: self-hosted`, na máquina do projeto, que é o IP que as fontes aceitam.
 Os testes continuam na nuvem — não vão à rede.
 

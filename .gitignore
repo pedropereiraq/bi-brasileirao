@@ -11,3 +11,4 @@ Thumbs.db
 ferramentas/proxy-cloudflare/.chave
 ferramentas/proxy-cloudflare/node_modules/
 ferramentas/proxy-cloudflare/.wrangler/
+ferramentas/proxy-cloudflare/.segredos.json
