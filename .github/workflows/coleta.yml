@@ -7,6 +7,10 @@ name: Coleta e recálculo
 # Roda em runner self-hosted, e não na nuvem, porque Sofascore e ogol recusam
 # IP de datacenter — medido nos dois lugares, ver docs/decisoes.md seção 1.
 # Os testes seguem em runner hospedado: eles não vão à rede.
+#
+# Os passos são em PowerShell, não em bash: o runner é Windows e o `bash.exe`
+# do Git não está no PATH da máquina. Sem `pwsh` instalado, o shell é o
+# Windows PowerShell 5.1 — daí não haver `&&` nem operador ternário aqui.
 on:
   schedule:
     # Horários em UTC. O Brasil está em UTC-3.
@@ -27,17 +31,11 @@ concurrency:
 permissions:
   contents: write
 
-defaults:
-  run:
-    # O runner é Windows; sem isto o shell padrão seria PowerShell.
-    shell: bash
-
 jobs:
   coletar:
     runs-on: [self-hosted, windows, casa]
     timeout-minutes: 30
     env:
-      TZ: America/Sao_Paulo
       PYTHONIOENCODING: utf-8
 
     steps:
@@ -48,18 +46,16 @@ jobs:
       - name: Conferir o ambiente
         run: |
           python --version
-          python -c "import pandas, pyarrow, curl_cffi; print('dependências ok')"
-
-      - name: Instalar dependências que faltarem
-        run: python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+          python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+          python -c "import pandas, pyarrow, curl_cffi, lxml; print('dependencias ok')"
 
       - name: Definir o ano da edição
         id: edicao
         run: |
-          ano="${{ inputs.ano }}"
-          [ -z "$ano" ] && ano=$(date +%Y)
-          echo "ano=$ano" >> "$GITHUB_OUTPUT"
-          echo "Coletando a edição de $ano"
+          $ano = "${{ inputs.ano }}"
+          if ([string]::IsNullOrWhiteSpace($ano)) { $ano = (Get-Date).Year }
+          "ano=$ano" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Output "Coletando a edicao de $ano"
 
       - name: Coletar
         id: coleta
@@ -79,16 +75,20 @@ jobs:
           git config user.name  "coletor"
           git config user.email "coletor@users.noreply.github.com"
           git add dados/
-          if git diff --cached --quiet; then
-            echo "Nada mudou desde a última coleta."
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Nada mudou desde a ultima coleta."
             exit 0
-          fi
-          git commit -m "dados: coleta de $(date '+%d/%m/%Y %H:%M')"
+          }
+          $carimbo = Get-Date -Format "dd/MM/yyyy HH:mm"
+          git commit -m "dados: coleta de $carimbo"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           git push
+          exit $LASTEXITCODE
 
       - name: Diagnóstico da falha de coleta
         if: failure() && steps.coleta.outcome == 'failure'
         run: |
-          echo "::error::A coleta falhou. Se a mensagem traz HTTP 403, a fonte"
-          echo "::error::recusou o cliente. Rode 'python -m ferramentas.diagnostico_fontes'"
-          echo "::error::na máquina para ver o que ainda responde. Ver docs/decisoes.md."
+          Write-Output "::error::A coleta falhou. Se a mensagem traz HTTP 403, a fonte"
+          Write-Output "::error::recusou o cliente. Rode 'python -m ferramentas.diagnostico_fontes'"
+          Write-Output "::error::na maquina para ver o que ainda responde. Ver docs/decisoes.md."
