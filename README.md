@@ -174,6 +174,10 @@ muda com o remarcamento.
 publicado: o critério de desempate, o jogo não realizado de 2016, a grade
 completa de etapas, o escopo do histórico. Cada uma tem teste que a sustenta.
 
+[**docs/operacao.md**](docs/operacao.md) — o dia a dia: como dar acesso a mais
+gente, como trocar o token, o que fazer quando o botão dá erro, e as três coisas
+que precisam de olho de tempos em tempos.
+
 [docs/ESPECIFICACAO_BANCO.md](docs/ESPECIFICACAO_BANCO.md) — a especificação da
 fase 1, com o levantamento das 29 páginas do BI atual.
 
