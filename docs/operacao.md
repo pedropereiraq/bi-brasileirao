@@ -117,8 +117,9 @@ IP residencial: `python -m bi atualizar`.
 
 ## O que checar de tempos em tempos
 
-- **Validade do `GITHUB_TOKEN`.** Quando vence, o botão coleta e guarda, mas o
-  recálculo não dispara — e a falha é silenciosa.
+- **Validade do `GITHUB_TOKEN`: vence em 26/11/2026.** Quando vencer, o botão
+  vai continuar coletando e guardando, mas o recálculo não dispara — e a falha
+  é silenciosa: o site fica em "pedido" e nada acontece. Renovar antes disso.
 - **Virada de ano.** A partir de 1º de janeiro o site pede o ano novo. Se a
   temporada ainda não foi publicada pela fonte, a coleta falha até publicarem.
   Os ids conhecidos ficam em `bi/config.py`, em `TEMPORADAS`.
