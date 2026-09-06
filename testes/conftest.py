@@ -28,6 +28,24 @@ def jogos_historicos() -> pd.DataFrame:
 
 
 @pytest.fixture(scope="session")
+def jogos_todos() -> pd.DataFrame:
+    """
+    Todo o recorte do BI, inclusive a edição em andamento — que vem do canônico,
+    não do Excel. Usado pelo gabarito do motor do navegador.
+    """
+    from bi import canonico
+    caminho = cfg.CANONICO / "jogos.parquet"
+    if not caminho.exists():
+        pytest.skip("banco não construído — rode `python -m bi construir`")
+    jogos = canonico.carregar_jogos()
+    return jogos[
+        (jogos["ano"] >= cfg.ANO_INICIO_BI)
+        & (jogos["serie"].isin(cfg.SERIES))
+        & (jogos["fase"] == cfg.FASE_UNICA)
+    ].reset_index(drop=True)
+
+
+@pytest.fixture(scope="session")
 def matriz_excel() -> pd.DataFrame:
     """
     Aba `Matriz - Só valores`: 30.400 linhas de gabarito, calculadas no Power BI

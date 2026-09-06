@@ -1,0 +1,9 @@
+{
+  "name": "bi-brasileirao-site",
+  "private": true,
+  "type": "module",
+  "description": "Site do BI. `type: module` porque o motor do navegador e os testes usam import/export nativos.",
+  "scripts": {
+    "test": "node --test testes/*.test.js"
+  }
+}

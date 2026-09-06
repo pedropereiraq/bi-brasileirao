@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atualizar dados · BI Brasileirão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+<style>
+  .painel-atualizar { max-width: 620px; padding: 20px; }
+  #atualizar {
+    width: 100%; padding: 12px 16px; font: inherit; font-size: 15px; font-weight: 700;
+    color: #fff; background: var(--azul); border: 0; border-radius: 6px; cursor: pointer;
+  }
+  #atualizar:hover:not(:disabled) { background: var(--azul-escuro); }
+  #atualizar:disabled { opacity: .55; cursor: progress; }
+  .progresso { margin-top: 14px; }
+  .barra { height: 5px; background: var(--cinza-claro); border-radius: 3px; overflow: hidden; }
+  .barra span { display: block; height: 100%; width: 0; background: var(--azul); transition: width .25s ease-out; }
+  .passo { margin: 7px 0 0; font-size: 13px; color: var(--cinza-escuro); font-variant-numeric: tabular-nums; }
+  .recado { margin: 12px 0 0; font-size: 13.5px; }
+  .recado.bom { color: var(--azul); }
+  .recado.ruim { color: var(--vermelho); }
+  .recado:empty { margin: 0; }
+  .situacao { max-width: 620px; margin-top: 18px; padding: 4px 20px 8px; }
+  .situacao dl { margin: 0; }
+  .situacao dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--linha); }
+  .situacao dl > div:last-child { border-bottom: 0; }
+  .situacao dt { font-size: 13px; color: var(--cinza-escuro); }
+  .situacao dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--azul-escuro); text-align: right; font-variant-numeric: tabular-nums; }
+  .aviso { max-width: 620px; margin-top: 18px; padding: 12px 16px; font-size: 12.5px; background: var(--azul-lavado); border: 1px solid var(--azul-claro); border-radius: var(--raio); color: var(--cinza-texto); }
+</style>
+</head>
+<body>
+
+<main class="pagina">
+
+  <header class="topo">
+    <div>
+      <h1>Atualizar dados</h1>
+      <p class="subtitulo">A busca acontece <b>neste navegador</b> — é o que faz a fonte aceitar a requisição.</p>
+    </div>
+    <div class="marca" aria-label="ecbahia números">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="25" fill="none" stroke="#0B5394" stroke-width="8"/>
+        <path d="M32 7a25 25 0 0 0-21.7 12.5" fill="none" stroke="#CC4125" stroke-width="8"/>
+        <rect x="21" y="36" width="6" height="10" fill="#0B5394"/>
+        <rect x="29" y="30" width="6" height="16" fill="#CC4125"/>
+        <rect x="37" y="24" width="6" height="22" fill="#0B5394"/>
+      </svg>
+      <span class="marca-texto"><span class="ec">ecbahia</span><span class="num">numeros</span></span>
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/">Classificação</a>
+    <a href="/atualizar.html" aria-current="page">Atualizar dados</a>
+  </nav>
+
+  <section class="cartao painel-atualizar">
+    <button id="atualizar" type="button">Atualizar dados</button>
+    <div id="progresso" class="progresso" hidden>
+      <div class="barra"><span id="barra"></span></div>
+      <p id="passo" class="passo"></p>
+    </div>
+    <p id="recado" class="recado" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="cartao situacao">
+    <dl id="situacao">
+      <div><dt>Série A</dt><dd data-campo="A">—</dd></div>
+      <div><dt>Série B</dt><dd data-campo="B">—</dd></div>
+      <div><dt>Recálculo</dt><dd data-campo="recalculo">—</dd></div>
+    </dl>
+  </section>
+
+  <p class="aviso">
+    O botão faz este navegador baixar as 38 rodadas das duas séries — uns 25
+    segundos —, entregar o resultado bruto ao site e pedir o recálculo, que roda
+    com o mesmo motor validado contra a planilha histórica e leva alguns minutos.
+    Se aparecer erro 403, esta conexão está sendo recusada pela fonte: VPN
+    corporativa e rede de datacenter costumam causar isso, e uma conexão
+    doméstica resolve.
+  </p>
+
+  <footer class="rodape">
+    <p>Deixe a aba aberta até a barra chegar ao fim. O recálculo continua sozinho depois disso.</p>
+    <p><b>ecbahia</b>numeros · Podcast45</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/atualizar.js"></script>
+</body>
+</html>

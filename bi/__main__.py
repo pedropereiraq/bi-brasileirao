@@ -3,7 +3,7 @@ Linha de comando do projeto.
 
     python -m bi coletar     busca no Sofascore (só de IP residencial)
     python -m bi ingerir     lê o bruto que o navegador depositou na nuvem
-    python -m bi construir   canônico + as três tabelas derivadas
+    python -m bi construir   canônico + derivadas + dados do site
     python -m bi conferir    nossa tabela x classificação oficial
     python -m bi atualizar   coletar + construir + conferir (uso local)
     python -m bi recalcular  ingerir + construir (o que o GitHub roda)
@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 
-from . import canonico, coletor, conferencia, derivadas, nuvem
+from . import canonico, coletor, conferencia, derivadas, nuvem, publicacao
 from . import config as cfg
 
 
@@ -41,6 +41,8 @@ def cmd_construir(_args) -> int:
     print(f"  jogos: {len(jogos):,} | clubes: {len(clubes):,}".replace(",", "."))
     print("camada derivada...")
     derivadas.construir(jogos)
+    print("dados do site...")
+    publicacao.construir(jogos)
     return 0
 
 

@@ -3,55 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BI Brasileirão — atualização</title>
-<link rel="stylesheet" href="/estilo.css">
+<title>Classificação · BI Brasileirão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
 </head>
 <body>
 
-<main>
-  <header>
-    <p class="marca">ECBahiaNumeros · Podcast45</p>
-    <h1>BI Brasileirão</h1>
-    <p class="explicacao">
-      Os dados só mudam quando alguém aperta o botão. A busca acontece
-      <strong>neste navegador</strong> — é o que faz a fonte aceitar a requisição.
-      Deixe a aba aberta até terminar.
-    </p>
+<main class="pagina">
+
+  <header class="topo">
+    <div>
+      <h1>Classificação</h1>
+      <p class="subtitulo" id="subtitulo">carregando…</p>
+    </div>
+    <div class="marca" aria-label="ecbahia números">
+      <!-- Anel com barras, redesenhado em SVG: os PNGs da marca têm o letreiro
+           em branco, invisível sobre o fundo offwhite. -->
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="25" fill="none" stroke="#0B5394" stroke-width="8"/>
+        <path d="M32 7a25 25 0 0 0-21.7 12.5" fill="none" stroke="#CC4125" stroke-width="8"/>
+        <rect x="21" y="36" width="6" height="10" fill="#0B5394"/>
+        <rect x="29" y="30" width="6" height="16" fill="#CC4125"/>
+        <rect x="37" y="24" width="6" height="22" fill="#0B5394"/>
+      </svg>
+      <span class="marca-texto"><span class="ec">ecbahia</span><span class="num">numeros</span></span>
+    </div>
   </header>
 
-  <section class="painel">
-    <button id="atualizar" type="button">Atualizar dados</button>
-    <div id="progresso" class="progresso" hidden>
-      <div class="barra"><span id="barra"></span></div>
-      <p id="passo" class="passo"></p>
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/" aria-current="page">Classificação</a>
+    <a href="/atualizar.html">Atualizar dados</a>
+  </nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label for="serie">Série</label>
+        <select id="serie"></select>
+      </div>
+      <div class="campo">
+        <label for="edicao">Edição</label>
+        <select id="edicao"></select>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">Mando</span>
+        <div class="segmentado" id="mando" role="group" aria-label="Mando de campo">
+          <button type="button" data-valor="todos" aria-pressed="true">Todos</button>
+          <button type="button" data-valor="casa" aria-pressed="false">Casa</button>
+          <button type="button" data-valor="fora" aria-pressed="false">Fora</button>
+        </div>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">Rodadas</span>
+        <div class="par">
+          <select id="rodada-de"></select>
+          <span>a</span>
+          <select id="rodada-ate"></select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="ultimos">Últimos jogos</label>
+        <select id="ultimos"></select>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">Datas</span>
+        <div class="par">
+          <input type="date" id="data-de" aria-label="Data inicial">
+          <span>a</span>
+          <input type="date" id="data-ate" aria-label="Data final">
+        </div>
+      </div>
+
+      <button type="button" class="botao-texto" id="limpar">Limpar filtros</button>
     </div>
-    <p id="recado" class="recado" role="status" aria-live="polite"></p>
+    <p class="resumo-filtro" id="resumo"></p>
   </section>
 
-  <section class="estado">
-    <h2>Situação</h2>
-    <dl id="situacao">
-      <div><dt>Série A</dt><dd data-campo="A">—</dd></div>
-      <div><dt>Série B</dt><dd data-campo="B">—</dd></div>
-      <div><dt>Recálculo</dt><dd data-campo="recalculo">—</dd></div>
-    </dl>
+  <section class="cartao">
+    <div class="tabela-caixa">
+      <table class="classificacao">
+        <thead>
+          <tr>
+            <th class="pos">#</th>
+            <th class="clube">Clube</th>
+            <th title="Pontos">P</th>
+            <th title="Jogos">J</th>
+            <th title="Triunfos">T</th>
+            <th title="Empates">E</th>
+            <th title="Derrotas">D</th>
+            <th title="Gols pró">GP</th>
+            <th title="Gols contra">GC</th>
+            <th title="Saldo de gols">SG</th>
+            <th title="Aproveitamento dos pontos disputados">%</th>
+            <th title="Últimos cinco jogos, do mais antigo ao mais recente">Últimos</th>
+          </tr>
+        </thead>
+        <tbody id="corpo"></tbody>
+      </table>
+    </div>
+    <div class="legenda-faixa">
+      <span><i style="background:var(--azul)"></i>G4</span>
+      <span><i style="background:var(--vermelho)"></i>Z4</span>
+      <span><i style="background:var(--azul)"></i>triunfo</span>
+      <span><i style="background:var(--cinza-escuro)"></i>empate</span>
+      <span><i style="background:var(--vermelho)"></i>derrota</span>
+      <span>clique num clube para ver a campanha</span>
+    </div>
   </section>
 
-  <footer>
-    <p>
-      Apertar o botão faz este navegador baixar as 38 rodadas das duas séries
-      (uns 25 segundos), entregar o resultado bruto ao site e pedir o recálculo.
-      O recálculo roda com o mesmo motor validado contra a planilha histórica e
-      leva alguns minutos.
-    </p>
-    <p class="nota">
-      Se aparecer erro 403, esta conexão está sendo recusada pela fonte. VPN
-      corporativa e rede de datacenter costumam causar isso — tente de uma
-      conexão doméstica.
-    </p>
+  <section id="painel" hidden></section>
+
+  <footer class="rodape">
+    <p id="metodologia"></p>
+    <p><b>ecbahia</b>numeros · Podcast45</p>
   </footer>
+
 </main>
 
-<script type="module" src="/app.js"></script>
+<script type="module" src="/js/classificacao.js"></script>
 </body>
 </html>

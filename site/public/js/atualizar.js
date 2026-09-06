@@ -1,4 +1,4 @@
-import { coletarSerie, depositar } from "/coleta.js";
+import { coletarSerie, depositar } from "/js/coleta.js";
 
 const SERIES = ["A", "B"];
 const botao = document.querySelector("#atualizar");

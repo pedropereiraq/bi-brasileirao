@@ -28,6 +28,16 @@ jobs:
 
       # Inclui `test_reconstrucao.py`, que refaz as três tabelas fato a partir
       # do canônico e compara com os parquets versionados — a prova de que a
-      # camada derivada é mesmo derivada.
-      - name: Testes
+      # camada derivada é mesmo derivada. E `test_motor_navegador.py`, que
+      # gera o gabarito consumido pelo passo seguinte.
+      - name: Testes do motor Python
         run: pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # A outra ponta da cadeia de confiança: o motor do navegador tem de
+      # reproduzir o gabarito que o motor Python acabou de gerar.
+      - name: Testes do motor do navegador
+        run: node --test site/testes/*.test.js

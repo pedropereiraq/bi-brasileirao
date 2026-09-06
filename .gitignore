@@ -15,3 +15,4 @@ ferramentas/proxy-cloudflare/.segredos.json
 site/.chave
 site/.wrangler/
 site/node_modules/
+site/node_modules/

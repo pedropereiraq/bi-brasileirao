@@ -1,0 +1,244 @@
+/*
+ * Identidade do ECBahia Números aplicada ao BI.
+ *
+ * Paleta, tipografia e a régua azul/vermelho/cinza vêm da skill dos cards.
+ * Regras herdadas e inegociáveis: fundo offwhite (nunca branco puro), nunca
+ * preto — o tom mais escuro é o azul-escuro —, e resultado sempre azul para
+ * triunfo, cinza para empate, vermelho para derrota.
+ *
+ * O que NÃO vem dos cards é o viés: lá o holofote é do Bahia, aqui é uma
+ * tabela de campeonato e todo clube é tratado igual.
+ */
+
+:root {
+  --offwhite: #F4F2ED;
+  --branco: #FFFFFF;
+
+  --azul: #0B5394;
+  --azul-escuro: #073763;
+  --azul-medio: #3D7EB8;
+  --azul-claro: #A9C7E2;
+  --azul-lavado: #E2EBF4;
+
+  --vermelho: #CC4125;
+  --vermelho-claro: #E3A899;
+  --vermelho-lavado: #F5E3DE;
+
+  --cinza: #CCCCCC;
+  --cinza-escuro: #8A8A8A;
+  --cinza-texto: #5C5C5C;
+  --cinza-claro: #E4E1DB;
+  --linha: #DBD8D2;
+
+  --raio: 8px;
+  --sombra: 0 1px 2px rgba(7, 55, 99, .06), 0 4px 16px rgba(7, 55, 99, .05);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--offwhite);
+  color: var(--cinza-texto);
+  font: 15px/1.5 Assistant, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: "Bree Serif", Georgia, serif;
+  font-weight: 700;
+  color: var(--azul);
+  margin: 0;
+  letter-spacing: -.01em;
+}
+
+a { color: var(--azul); }
+
+.pagina { max-width: 1180px; margin: 0 auto; padding: 26px 20px 60px; }
+
+/* ------------------------------------------------------------ cabeçalho */
+.topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.topo h1 { font-size: 30px; }
+.subtitulo { margin: 4px 0 0; color: var(--cinza-escuro); font-size: 13.5px; }
+
+.marca { display: flex; align-items: center; gap: 9px; flex: none; }
+.marca svg { width: 34px; height: 34px; display: block; }
+.marca-texto { font-weight: 800; font-size: 15px; letter-spacing: -.01em; line-height: 1; }
+.marca-texto .ec { color: var(--azul-medio); }
+.marca-texto .num { color: var(--azul-escuro); }
+
+/* A régua é assinatura da página: entra sempre, logo abaixo do cabeçalho. */
+.regua { display: flex; height: 4px; margin: 14px 0 20px; border-radius: 2px; overflow: hidden; }
+.regua i { display: block; height: 100%; }
+.regua i:nth-child(1) { flex: 6; background: var(--azul); }
+.regua i:nth-child(2) { flex: 2; background: var(--vermelho); }
+.regua i:nth-child(3) { flex: 1; background: var(--cinza); }
+
+.navegacao { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.navegacao a {
+  padding: 5px 11px; border-radius: 99px; font-size: 13px; font-weight: 600;
+  text-decoration: none; color: var(--cinza-texto); background: var(--cinza-claro);
+}
+.navegacao a[aria-current="page"] { background: var(--azul); color: var(--branco); }
+.navegacao a:hover:not([aria-current]) { background: var(--azul-lavado); color: var(--azul); }
+
+/* --------------------------------------------------------------- painéis */
+.cartao {
+  background: var(--branco); border: 1px solid var(--linha);
+  border-radius: var(--raio); box-shadow: var(--sombra);
+}
+
+.filtros { padding: 14px 16px; margin-bottom: 18px; }
+.filtros-linha { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+
+.campo { display: flex; flex-direction: column; gap: 4px; }
+.campo > label, .rotulo {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--cinza-escuro);
+}
+
+select, input[type="date"], input[type="number"] {
+  font: inherit; font-size: 14px; color: var(--azul-escuro);
+  padding: 6px 9px; border: 1px solid var(--linha); border-radius: 6px;
+  background: var(--branco); min-height: 34px;
+}
+select:focus, input:focus { outline: 2px solid var(--azul-claro); outline-offset: 1px; }
+
+.segmentado { display: flex; border: 1px solid var(--linha); border-radius: 6px; overflow: hidden; }
+.segmentado button {
+  font: inherit; font-size: 13.5px; font-weight: 600; padding: 6px 13px;
+  border: 0; border-right: 1px solid var(--linha); background: var(--branco);
+  color: var(--cinza-texto); cursor: pointer; min-height: 34px;
+}
+.segmentado button:last-child { border-right: 0; }
+.segmentado button[aria-pressed="true"] { background: var(--azul); color: var(--branco); }
+.segmentado button:hover:not([aria-pressed="true"]) { background: var(--azul-lavado); }
+
+.par { display: flex; align-items: center; gap: 6px; }
+.par span { color: var(--cinza-escuro); font-size: 13px; }
+
+.botao-texto {
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--azul);
+  background: none; border: 0; cursor: pointer; padding: 6px 2px; text-decoration: underline;
+}
+.botao-texto:hover { color: var(--azul-escuro); }
+
+.resumo-filtro {
+  margin: 10px 0 0; font-size: 13px; color: var(--cinza-escuro);
+  border-top: 1px dashed var(--linha); padding-top: 9px;
+}
+.resumo-filtro b { color: var(--azul-escuro); font-weight: 700; }
+
+/* ------------------------------------------------------------- tabela */
+.tabela-caixa { overflow-x: auto; }
+
+table.classificacao { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+
+.classificacao thead th {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--cinza-escuro); text-align: right; padding: 10px 7px;
+  border-bottom: 2px solid var(--linha); white-space: nowrap; background: var(--branco);
+  position: sticky; top: 0;
+}
+.classificacao thead th.clube, .classificacao thead th.pos { text-align: left; }
+
+.classificacao td { padding: 0 7px; height: 40px; border-bottom: 1px solid var(--linha); text-align: right; }
+.classificacao tbody tr { cursor: pointer; }
+.classificacao tbody tr:hover { background: var(--azul-lavado); }
+.classificacao tbody tr[aria-selected="true"] { background: var(--azul-lavado); }
+.classificacao tbody tr[aria-selected="true"] td.clube { font-weight: 800; }
+
+td.pos { text-align: left; width: 44px; font-weight: 700; color: var(--azul-escuro); padding-left: 12px; }
+td.clube { text-align: left; min-width: 190px; }
+.clube-celula { display: flex; align-items: center; gap: 9px; }
+.clube-celula img { width: 21px; height: 21px; object-fit: contain; flex: none; }
+.clube-nome { font-weight: 600; color: var(--azul-escuro); }
+.clube-uf { color: var(--cinza-escuro); font-weight: 400; }
+
+td.pts { font-weight: 800; color: var(--azul-escuro); font-size: 15.5px; }
+td.fraco { color: var(--cinza-escuro); }
+
+/* Faixa: G4 e Z4 valem em toda edição de pontos corridos com 20 clubes desde
+   2006. O número de vagas de Libertadores e Sul-Americana mudou várias vezes
+   no período, então não é marcado — marcar seria inventar regra. */
+tr.faixa-g4 td.pos { box-shadow: inset 4px 0 0 var(--azul); }
+tr.faixa-z4 td.pos { box-shadow: inset 4px 0 0 var(--vermelho); }
+
+.legenda-faixa { display: flex; gap: 16px; padding: 11px 16px; font-size: 12.5px; color: var(--cinza-escuro); border-top: 1px solid var(--linha); flex-wrap: wrap; }
+.legenda-faixa i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+/* ------------------------------------------------------- chips e cores */
+.chips { display: flex; gap: 3px; justify-content: flex-end; }
+.chip {
+  width: 17px; height: 17px; border-radius: 3px; font-size: 10px; font-weight: 800;
+  color: var(--branco); display: grid; place-items: center; flex: none;
+}
+.chip.T { background: var(--azul); }        /* triunfo  */
+.chip.E { background: var(--cinza-escuro); } /* empate   */
+.chip.D { background: var(--vermelho); }     /* derrota  */
+
+/* --------------------------------------------------------- painel clube */
+.painel-clube { margin-top: 20px; padding: 0; overflow: hidden; }
+.painel-cabecalho {
+  display: flex; align-items: center; gap: 13px; padding: 15px 18px;
+  border-bottom: 1px solid var(--linha); background: var(--azul-lavado);
+}
+.painel-cabecalho img { width: 40px; height: 40px; object-fit: contain; }
+.painel-cabecalho h2 { font-size: 20px; }
+.painel-cabecalho .lugar { font-size: 12.5px; color: var(--cinza-escuro); }
+.fechar {
+  margin-left: auto; font: inherit; font-size: 20px; line-height: 1; color: var(--cinza-escuro);
+  background: none; border: 0; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.fechar:hover { background: var(--branco); color: var(--azul); }
+
+.numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 1px; background: var(--linha); border-bottom: 1px solid var(--linha); }
+.numero { background: var(--branco); padding: 12px 14px; }
+.numero .valor { font-size: 22px; font-weight: 800; color: var(--azul-escuro); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.numero .nome { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--cinza-escuro); margin-top: 3px; }
+.numero.destaque { background: var(--azul); }
+.numero.destaque .valor, .numero.destaque .nome { color: var(--branco); }
+
+.painel-corpo { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--linha); }
+.bloco { background: var(--branco); padding: 15px 18px; min-width: 0; }
+.bloco h3 { font-size: 14px; margin-bottom: 10px; }
+@media (max-width: 860px) { .painel-corpo { grid-template-columns: 1fr; } }
+
+.mando-barras { display: flex; flex-direction: column; gap: 11px; }
+.mando-linha { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; }
+.mando-nome { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--cinza-escuro); }
+.barra-empilhada { display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: var(--cinza-claro); }
+.barra-empilhada i { display: block; height: 100%; }
+.barra-empilhada i.T { background: var(--azul); }
+.barra-empilhada i.E { background: var(--cinza-escuro); }
+.barra-empilhada i.D { background: var(--vermelho); }
+.mando-valor { font-size: 13px; font-weight: 700; color: var(--azul-escuro); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.grafico { width: 100%; height: auto; display: block; }
+.grafico .eixo { stroke: var(--linha); stroke-width: 1; }
+.grafico .grade { stroke: var(--cinza-claro); stroke-width: 1; stroke-dasharray: 2 3; }
+.grafico .rotulo { font-size: 9.5px; fill: var(--cinza-escuro); font-family: Assistant, sans-serif; }
+.grafico .linha-pos { fill: none; stroke: var(--azul); stroke-width: 2; stroke-linejoin: round; }
+.grafico .linha-pts { fill: none; stroke: var(--vermelho); stroke-width: 2; stroke-linejoin: round; }
+.grafico .ponto { fill: var(--azul); }
+
+.jogos-lista { max-height: 340px; overflow-y: auto; margin: -4px -6px; }
+table.jogos { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.jogos td { padding: 5px 6px; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+table.jogos tr:last-child td { border-bottom: 0; }
+.jogos .rodada { color: var(--cinza-escuro); font-size: 11.5px; width: 30px; }
+.jogos .data { color: var(--cinza-escuro); font-size: 11.5px; }
+.jogos .mando { font-size: 10px; font-weight: 800; letter-spacing: .05em; color: var(--cinza-escuro); }
+.jogos .adversario { width: 99%; color: var(--azul-escuro); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.jogos .placar { font-weight: 800; color: var(--azul-escuro); }
+.jogos .posicao { color: var(--cinza-escuro); font-size: 11.5px; }
+
+.vazio { padding: 40px 18px; text-align: center; color: var(--cinza-escuro); font-size: 14px; }
+
+/* --------------------------------------------------------------- rodapé */
+.rodape {
+  margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--linha);
+  display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  font-size: 12px; color: var(--cinza-escuro);
+}
+.rodape p { margin: 0; max-width: 62ch; }
