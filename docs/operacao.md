@@ -32,6 +32,8 @@ precisa estar ligada além da de quem apertou.
 | `CHAVE` | secret do Pages **e** secret `BI_NUVEM_CHAVE` do repositório | autentica o GitHub nas rotas `/api/bruto` e `/api/concluido` |
 | `GITHUB_TOKEN` | secret do Pages | deixa o site disparar o recálculo |
 | `BI_NUVEM_URL` | variável do repositório | endereço do site, para o recálculo saber onde ler |
+| `CLOUDFLARE_API_TOKEN` | secret do repositório | deixa o recálculo republicar o site |
+| `CLOUDFLARE_ACCOUNT_ID` | variável do repositório | conta onde o Pages mora |
 
 **`CHAVE` tem de ser idêntica dos dois lados.** Trocar num só quebra o recálculo
 com 401.
@@ -54,6 +56,14 @@ exigem o cabeçalho `x-chave`.
 > `bi-brasileirao.pages.dev` inteiro. Preencher *Subdomain* também produz
 > `bi-brasileirao.bi-brasileirao.pages.dev`, que não existe — e o site fica
 > aberto sem dar nenhum sinal. Deixe *Subdomain* vazio.
+
+> **As URLs de preview não passam pelo Access.** Todo deploy do Pages cria um
+> endereço `<hash>.bi-brasileirao.pages.dev`, e uma aplicação registrada no
+> hostname exato não o cobre — medido em 06/09/2026: produção devolve 302 para
+> o login, os previews devolvem 200 com o site inteiro. Para fechar, acrescente
+> à aplicação **BI Brasileirão** uma segunda entrada de *Public hostname* com
+> *Subdomain* `*` e *Domain* `bi-brasileirao.pages.dev`. As rotas de máquina
+> continuam liberadas porque o Access resolve pelo caminho mais específico.
 
 ---
 
@@ -86,6 +96,30 @@ Necessário quando o token vence, ou sempre que ele for exposto.
 > não é criptografado, aparece em texto puro na listagem e no painel. Já
 > aconteceu duas vezes aqui. Pelo painel os campos são rotulados e não há como
 > errar.
+
+---
+
+## Publicar o site
+
+O recálculo republica sozinho, desde que `CLOUDFLARE_API_TOKEN` exista. **Sem
+ele o botão atualiza os dados no repositório e o site continua mostrando os de
+antes** — o passo avisa em amarelo em vez de falhar, porque o recálculo em si
+terminou bem.
+
+Para criar: painel da Cloudflare → **Manage Account → API Tokens → Create
+Token**, modelo *Edit Cloudflare Workers* (ou permissão `Cloudflare Pages:
+Edit` na conta). Depois:
+
+```
+gh secret set CLOUDFLARE_API_TOKEN --repo pedropereiraq/bi-brasileirao
+gh variable set CLOUDFLARE_ACCOUNT_ID --repo pedropereiraq/bi-brasileirao --body <id da conta>
+```
+
+Publicar à mão, quando precisar:
+
+```
+cd site && npx wrangler pages deploy public --project-name bi-brasileirao --branch main
+```
 
 ---
 
