@@ -44,14 +44,63 @@ def _recorte_bi(jogos: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
+ESCUDOS = cfg.RAIZ / "site" / "public" / "escudos"
+
+
+def baixar_escudos(clubes: pd.DataFrame) -> dict[str, str]:
+    """
+    Traz os escudos para dentro do site e devolve o caminho local de cada um.
+
+    Dois motivos, e o segundo é o que obriga. O primeiro é não depender do CDN
+    da globo a cada visita. O segundo é o card: imagem de outra origem
+    **contamina o canvas**, e canvas contaminado não exporta PNG — o botão de
+    gerar card simplesmente não funcionaria.
+
+    Baixa só o que falta, e falha macio: sem rede, o site cai no escudo remoto.
+    Os arquivos ficam versionados, então em uso normal nada é baixado.
+    """
+    from curl_cffi import requests
+
+    ESCUDOS.mkdir(parents=True, exist_ok=True)
+    locais: dict[str, str] = {}
+    baixados = 0
+
+    for linha in clubes.itertuples():
+        if not isinstance(linha.escudo, str) or not linha.escudo:
+            continue
+        extensao = ".svg" if linha.escudo.lower().endswith(".svg") else ".png"
+        # O nome do arquivo sai do nome canônico, não da sigla: sigla repete.
+        apelido = linha.equipe.replace(" ", "_").replace("(", "").replace(")", "")
+        destino = ESCUDOS / f"{apelido}{extensao}"
+
+        if not destino.exists():
+            try:
+                resposta = requests.get(linha.escudo, timeout=30, impersonate="chrome")
+                if resposta.ok and resposta.content:
+                    destino.write_bytes(resposta.content)
+                    baixados += 1
+            except Exception as e:  # noqa: BLE001 — sem rede, segue com o remoto
+                print(f"  escudo de {linha.equipe} não baixou ({type(e).__name__})")
+
+        if destino.exists():
+            locais[linha.equipe] = f"/escudos/{destino.name}"
+
+    if baixados:
+        print(f"  {baixados} escudos baixados")
+    return locais
+
+
 def publicar_clubes(jogos: pd.DataFrame, clubes: pd.DataFrame) -> dict:
     """Só os clubes que aparecem em alguma edição do recorte."""
     presentes = set(jogos["mandante"]) | set(jogos["visitante"])
     sub = clubes[clubes["equipe"].isin(presentes)]
+    locais = baixar_escudos(sub)
     return {
         linha.equipe: {
             "sigla": linha.sigla,
-            "escudo": linha.escudo if isinstance(linha.escudo, str) else None,
+            # Local quando existe; o remoto fica como reserva declarada.
+            "escudo": locais.get(linha.equipe)
+                      or (linha.escudo if isinstance(linha.escudo, str) else None),
             "estado": linha.estado,
             "regiao": linha.regiao,
             "cidade": linha.cidade,
@@ -114,10 +163,13 @@ def construir(jogos: pd.DataFrame | None = None,
         "campos_jogo": CAMPOS_JOGO,
         "edicoes": edicoes,
     })
-    _gravar(DESTINO / "clubes.json", publicar_clubes(recorte, clubes))
+    # Uma vez só: `publicar_clubes` baixa escudos, e chamar duas vezes dobraria
+    # o trabalho por causa de um número no print.
+    dados_clubes = publicar_clubes(recorte, clubes)
+    _gravar(DESTINO / "clubes.json", dados_clubes)
 
     tamanho = sum(p.stat().st_size for p in DESTINO.rglob("*.json"))
-    print(f"  {len(edicoes)} edições, {len(publicar_clubes(recorte, clubes))} clubes"
+    print(f"  {len(edicoes)} edições, {len(dados_clubes)} clubes"
           f" -> {tamanho/1024:.0f} KB em {DESTINO.relative_to(cfg.RAIZ)}")
     return {"edicoes": len(edicoes), "bytes": tamanho}
 

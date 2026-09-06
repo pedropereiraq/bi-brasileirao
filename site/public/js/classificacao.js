@@ -1,6 +1,8 @@
 import {
   tabela, filtrar, formatoLongo, clubesDaEdicao, campanha, porMando,
 } from "/js/motor.js";
+import { registrarCartao } from "/js/cartao.js";
+import { montarCartao } from "/js/cartao_classificacao.js";
 
 const MAX_CHIPS = 5;
 
@@ -27,6 +29,7 @@ async function inicializar() {
 
   montarSeletoresDeEdicao();
   ligarFiltros();
+  registrarCartao(() => montarCartao(estado));
   await trocarEdicao(daUrl() ?? estado.edicoes[0].apelido);
 }
 
@@ -299,10 +302,13 @@ function desenharPainel(clube) {
     </div>`;
 
   el("fechar-painel").addEventListener("click", () => selecionar(clube));
+  ligarGraficosDoPainel(painel, passos);
 }
 
 function blocoMando(mandos) {
-  const maximo = Math.max(mandos.casa.j, mandos.fora.j, 1);
+  // O total entra no máximo. Sem ele a barra de Total passava de 100% da caixa
+  // e vazava para fora do cartão — era o que estava quebrado.
+  const maximo = Math.max(mandos.casa.j, mandos.fora.j, mandos.todos.j, 1);
   const linha = (nome, m) => {
     if (!m.j) return `<div class="mando-linha"><span class="mando-nome">${nome}</span>
       <span class="fraco">sem jogos no recorte</span><span></span></div>`;
@@ -316,7 +322,7 @@ function blocoMando(mandos) {
         <i class="E" style="width:${pedaco(m.e)}%"></i>
         <i class="D" style="width:${pedaco(m.d)}%"></i>
       </span>
-      <span class="mando-valor">${m.pts} pts · ${m.j}J · ${Math.round(m.pts / (3 * m.j) * 100)}%</span>
+      <span class="mando-valor">${m.pts} pts · ${m.j}J · ${Math.round((m.pts / (3 * m.j)) * 100)}%</span>
     </div>`;
   };
   return `<div class="mando-barras">
@@ -327,17 +333,37 @@ function blocoMando(mandos) {
 }
 
 /* ------------------------------------------------------------ gráficos */
-const L = 420, A = 150, MARGEM = { e: 26, d: 8, t: 10, b: 20 };
-
-function moldura(conteudo, rotulosY, rotulosX) {
-  return `<svg class="grafico" viewBox="0 0 ${L} ${A}" role="img">
-    ${rotulosY}${rotulosX}${conteudo}
-  </svg>`;
-}
+/*
+ * SVG desenhado à mão, sem biblioteca. Cada gráfico leva faixas invisíveis de
+ * captura sobre cada ponto: passar o mouse mostra a guia, destaca o ponto e
+ * abre a dica com os números daquela rodada.
+ */
+const L = 420, A = 150, MARGEM = { e: 26, d: 10, t: 12, b: 22 };
 
 function escalaX(i, n) {
   const util = L - MARGEM.e - MARGEM.d;
   return MARGEM.e + (n <= 1 ? util / 2 : (i / (n - 1)) * util);
+}
+
+/** Faixas de captura: cada uma cobre a vizinhança de um ponto. */
+function alvos(n) {
+  const util = L - MARGEM.e - MARGEM.d;
+  const largura = n <= 1 ? util : util / (n - 1);
+  return Array.from({ length: n }, (_, i) =>
+    `<rect class="alvo" data-i="${i}" x="${escalaX(i, n) - largura / 2}" y="0"
+           width="${largura}" height="${A}"/>`).join("");
+}
+
+function moldura(grade, rotulosX, conteudo, n, cor) {
+  return `<div class="grafico-caixa">
+    <svg class="grafico" viewBox="0 0 ${L} ${A}" preserveAspectRatio="xMidYMid meet">
+      ${grade}${rotulosX}${conteudo}
+      <line class="guia" x1="0" y1="${MARGEM.t}" x2="0" y2="${A - MARGEM.b}" opacity="0"/>
+      <circle class="ponto" r="4.5" opacity="0" style="fill:${cor}"/>
+      ${alvos(n)}
+    </svg>
+    <div class="dica" role="status"></div>
+  </div>`;
 }
 
 function graficoPosicao(passos) {
@@ -345,18 +371,17 @@ function graficoPosicao(passos) {
   const n = passos.length;
   const util = A - MARGEM.t - MARGEM.b;
   // Eixo invertido: 1º lugar no topo, como se lê uma tabela.
-  const y = (pos) => MARGEM.t + ((pos - 1) / 19) * util;
+  const y = (p) => MARGEM.t + ((p.pos - 1) / 19) * util;
 
-  const pontos = passos.map((p, i) => `${escalaX(i, n)},${y(p.pos)}`).join(" ");
-  const grade = [1, 5, 10, 15, 20].map((pos) =>
-    `<line class="grade" x1="${MARGEM.e}" y1="${y(pos)}" x2="${L - MARGEM.d}" y2="${y(pos)}"/>
-     <text class="rotulo" x="4" y="${y(pos) + 3}">${pos}º</text>`).join("");
+  const linha = passos.map((p, i) => `${escalaX(i, n)},${y(p)}`).join(" ");
+  const grade = [1, 5, 10, 15, 20].map((pos) => {
+    const yy = MARGEM.t + ((pos - 1) / 19) * util;
+    return `<line class="grade" x1="${MARGEM.e}" y1="${yy}" x2="${L - MARGEM.d}" y2="${yy}"/>
+            <text class="rotulo" x="4" y="${yy + 3}">${pos}º</text>`;
+  }).join("");
 
-  const ultimo = passos[n - 1];
-  return moldura(
-    `<polyline class="linha-pos" points="${pontos}"/>
-     <circle class="ponto" cx="${escalaX(n - 1, n)}" cy="${y(ultimo.pos)}" r="3"/>`,
-    grade, rotulosDeRodada(passos));
+  return moldura(grade, rotulosDeRodada(passos),
+    `<polyline class="linha-pos" points="${linha}"/>`, n, "var(--azul)");
 }
 
 function graficoPontos(passos) {
@@ -364,27 +389,89 @@ function graficoPontos(passos) {
   const n = passos.length;
   const util = A - MARGEM.t - MARGEM.b;
   const maximo = Math.max(passos[n - 1].pts_ac, 1);
-  const y = (pts) => MARGEM.t + util - (pts / maximo) * util;
+  const y = (p) => MARGEM.t + util - (p.pts_ac / maximo) * util;
 
-  const pontos = passos.map((p, i) => `${escalaX(i, n)},${y(p.pts_ac)}`).join(" ");
-  const marcas = [0, Math.round(maximo / 2), maximo];
-  const grade = marcas.map((v) =>
-    `<line class="grade" x1="${MARGEM.e}" y1="${y(v)}" x2="${L - MARGEM.d}" y2="${y(v)}"/>
-     <text class="rotulo" x="4" y="${y(v) + 3}">${v}</text>`).join("");
+  const linha = passos.map((p, i) => `${escalaX(i, n)},${y(p)}`).join(" ");
+  const grade = [0, Math.round(maximo / 2), maximo].map((v) => {
+    const yy = MARGEM.t + util - (v / maximo) * util;
+    return `<line class="grade" x1="${MARGEM.e}" y1="${yy}" x2="${L - MARGEM.d}" y2="${yy}"/>
+            <text class="rotulo" x="4" y="${yy + 3}">${v}</text>`;
+  }).join("");
 
-  return moldura(
-    `<polyline class="linha-pts" points="${pontos}"/>
-     <circle class="ponto" style="fill:var(--vermelho)" cx="${escalaX(n - 1, n)}" cy="${y(passos[n - 1].pts_ac)}" r="3"/>`,
-    grade, rotulosDeRodada(passos));
+  return moldura(grade, rotulosDeRodada(passos),
+    `<polyline class="linha-pts" points="${linha}"/>`, n, "var(--vermelho)");
 }
 
 function rotulosDeRodada(passos) {
   const n = passos.length;
-  const quais = n <= 6 ? passos.map((_, i) => i)
-                       : [0, Math.floor((n - 1) / 2), n - 1];
+  const quais = n <= 6 ? passos.map((_, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
   return quais.map((i) =>
-    `<text class="rotulo" x="${escalaX(i, n)}" y="${A - 5}" text-anchor="middle">R${passos[i].rodada}</text>`
+    `<text class="rotulo" x="${escalaX(i, n)}" y="${A - 6}" text-anchor="middle">R${passos[i].rodada}</text>`
   ).join("");
+}
+
+/**
+ * Liga a interação de um gráfico já no DOM. `alturaDe` devolve o y de um passo
+ * no sistema do viewBox; `texto` monta o conteúdo da dica.
+ */
+function ligarGrafico(caixa, passos, alturaDe, texto) {
+  if (!caixa || !passos.length) return;
+  const svg = caixa.querySelector("svg");
+  const guia = caixa.querySelector(".guia");
+  const ponto = caixa.querySelector(".ponto");
+  const dica = caixa.querySelector(".dica");
+  const n = passos.length;
+
+  const mostrar = (i) => {
+    const p = passos[i];
+    const x = escalaX(i, n), y = alturaDe(p);
+    guia.setAttribute("x1", x); guia.setAttribute("x2", x);
+    guia.setAttribute("opacity", "1");
+    ponto.setAttribute("cx", x); ponto.setAttribute("cy", y);
+    ponto.setAttribute("opacity", "1");
+
+    const caixaSvg = svg.getBoundingClientRect();
+    dica.innerHTML = texto(p);
+    dica.style.left = `${(x / L) * caixaSvg.width}px`;
+    dica.style.top = `${(y / A) * caixaSvg.height - 8}px`;
+    dica.dataset.visivel = "sim";
+  };
+
+  const esconder = () => {
+    guia.setAttribute("opacity", "0");
+    ponto.setAttribute("opacity", "0");
+    dica.dataset.visivel = "nao";
+  };
+
+  for (const alvo of caixa.querySelectorAll(".alvo")) {
+    const i = Number(alvo.dataset.i);
+    alvo.addEventListener("pointerenter", () => mostrar(i));
+    alvo.addEventListener("focus", () => mostrar(i));
+  }
+  svg.addEventListener("pointerleave", esconder);
+  // Em toque, o dedo sai sem "pointerleave" às vezes; um toque fora fecha.
+  document.addEventListener("pointerdown", (e) => {
+    if (!caixa.contains(e.target)) esconder();
+  });
+}
+
+/** Liga os dois gráficos do painel do clube. */
+function ligarGraficosDoPainel(painel, passos) {
+  const util = A - MARGEM.t - MARGEM.b;
+  const maximo = Math.max(passos.length ? passos[passos.length - 1].pts_ac : 1, 1);
+  const caixas = painel.querySelectorAll(".grafico-caixa");
+
+  ligarGrafico(caixas[0], passos,
+    (p) => MARGEM.t + ((p.pos - 1) / 19) * util,
+    (p) => `<b>${p.pos}º</b> após a rodada ${p.rodada}<br>
+            <span class="fraca">${dataBr(p.data)} · ${p.mando === "casa" ? "casa" : "fora"} ·
+            ${nomeCurto(p.adversario)} ${p.gp} × ${p.gc}</span>`);
+
+  ligarGrafico(caixas[1], passos,
+    (p) => MARGEM.t + util - (p.pts_ac / maximo) * util,
+    (p) => `<b>${p.pts_ac} pontos</b> em ${p.j_ac} jogos<br>
+            <span class="fraca">rodada ${p.rodada} · ${p.t_ac}T ${p.e_ac}E ${p.d_ac}D ·
+            saldo ${p.sg_ac > 0 ? "+" : ""}${p.sg_ac}</span>`);
 }
 
 function listaJogos(passos) {

@@ -18,17 +18,8 @@
       <h1>Classificação</h1>
       <p class="subtitulo" id="subtitulo">carregando…</p>
     </div>
-    <div class="marca" aria-label="ecbahia números">
-      <!-- Anel com barras, redesenhado em SVG: os PNGs da marca têm o letreiro
-           em branco, invisível sobre o fundo offwhite. -->
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="25" fill="none" stroke="#0B5394" stroke-width="8"/>
-        <path d="M32 7a25 25 0 0 0-21.7 12.5" fill="none" stroke="#CC4125" stroke-width="8"/>
-        <rect x="21" y="36" width="6" height="10" fill="#0B5394"/>
-        <rect x="29" y="30" width="6" height="16" fill="#CC4125"/>
-        <rect x="37" y="24" width="6" height="22" fill="#0B5394"/>
-      </svg>
-      <span class="marca-texto"><span class="ec">ecbahia</span><span class="num">numeros</span></span>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
     </div>
   </header>
 
@@ -37,6 +28,8 @@
   <nav class="navegacao">
     <a href="/" aria-current="page">Classificação</a>
     <a href="/atualizar.html">Atualizar dados</a>
+    <span class="separador"></span>
+    <button type="button" class="botao-card" id="gerar-card">Gerar card</button>
   </nav>
 
   <section class="cartao filtros">

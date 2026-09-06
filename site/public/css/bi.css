@@ -61,11 +61,9 @@ a { color: var(--azul); }
 .topo h1 { font-size: 30px; }
 .subtitulo { margin: 4px 0 0; color: var(--cinza-escuro); font-size: 13.5px; }
 
-.marca { display: flex; align-items: center; gap: 9px; flex: none; }
-.marca svg { width: 34px; height: 34px; display: block; }
-.marca-texto { font-weight: 800; font-size: 15px; letter-spacing: -.01em; line-height: 1; }
-.marca-texto .ec { color: var(--azul-medio); }
-.marca-texto .num { color: var(--azul-escuro); }
+.marca { flex: none; }
+.marca img { display: block; width: 190px; height: auto; }
+@media (max-width: 560px) { .marca img { width: 140px; } }
 
 /* A régua é assinatura da página: entra sempre, logo abaixo do cabeçalho. */
 .regua { display: flex; height: 4px; margin: 14px 0 20px; border-radius: 2px; overflow: hidden; }
@@ -81,6 +79,33 @@ a { color: var(--azul); }
 }
 .navegacao a[aria-current="page"] { background: var(--azul); color: var(--branco); }
 .navegacao a:hover:not([aria-current]) { background: var(--azul-lavado); color: var(--azul); }
+
+.navegacao .separador { flex: 1; }
+.botao-card {
+  font: inherit; font-size: 13px; font-weight: 700; padding: 5px 13px;
+  border: 1px solid var(--azul); border-radius: 99px; background: var(--branco);
+  color: var(--azul); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.botao-card:hover:not(:disabled) { background: var(--azul); color: var(--branco); }
+.botao-card:disabled { opacity: .5; cursor: progress; }
+
+/* Diálogo do card: pré-visualização antes de baixar, porque card errado
+   publicado é pior do que card não gerado. */
+dialog.card {
+  border: 0; border-radius: var(--raio); padding: 0; max-width: min(96vw, 900px);
+  background: var(--branco); box-shadow: 0 12px 48px rgba(7, 55, 99, .25);
+}
+dialog.card::backdrop { background: rgba(7, 55, 99, .45); }
+.card-topo { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--linha); }
+.card-topo h2 { font-size: 16px; }
+.card-topo .acoes { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.card-previa { padding: 16px; background: var(--cinza-claro); }
+.card-previa img, .card-previa canvas { display: block; width: 100%; height: auto; border-radius: 4px; box-shadow: var(--sombra); }
+.card-baixar {
+  font: inherit; font-size: 13px; font-weight: 700; padding: 7px 15px; border: 0;
+  border-radius: 6px; background: var(--azul); color: var(--branco); cursor: pointer;
+}
+.card-baixar:hover { background: var(--azul-escuro); }
 
 /* --------------------------------------------------------------- painéis */
 .cartao {
@@ -221,6 +246,20 @@ tr.faixa-z4 td.pos { box-shadow: inset 4px 0 0 var(--vermelho); }
 .grafico .linha-pos { fill: none; stroke: var(--azul); stroke-width: 2; stroke-linejoin: round; }
 .grafico .linha-pts { fill: none; stroke: var(--vermelho); stroke-width: 2; stroke-linejoin: round; }
 .grafico .ponto { fill: var(--azul); }
+.grafico .guia { stroke: var(--azul-claro); stroke-width: 1; }
+.grafico .alvo { fill: transparent; }
+
+.grafico-caixa { position: relative; }
+.dica {
+  position: absolute; z-index: 5; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -100%); transition: opacity .1s;
+  background: var(--azul-escuro); color: var(--branco); border-radius: 6px;
+  padding: 6px 9px; font-size: 11.5px; line-height: 1.35; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(7, 55, 99, .3);
+}
+.dica[data-visivel="sim"] { opacity: 1; }
+.dica b { font-weight: 800; }
+.dica .fraca { color: var(--azul-claro); }
 
 .jogos-lista { max-height: 340px; overflow-y: auto; margin: -4px -6px; }
 table.jogos { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
