@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabela de jogos · BI Brasileirão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+</head>
+<body>
+
+<main class="pagina larga">
+
+  <header class="topo">
+    <div>
+      <h1>Tabela de jogos</h1>
+      <p class="subtitulo" id="subtitulo">carregando…</p>
+    </div>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/">Classificação</a>
+    <a href="/jogos.html" aria-current="page">Tabela de jogos</a>
+    <a href="/atualizar.html">Atualizar dados</a>
+    <span class="separador"></span>
+    <button type="button" class="botao-card" id="gerar-card">Gerar card</button>
+  </nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label for="serie">Série</label>
+        <select id="serie"></select>
+      </div>
+      <div class="campo">
+        <label for="edicao">Edição</label>
+        <select id="edicao"></select>
+      </div>
+      <div class="campo">
+        <span class="rotulo">Situação</span>
+        <div class="segmentado" id="situacao" role="group" aria-label="Situação do jogo">
+          <button type="button" data-valor="todos" aria-pressed="true">Todos</button>
+          <button type="button" data-valor="realizados" aria-pressed="false">Realizados</button>
+          <button type="button" data-valor="pendentes" aria-pressed="false">Pendentes</button>
+        </div>
+      </div>
+      <button type="button" class="botao-texto" id="limpar" hidden>Limpar seleção</button>
+    </div>
+  </section>
+
+  <section class="painel-jogos">
+
+    <aside class="coluna-numeros">
+      <div class="cartao bloco-numero">
+        <div class="valor" id="n-realizados">—</div>
+        <div class="nome">jogos realizados</div>
+      </div>
+      <div class="cartao bloco-numero">
+        <div class="valor" id="n-pendentes">—</div>
+        <div class="nome">jogos pendentes</div>
+      </div>
+      <div class="cartao bloco-numero medidor">
+        <div class="nome">% executado</div>
+        <div id="medidor"></div>
+      </div>
+    </aside>
+
+    <div class="coluna-centro">
+      <section class="cartao bloco-grafico">
+        <div class="bloco-topo">
+          <h2>Jogos por rodada</h2>
+          <div class="legenda">
+            <span><i style="background:var(--azul)"></i>realizados</span>
+            <span><i style="background:var(--cinza-claro)"></i>pendentes</span>
+            <span class="fraco">clique numa rodada para filtrar</span>
+          </div>
+        </div>
+        <div id="grafico-rodadas" class="grafico-rodadas"></div>
+      </section>
+
+      <section class="cartao bloco-tabela">
+        <div class="bloco-topo">
+          <h2 id="titulo-jogos">Jogos</h2>
+          <span class="fraco" id="contagem-jogos"></span>
+        </div>
+        <div class="jogos-rolagem">
+          <table class="tabela-jogos">
+            <thead>
+              <tr>
+                <th class="rod">Rod</th>
+                <th class="data">Data</th>
+                <th class="mandante">Mandante</th>
+                <th class="placar">Placar</th>
+                <th class="visitante">Visitante</th>
+              </tr>
+            </thead>
+            <tbody id="corpo-jogos"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <aside class="cartao bloco-classificacao">
+      <div class="bloco-topo">
+        <h2>Classificação</h2>
+      </div>
+      <table class="mini-classificacao">
+        <thead>
+          <tr>
+            <th class="pos">P</th>
+            <th class="time" colspan="2">Time</th>
+            <th title="Pontos ganhos">PG</th>
+            <th title="Jogos">J</th>
+          </tr>
+        </thead>
+        <tbody id="corpo-classificacao"></tbody>
+      </table>
+      <p class="fraco dica-menu">clique num clube para ver só os jogos dele</p>
+    </aside>
+
+  </section>
+
+  <footer class="rodape">
+    <p id="metodologia"></p>
+    <p><b>ecbahia</b>numeros · Podcast45</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/jogos.js"></script>
+</body>
+</html>

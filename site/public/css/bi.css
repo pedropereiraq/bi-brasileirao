@@ -281,3 +281,152 @@ table.jogos tr:last-child td { border-bottom: 0; }
   font-size: 12px; color: var(--cinza-escuro);
 }
 .rodape p { margin: 0; max-width: 62ch; }
+
+/* =====================================================================
+ * Tabela de jogos
+ * =================================================================== */
+.pagina.larga { max-width: 1440px; }
+
+.painel-jogos {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 230px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .painel-jogos { grid-template-columns: minmax(0, 1fr); }
+  .coluna-numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+
+.coluna-numeros { display: flex; flex-direction: column; gap: 16px; }
+.coluna-centro { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.bloco-numero { padding: 14px 16px; }
+.bloco-numero .valor {
+  font-size: 34px; font-weight: 800; color: var(--azul-escuro);
+  line-height: 1.05; font-variant-numeric: tabular-nums;
+}
+.bloco-numero .nome {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--cinza-escuro); margin-top: 4px;
+}
+.bloco-numero.medidor { display: flex; flex-direction: column; gap: 6px; }
+.bloco-numero.medidor .nome { margin: 0; order: -1; }
+.anel { width: 100%; height: auto; display: block; }
+.anel-valor {
+  font: 800 17px Assistant, sans-serif; fill: var(--azul-escuro);
+}
+
+.bloco-topo {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: 13px 16px 10px;
+}
+.bloco-topo h2 { font-size: 15px; }
+.legenda { display: flex; gap: 13px; font-size: 12px; color: var(--cinza-escuro);
+           margin-left: auto; flex-wrap: wrap; }
+.legenda i { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+             margin-right: 5px; vertical-align: -1px; }
+.fraco { color: var(--cinza-escuro); font-size: 12.5px; }
+
+/* ------------------------------------------------ gráfico por rodada */
+.grafico-rodadas {
+  display: flex; align-items: flex-end; gap: 3px;
+  padding: 4px 16px 12px; height: 150px;
+}
+.barra-rodada {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none;
+  cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end;
+  gap: 4px; border-radius: 4px;
+}
+.barra-rodada:hover .pilha { filter: brightness(1.08); }
+.barra-rodada .pilha {
+  display: flex; flex-direction: column-reverse; border-radius: 3px;
+  overflow: hidden; min-height: 3px;
+}
+.barra-rodada i {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; font-style: normal; min-height: 0;
+}
+.barra-rodada i.feito { background: var(--azul); color: var(--branco); }
+.barra-rodada i.pendente { background: var(--cinza-claro); color: var(--cinza-escuro); }
+.rotulo-rodada {
+  font-size: 10px; color: var(--cinza-escuro); font-variant-numeric: tabular-nums;
+}
+.barra-rodada[aria-pressed="true"] .rotulo-rodada {
+  color: var(--branco); background: var(--azul); border-radius: 3px; font-weight: 800;
+}
+.barra-rodada.escolhida i.pendente { background: var(--azul-claro); }
+
+/* ----------------------------------------------------- lista de jogos */
+.jogos-rolagem { max-height: 460px; overflow-y: auto; }
+table.tabela-jogos {
+  width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+  /* Fixo: com larguras em percentual as colunas de nome empurravam o placar
+     para uns poucos pixels e o "2 × 0" saía empilhado na vertical. */
+  table-layout: fixed;
+}
+.tabela-jogos thead th {
+  position: sticky; top: 0; background: var(--branco); z-index: 1;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--cinza-escuro); padding: 8px 10px; border-bottom: 2px solid var(--linha);
+}
+.tabela-jogos th.mandante { text-align: right; }
+.tabela-jogos th.visitante { text-align: left; }
+.tabela-jogos th.placar, .tabela-jogos th.rod, .tabela-jogos th.data { text-align: center; }
+
+.tabela-jogos td { padding: 0 10px; height: 38px; border-bottom: 1px solid var(--linha); }
+.tabela-jogos tr:hover { background: var(--azul-lavado); }
+.tabela-jogos .rod, .tabela-jogos .data { text-align: center; color: var(--cinza-escuro); font-size: 12.5px; }
+.tabela-jogos .rod { font-weight: 700; color: var(--azul-escuro); width: 46px; }
+.tabela-jogos .data { width: 82px; }
+
+.tabela-jogos .mandante, .tabela-jogos .visitante { width: auto; }
+/* `inline-flex`, não `flex`: como bloco, a indentação do template em volta do
+   span vira caixa de linha vazia dos dois lados, e a linha da tabela ficava
+   com 72px em vez de 38. */
+.lado {
+  display: inline-flex; align-items: center; gap: 8px; vertical-align: middle;
+  max-width: 100%; font-size: 14px; font-weight: 600; color: var(--azul-escuro);
+  overflow: hidden; white-space: nowrap;
+}
+.lado.direita { justify-content: flex-end; }
+.lado img { width: 20px; height: 20px; object-fit: contain; flex: none; }
+.destacado .lado { color: var(--azul); font-weight: 800; }
+
+.tabela-jogos .placar { width: 96px; text-align: center; }
+/* Classe própria, e não `.numeros`: aquele nome já é a grade de caixas do
+   painel do clube, e o placar herdava `display: grid` com colunas de 112px —
+   o "2 × 0" saía empilhado e a linha ia a 72px. */
+.placar-numeros {
+  white-space: nowrap; font-size: 15px; font-weight: 800; color: var(--azul-escuro);
+}
+.placar-numeros i { font-style: normal; color: var(--cinza-escuro); margin: 0 4px; font-weight: 400; }
+.placar .a-jogar { font-size: 11.5px; color: var(--cinza-escuro); }
+.tabela-jogos tr.pendente .lado { color: var(--cinza-texto); font-weight: 400; }
+
+/* ------------------------------------------- classificação como menu */
+.bloco-classificacao { padding-bottom: 8px; }
+table.mini-classificacao {
+  width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+}
+.mini-classificacao thead th {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--cinza-escuro); padding: 4px 6px; border-bottom: 2px solid var(--linha);
+  text-align: right;
+}
+.mini-classificacao thead th.pos, .mini-classificacao thead th.time { text-align: left; }
+.mini-classificacao td { padding: 0 6px; height: 30px; border-bottom: 1px solid var(--linha); text-align: right; }
+.mini-classificacao tbody tr { cursor: pointer; }
+.mini-classificacao tbody tr:hover { background: var(--azul-lavado); }
+.mini-classificacao tbody tr[aria-selected="true"] { background: var(--azul); }
+.mini-classificacao tbody tr[aria-selected="true"] td { color: var(--branco); }
+.mini-classificacao td.pos { text-align: left; width: 26px; font-weight: 700; color: var(--azul-escuro); padding-left: 10px; }
+.mini-classificacao td.escudo { width: 24px; padding: 0; }
+.mini-classificacao td.escudo img { width: 18px; height: 18px; object-fit: contain; display: block; }
+.mini-classificacao td.sigla { text-align: left; font-weight: 700; color: var(--azul-escuro); font-size: 12.5px; }
+.mini-classificacao td.pg { font-weight: 800; color: var(--azul-escuro); }
+.mini-classificacao td.j { color: var(--cinza-escuro); font-size: 12.5px; }
+.mini-classificacao tr.faixa-g4 td.pos { box-shadow: inset 3px 0 0 var(--azul); }
+.mini-classificacao tr.faixa-z4 td.pos { box-shadow: inset 3px 0 0 var(--vermelho); }
+.mini-classificacao tr[aria-selected="true"] td.pos { box-shadow: none; }
+.dica-menu { margin: 8px 12px 4px; }
