@@ -1,223 +1,214 @@
 /**
- * Card: evolução da pontuação de duas equipes.
+ * Card: evolução da pontuação de duas campanhas.
  *
- * Duas linhas — equipe 1 em azul, equipe 2 em vermelho — sobre as rodadas da
- * edição. Embaixo, uma faixa para cada equipe com o escudo do adversário, a
- * etiqueta casa/fora e o placar de cada jogo já realizado.
+ * Duas linhas — campanha 1 em azul, campanha 2 em vermelho — sobre os **jogos
+ * em ordem cronológica**, não sobre a rodada. Dois motivos:
  *
- * As colunas das faixas e os pontos das linhas dividem a mesma escala de x, de
- * propósito: é o que deixa ler na vertical, do placar para a curva.
+ * 1. Rodada não é tempo. Um jogo adiado da rodada 4 disputado em agosto punha
+ *    o acumulado de agosto lá atrás, e a linha dava um pico e voltava.
+ * 2. Comparar campanhas de anos diferentes só faz sentido pelo n-ésimo jogo.
+ *
+ * O eixo vai sempre até 38, mesmo com a edição em andamento — é o tamanho de
+ * uma campanha, e encurtá-lo esconderia o quanto falta. A linha de cada equipe
+ * termina no último jogo que ela disputou: quem jogou menos, para antes.
  */
 import { formatoLongo } from "/js/motor.js";
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
 } from "/js/cartao.js";
+import { nomeBonito, nomeCurto } from "/js/nomes.js";
 
-const CALHA = 148;          // coluna da esquerda: eixo e identificação
-const nomeCurto = (equipe) => equipe.replace(/\s*\([A-Z]{2}\)$/, "");
+const CALHA = 152;          // coluna da esquerda: eixo e identificação
+const JOGOS = 38;           // o eixo vai sempre até aqui
 
-/**
- * A campanha de um clube indexada por rodada.
- *
- * Acumula por **rodada**, e não em ordem cronológica: um jogo adiado da rodada
- * 4 disputado em agosto pertence à rodada 4. Usar o acumulado cronológico aqui
- * fazia a linha dar um pico e voltar — pontos acumulados não caem.
- *
- * Rodada sem jogo carrega o valor anterior, deixando a linha plana.
- */
-function campanhaPorRodada(jogos, clube, rodadas) {
-  const meus = formatoLongo(jogos).filter((l) => l.equipe === clube);
-  const porRodada = new Map(meus.map((l) => [l.rodada, l]));
+/** A campanha de um clube em ordem cronológica: o n-ésimo jogo disputado. */
+function campanhaCronologica(jogos, clube) {
+  const meus = formatoLongo(jogos)
+    .filter((l) => l.equipe === clube)
+    .sort((x, y) => (x.data === y.data ? x.rodada - y.rodada
+                                       : x.data < y.data ? -1 : 1));
 
-  const saida = [];
-  let pts = 0, jogados = 0;
-  for (let r = 1; r <= rodadas; r++) {
-    const jogo = porRodada.get(r) ?? null;
-    if (jogo) { pts += jogo.pts; jogados += 1; }
-    saida.push({ rodada: r, pts, jogados, jogo });
-  }
-  return saida;
+  let pts = 0;
+  return meus.map((jogo, i) => {
+    pts += jogo.pts;
+    return { n: i + 1, pts, jogo };
+  });
 }
 
 export function montarCartao(estado) {
-  const { edicao, jogos, clubes, equipeA, equipeB } = estado;
-  if (!equipeA || !equipeB || equipeA === equipeB) return null;
+  const { serie, a, b, clubes } = estado;
+  if (!a?.clube || !b?.clube || !a.jogos || !b.jogos) return null;
+  if (a.clube === b.clube && a.edicao.ano === b.edicao.ano) return null;
 
-  const rodadas = edicao.rodadas;
-  const a = campanhaPorRodada(jogos, equipeA, rodadas);
-  const b = campanhaPorRodada(jogos, equipeB, rodadas);
+  const campanhaA = campanhaCronologica(a.jogos, a.clube);
+  const campanhaB = campanhaCronologica(b.jogos, b.clube);
+  if (!campanhaA.length && !campanhaB.length) return null;
 
-  // Até onde desenhar: a última rodada em que qualquer das duas jogou.
-  const ultima = Math.max(
-    ...a.filter((p) => p.jogo).map((p) => p.rodada),
-    ...b.filter((p) => p.jogo).map((p) => p.rodada),
-    1);
-
-  const finalA = a[ultima - 1], finalB = b[ultima - 1];
-  const diferenca = Math.abs(finalA.pts - finalB.pts);
-  const naFrente = finalA.pts === finalB.pts ? null
-                 : finalA.pts > finalB.pts ? equipeA : equipeB;
+  const anosIguais = a.edicao.ano === b.edicao.ano;
+  const rotuloA = anosIguais ? nomeBonito(a.clube)
+                             : `${nomeBonito(a.clube)} ${a.edicao.ano}`;
+  const rotuloB = anosIguais ? nomeBonito(b.clube)
+                             : `${nomeBonito(b.clube)} ${b.edicao.ano}`;
 
   return {
-    titulo: `${nomeCurto(equipeA)} × ${nomeCurto(equipeB)}`,
-    subtitulo: `Evolução da pontuação · Série ${edicao.serie} · ${edicao.ano} · `
-             + (edicao.encerrada ? "edição completa" : `até a rodada ${ultima}`),
-    arquivo: `evolucao-${nomeCurto(equipeA)}-${nomeCurto(equipeB)}-${edicao.ano}`,
-    nota: "Pontos acumulados rodada a rodada. Jogo sem placar não entra na "
-        + "conta; rodada sem jogo mantém a linha no mesmo ponto.",
-    numeros: [
-      naFrente
-        ? { valor: `+${diferenca}`, nome: `de vantagem do ${nomeCurto(naFrente)}`,
-            destaque: "azul" }
-        : { valor: "empate", nome: "as duas com os mesmos pontos", destaque: "azul" },
-      { valor: finalA.pts, nome: `${nomeCurto(equipeA)} · ${finalA.jogados}J` },
-      { valor: finalB.pts, nome: `${nomeCurto(equipeB)} · ${finalB.jogados}J` },
-      { valor: ultima, nome: "rodadas" },
-    ],
+    titulo: `${rotuloA} × ${rotuloB}`,
+    subtitulo: `Evolução da pontuação · Série ${serie}`
+             + (anosIguais ? ` · ${a.edicao.ano}` : "")
+             + " · jogos em ordem cronológica",
+    arquivo: `evolucao-${nomeCurto(a.clube)}-${a.edicao.ano}`
+           + `-${nomeCurto(b.clube)}-${b.edicao.ano}`,
+    numeros: [],   // sem faixa de números: o gráfico fica com a altura toda
+    nota: "",
     corpo: async (ctx, y) => {
       const x0 = MARGEM + CALHA;
       const x1 = CARD.largura - MARGEM;
-      const largura = (x1 - x0) / ultima;
-      const centro = (r) => x0 + (r - 0.5) * largura;
+      const largura = (x1 - x0) / JOGOS;
+      const centro = (n) => x0 + (n - 0.5) * largura;
 
-      // Alturas escolhidas para o corpo chegar ao rodapé sem sobra: a skill
-      // reprova card com buraco branco embaixo.
-      const topo = y + 46, alturaPlot = 270;
-      const yRodadas = topo + alturaPlot + 24;
-      const yFaixaA = yRodadas + 16;
-      const yFaixaB = yFaixaA + 78;
+      const topo = y + 42, alturaPlot = 424;
+      const yEixo = topo + alturaPlot + 24;
+      const yFaixaA = yEixo + 16;
+      const yFaixaB = yFaixaA + 80;
 
-      desenharLinhas(ctx, { a, b, ultima, centro, topo, alturaPlot, x0, x1 });
-      await legenda(ctx, MARGEM, y, clubes, equipeA, equipeB);
+      await legenda(ctx, MARGEM, y, clubes,
+                    [[a.clube, rotuloA, COR.azul], [b.clube, rotuloB, COR.vermelho]]);
+      desenharLinhas(ctx, { campanhaA, campanhaB, centro, topo, alturaPlot, x0, x1 });
 
-      // Com muitas rodadas os números se encostam; mostra de duas em duas,
-      // garantindo sempre a primeira e a última.
-      const salto = ultima > 26 ? 2 : 1;
-      for (let r = 1; r <= ultima; r++) {
-        if (r !== 1 && r !== ultima && (r - 1) % salto !== 0) continue;
-        texto(ctx, r, centro(r), yRodadas,
+      for (let n = 1; n <= JOGOS; n++) {
+        if (n !== 1 && n !== JOGOS && n % 2 === 0) continue;
+        texto(ctx, n, centro(n), yEixo,
               { tamanho: 11, cor: COR.cinzaEscuro, alinha: "center" });
       }
 
-      await faixaDeJogos(ctx, { passos: a, clube: equipeA, cor: COR.azul,
-        clubes, ultima, centro, largura, x: MARGEM, y: yFaixaA });
-      await faixaDeJogos(ctx, { passos: b, clube: equipeB, cor: COR.vermelho,
-        clubes, ultima, centro, largura, x: MARGEM, y: yFaixaB });
-
-      texto(ctx, "etiqueta C, jogo em casa · F, fora de casa · placar sempre na "
-                 + "ordem do clube da faixa · azul, triunfo · cinza, empate · "
-                 + "vermelho, derrota",
-            MARGEM, yFaixaB + 80, { tamanho: 13, cor: COR.cinzaEscuro });
+      await faixaDeJogos(ctx, { campanha: campanhaA, clube: a.clube,
+        rotulo: rotuloA, cor: COR.azul, clubes, centro, largura,
+        x: MARGEM, y: yFaixaA });
+      await faixaDeJogos(ctx, { campanha: campanhaB, clube: b.clube,
+        rotulo: rotuloB, cor: COR.vermelho, clubes, centro, largura,
+        x: MARGEM, y: yFaixaB });
     },
   };
 }
 
 /* --------------------------------------------------------------- linhas */
 function desenharLinhas(ctx, o) {
-  const { a, b, ultima, centro, topo, alturaPlot, x0, x1 } = o;
-  const maximo = Math.max(a[ultima - 1].pts, b[ultima - 1].pts, 1);
+  const { campanhaA, campanhaB, centro, topo, alturaPlot, x0, x1 } = o;
+  const fimA = campanhaA.at(-1), fimB = campanhaB.at(-1);
+  const maximo = Math.max(fimA?.pts ?? 0, fimB?.pts ?? 0, 1);
   const escala = (pts) => topo + alturaPlot - (pts / maximo) * alturaPlot;
 
-  // Grade: quatro marcas bastam para ler sem poluir.
-  const passo = Math.max(1, Math.ceil(maximo / 4 / 5) * 5);
+  const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
   for (let v = 0; v <= maximo; v += passo) {
     linhaH(ctx, x0 - 10, x1, escala(v), COR.cinzaClaro);
-    texto(ctx, v, x0 - 18, escala(v) + 4,
-          { tamanho: 12, cor: COR.cinzaEscuro, alinha: "right" });
+    texto(ctx, v, x0 - 18, escala(v) + 5,
+          { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
   }
 
-  for (const [passos, cor] of [[a, COR.azul], [b, COR.vermelho]]) {
+  const series = [[campanhaA, COR.azul], [campanhaB, COR.vermelho]];
+  for (const [campanha, cor] of series) {
+    if (!campanha.length) continue;
     ctx.save();
     ctx.strokeStyle = cor;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 4.5;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.beginPath();
-    for (let r = 1; r <= ultima; r++) {
-      const ponto = [centro(r), escala(passos[r - 1].pts)];
-      if (r === 1) ctx.moveTo(...ponto); else ctx.lineTo(...ponto);
-    }
+    campanha.forEach((p, i) => {
+      const ponto = [centro(p.n), escala(p.pts)];
+      if (i === 0) ctx.moveTo(...ponto); else ctx.lineTo(...ponto);
+    });
     ctx.stroke();
 
-    // Marca só as rodadas em que houve jogo: ponto em rodada vazia sugeriria
-    // que aconteceu alguma coisa ali.
     ctx.fillStyle = cor;
-    for (let r = 1; r <= ultima; r++) {
-      if (!passos[r - 1].jogo) continue;
+    for (const p of campanha) {
       ctx.beginPath();
-      ctx.arc(centro(r), escala(passos[r - 1].pts), 3.5, 0, Math.PI * 2);
+      ctx.arc(centro(p.n), escala(p.pts), 3.5, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    const fim = passos[ultima - 1];
-    ctx.beginPath();
-    ctx.arc(centro(ultima), escala(fim.pts), 7, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
-
-    // O rótulo de quem está atrás desce; senão os dois se encavalam quando as
-    // campanhas terminam perto uma da outra.
-    const atras = fim.pts < outro(passos).pts;
-    texto(ctx, fim.pts, centro(ultima) - 16, escala(fim.pts) + (atras ? 26 : -16),
-          { tamanho: 20, peso: 800, cor, alinha: "right" });
   }
 
-  function outro(passos) {
-    return (passos === a ? b : a)[ultima - 1];
+  // Selo com a pontuação final, logo depois do último ponto de cada linha.
+  // Como o eixo vai até 38 e a edição costuma estar em andamento, sobra
+  // espaço à direita para ele.
+  const selos = series
+    .map(([campanha, cor]) => ({ fim: campanha.at(-1), cor }))
+    .filter((s) => s.fim)
+    .sort((p, q) => escala(p.fim.pts) - escala(q.fim.pts));
+
+  let ultimoY = -Infinity;
+  for (const { fim, cor } of selos) {
+    let cy = escala(fim.pts);
+    if (cy - ultimoY < 50) cy = ultimoY + 50;   // não deixa os dois se tocarem
+    ultimoY = cy;
+    selo(ctx, Math.min(centro(fim.n) + 16, x1 - 92), cy, fim.pts, cor);
   }
 }
 
-async function legenda(ctx, x, y, clubes, equipeA, equipeB) {
-  texto(ctx, "Pontos acumulados", x, y + 15,
-        { tamanho: 20, peso: 700, cor: COR.azul, familia: "Bree Serif" });
+/** Caixa com a pontuação final, grande, na cor da linha. */
+function selo(ctx, x, y, valor, cor) {
+  ctx.save();
+  ctx.font = '800 34px "Assistant", sans-serif';
+  const largura = Math.max(76, ctx.measureText(String(valor)).width + 36);
+  ctx.restore();
 
-  let cx = x + 250;
-  for (const [clube, cor] of [[equipeA, COR.azul], [equipeB, COR.vermelho]]) {
-    caixa(ctx, cx, y + 4, 26, 6, cor, 3);
+  caixa(ctx, x, y - 24, largura, 48, cor, 8);
+  texto(ctx, valor, x + largura / 2, y + 12,
+        { tamanho: 34, peso: 800, cor: COR.branco, alinha: "center" });
+}
+
+async function legenda(ctx, x, y, clubes, series) {
+  texto(ctx, "Pontos acumulados", x, y + 16,
+        { tamanho: 21, peso: 700, cor: COR.azul, familia: "Bree Serif" });
+
+  let cx = x + 260;
+  for (const [clube, rotulo, cor] of series) {
+    caixa(ctx, cx, y + 5, 30, 7, cor, 3);
     const escudo = await imagem(clubes[clube]?.escudo);
-    desenharEscudo(ctx, escudo, cx + 34, y - 5, 22);
-    texto(ctx, nomeCurto(clube), cx + 62, y + 13,
-          { tamanho: 15, peso: 700, cor: COR.azulEscuro });
-    cx += 84 + ctx.measureText(nomeCurto(clube)).width;
+    desenharEscudo(ctx, escudo, cx + 40, y - 5, 24);
+    texto(ctx, rotulo, cx + 72, y + 14,
+          { tamanho: 16, peso: 700, cor: COR.azulEscuro });
+    ctx.save();
+    ctx.font = '700 16px "Assistant", sans-serif';
+    cx += 96 + ctx.measureText(rotulo).width;
+    ctx.restore();
   }
 }
 
 /* ---------------------------------------------------------- faixa de jogos */
 async function faixaDeJogos(ctx, o) {
-  const { passos, clube, cor, clubes, ultima, centro, largura, x, y } = o;
+  const { campanha, clube, rotulo, cor, clubes, centro, largura, x, y } = o;
 
-  // Identificação da faixa, na calha: barra da cor da linha, escudo e nome.
-  caixa(ctx, x, y + 4, 6, 56, cor, 3);
+  caixa(ctx, x, y + 4, 6, 62, cor, 3);
   const meu = await imagem(clubes[clube]?.escudo);
-  desenharEscudo(ctx, meu, x + 16, y + 6, 34);
-  texto(ctx, cortar(ctx, nomeCurto(clube), CALHA - 70, 14, 700),
-        x + 58, y + 28, { tamanho: 14, peso: 700, cor: COR.azulEscuro });
+  desenharEscudo(ctx, meu, x + 16, y + 8, 36);
+  texto(ctx, cortar(ctx, rotulo, CALHA - 76, 14, 700), x + 60, y + 30,
+        { tamanho: 14, peso: 700, cor: COR.azulEscuro });
+  texto(ctx, `${campanha.length} ${campanha.length === 1 ? "jogo" : "jogos"}`,
+        x + 60, y + 50, { tamanho: 12.5, cor: COR.cinzaEscuro });
 
-  const disputados = passos.filter((p) => p.jogo).length;
-  texto(ctx, `${disputados} ${disputados === 1 ? "jogo" : "jogos"}`,
-        x + 58, y + 46, { tamanho: 12, cor: COR.cinzaEscuro });
+  const ladoEscudo = Math.min(26, largura - 8);
+  for (const { n, jogo } of campanha) {
+    const cx = centro(n);
+    const im = await imagem(clubes[jogo.adversario]?.escudo);
+    desenharEscudo(ctx, im, cx - ladoEscudo / 2, y + 2, ladoEscudo);
 
-  const escudo = Math.min(26, largura - 8);
-  for (let r = 1; r <= ultima; r++) {
-    const passo = passos[r - 1];
-    if (!passo.jogo) continue;           // só os jogos já realizados
-    const j = passo.jogo;
-    const cx = centro(r);
-
-    const im = await imagem(clubes[j.adversario]?.escudo);
-    desenharEscudo(ctx, im, cx - escudo / 2, y + 2, escudo);
-
-    const emCasa = j.mando === "casa";
-    const etiqueta = emCasa ? "C" : "F";
-    const largEtiqueta = 15;
-    caixa(ctx, cx - largEtiqueta - 1, y + escudo + 6, largEtiqueta, 14,
-          emCasa ? COR.azulLavado : COR.cinzaClaro, 3);
-    texto(ctx, etiqueta, cx - largEtiqueta / 2 - 1, y + escudo + 17,
-          { tamanho: 10, peso: 800, alinha: "center",
+    // Casa/fora por extenso, em linha própria entre o escudo e o placar.
+    const emCasa = jogo.mando === "casa";
+    const rotuloMando = emCasa ? "casa" : "fora";
+    ctx.save();
+    ctx.font = '700 10px "Assistant", sans-serif';
+    const larguraPilula = ctx.measureText(rotuloMando).width + 10;
+    ctx.restore();
+    caixa(ctx, cx - larguraPilula / 2, y + ladoEscudo + 5, larguraPilula, 14,
+          emCasa ? COR.azulLavado : COR.cinzaClaro, 4);
+    texto(ctx, rotuloMando, cx, y + ladoEscudo + 15,
+          { tamanho: 10, peso: 700, alinha: "center",
             cor: emCasa ? COR.azul : COR.cinzaEscuro });
 
-    texto(ctx, `${j.gp}×${j.gc}`, cx + 2, y + escudo + 17,
-          { tamanho: 11.5, peso: 800, cor: corDoResultado(j.resultado) });
+    texto(ctx, `${jogo.gp}×${jogo.gc}`, cx, y + ladoEscudo + 33,
+          { tamanho: 12.5, peso: 800, alinha: "center",
+            cor: corDoResultado(jogo.resultado) });
   }
 }
 

@@ -1,21 +1,22 @@
 /**
  * Página do card de evolução da pontuação.
  *
- * Fora do card: série, ano e as duas equipes. Dentro: só o card. Trocar
- * qualquer filtro redesenha na hora.
+ * Fora do card: a série, e um par ano + equipe para cada campanha. Os anos são
+ * independentes, de propósito — é o que permite cruzar o Bahia de 2026 com o
+ * Bahia de 2019, ou com outro clube de outro ano.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_evolucao.js";
+import { nomeBonito } from "/js/nomes.js";
 
 const estado = {
-  edicoes: [], clubes: {}, jogos: null, edicao: null,
-  equipeA: null, equipeB: null,
+  edicoes: [], clubes: {}, serie: null,
+  a: { apelido: null, edicao: null, jogos: null, clube: null },
+  b: { apelido: null, edicao: null, jogos: null, clube: null },
 };
 
 const el = (id) => document.getElementById(id);
-const nomeCurto = (equipe) => equipe.replace(/\s*\([A-Z]{2}\)$/, "");
-
 let redesenhar = () => {};
 
 inicializar().catch((erro) => {
@@ -24,8 +25,7 @@ inicializar().catch((erro) => {
 });
 
 async function inicializar() {
-  definirMensagemSemCard(
-    "escolha duas equipes diferentes para desenhar o card");
+  definirMensagemSemCard("escolha duas campanhas diferentes");
   redesenhar = ligarPaginaDeCard(() => montarCartao(estado));
 
   const [edicoes, clubes] = await Promise.all([
@@ -38,82 +38,78 @@ async function inicializar() {
   const series = [...new Set(estado.edicoes.map((e) => e.serie))].sort();
   el("serie").innerHTML = series
     .map((s) => `<option value="${s}">Série ${s}</option>`).join("");
+  el("serie").addEventListener("change", () => trocarSerie(el("serie").value));
 
-  el("serie").addEventListener("change", () => {
-    const primeira = estado.edicoes.find((e) => e.serie === el("serie").value);
-    trocarEdicao(primeira.apelido);
-  });
-  el("ano").addEventListener("change", () => trocarEdicao(el("ano").value));
-  el("equipe-a").addEventListener("change", () => {
-    estado.equipeA = el("equipe-a").value;
-    evitarRepetida("a");
-    aplicar();
-  });
-  el("equipe-b").addEventListener("change", () => {
-    estado.equipeB = el("equipe-b").value;
-    evitarRepetida("b");
-    aplicar();
-  });
-  el("trocar").addEventListener("click", () => {
-    [estado.equipeA, estado.equipeB] = [estado.equipeB, estado.equipeA];
-    el("equipe-a").value = estado.equipeA;
-    el("equipe-b").value = estado.equipeB;
-    aplicar();
-  });
+  for (const lado of ["a", "b"]) {
+    el(`ano-${lado}`).addEventListener("change",
+      () => trocarAno(lado, el(`ano-${lado}`).value));
+    el(`equipe-${lado}`).addEventListener("change", () => {
+      estado[lado].clube = el(`equipe-${lado}`).value;
+      aplicar();
+    });
+  }
+  el("trocar").addEventListener("click", inverter);
 
-  await trocarEdicao(daUrl().edicao ?? estado.edicoes[0].apelido);
+  const url = daUrl();
+  await trocarSerie(url.serie ?? series[0], url);
 }
 
-async function trocarEdicao(apelido) {
-  const edicao = estado.edicoes.find((e) => e.apelido === apelido);
-  if (!edicao) return;
+const anosDaSerie = (serie) => estado.edicoes.filter((e) => e.serie === serie);
 
-  el("serie").value = edicao.serie;
-  el("ano").innerHTML = estado.edicoes
-    .filter((e) => e.serie === edicao.serie)
+async function trocarSerie(serie, url = {}) {
+  estado.serie = serie;
+  el("serie").value = serie;
+
+  const anos = anosDaSerie(serie);
+  const opcoes = anos
     .map((e) => `<option value="${e.apelido}">${e.ano}</option>`).join("");
-  el("ano").value = apelido;
+  for (const lado of ["a", "b"]) el(`ano-${lado}`).innerHTML = opcoes;
 
-  estado.jogos = await fetch(`/dados/jogos/${apelido}.json`).then((r) => r.json());
-  estado.edicao = edicao;
-
-  const clubes = clubesDaEdicao(estado.jogos);
-  const opcoes = clubes
-    .map((c) => `<option value="${c}">${nomeCurto(c)}</option>`).join("");
-  el("equipe-a").innerHTML = opcoes;
-  el("equipe-b").innerHTML = opcoes;
-
-  // Ao trocar de edição, os clubes mudam. Mantém a escolha quando ela ainda
-  // existe; senão, começa pelos dois primeiros da tabela, que é a comparação
-  // que alguém abriria primeiro.
-  const daUrlAtual = daUrl();
-  const classificados = tabela(estado.jogos, clubes, {}).map((c) => c.equipe);
-  estado.equipeA = escolher(estado.equipeA ?? daUrlAtual.a, clubes, classificados[0]);
-  estado.equipeB = escolher(estado.equipeB ?? daUrlAtual.b, clubes, classificados[1]);
-  if (estado.equipeA === estado.equipeB) {
-    estado.equipeB = classificados.find((c) => c !== estado.equipeA);
-  }
-
-  el("equipe-a").value = estado.equipeA;
-  el("equipe-b").value = estado.equipeB;
+  // Ao trocar de série, os anos guardados podem não existir mais.
+  await trocarAno("a", valido(url.anoA ?? estado.a.apelido, anos) ?? anos[0].apelido,
+                  url.a, { silencioso: true });
+  await trocarAno("b", valido(url.anoB ?? estado.b.apelido, anos) ?? anos[0].apelido,
+                  url.b, { silencioso: true });
   aplicar();
 }
 
-const escolher = (desejada, disponiveis, reserva) =>
-  disponiveis.includes(desejada) ? desejada : reserva;
+const valido = (apelido, anos) =>
+  anos.some((e) => e.apelido === apelido) ? apelido : null;
 
-/** Duas vezes a mesma equipe não desenha card; a outra cede o lugar. */
-function evitarRepetida(mexida) {
-  if (estado.equipeA !== estado.equipeB) return;
-  const clubes = clubesDaEdicao(estado.jogos);
-  const outra = clubes.find((c) => c !== estado.equipeA);
-  if (mexida === "a") {
-    estado.equipeB = outra;
-    el("equipe-b").value = outra;
-  } else {
-    estado.equipeA = outra;
-    el("equipe-a").value = outra;
+async function trocarAno(lado, apelido, clubeDesejado, { silencioso = false } = {}) {
+  const edicao = estado.edicoes.find((e) => e.apelido === apelido);
+  if (!edicao) return;
+
+  el(`ano-${lado}`).value = apelido;
+  const jogos = await fetch(`/dados/jogos/${apelido}.json`).then((r) => r.json());
+  const clubes = clubesDaEdicao(jogos);
+
+  el(`equipe-${lado}`).innerHTML = clubes
+    .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+
+  // Mantém o clube quando ele jogou naquele ano; senão propõe um da frente da
+  // tabela, que é a campanha que alguém abriria primeiro.
+  const classificados = tabela(jogos, clubes, {}).map((c) => c.equipe);
+  const atual = clubeDesejado ?? estado[lado].clube;
+  const escolhido = clubes.includes(atual) ? atual
+    : classificados[lado === "a" ? 0 : 1] ?? clubes[0];
+
+  Object.assign(estado[lado], { apelido, edicao, jogos, clube: escolhido });
+  el(`equipe-${lado}`).value = escolhido;
+
+  if (!silencioso) aplicar();
+}
+
+function inverter() {
+  const { a, b } = estado;
+  [estado.a, estado.b] = [b, a];
+  for (const lado of ["a", "b"]) {
+    el(`ano-${lado}`).value = estado[lado].apelido;
+    el(`equipe-${lado}`).innerHTML = clubesDaEdicao(estado[lado].jogos)
+      .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+    el(`equipe-${lado}`).value = estado[lado].clube;
   }
+  aplicar();
 }
 
 function aplicar() {
@@ -123,13 +119,14 @@ function aplicar() {
 
 function daUrl() {
   const p = new URLSearchParams(location.hash.slice(1));
-  return { edicao: p.get("edicao"), a: p.get("a"), b: p.get("b") };
+  return { serie: p.get("serie"), anoA: p.get("anoA"), a: p.get("a"),
+           anoB: p.get("anoB"), b: p.get("b") };
 }
 
 function atualizarUrl() {
   const p = new URLSearchParams();
-  if (estado.edicao) p.set("edicao", estado.edicao.apelido);
-  if (estado.equipeA) p.set("a", estado.equipeA);
-  if (estado.equipeB) p.set("b", estado.equipeB);
+  if (estado.serie) p.set("serie", estado.serie);
+  if (estado.a.apelido) { p.set("anoA", estado.a.apelido); p.set("a", estado.a.clube); }
+  if (estado.b.apelido) { p.set("anoB", estado.b.apelido); p.set("b", estado.b.clube); }
   history.replaceState(null, "", `#${p}`);
 }

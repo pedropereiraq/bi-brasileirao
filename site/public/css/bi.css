@@ -466,3 +466,8 @@ table.mini-classificacao {
 .pinta { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 .pinta.azul { background: var(--azul); }
 .pinta.vermelha { background: var(--vermelho); }
+
+.grupo-campanha { display: flex; flex-direction: column; gap: 5px; }
+.grupo-campanha .rotulo { display: flex; align-items: center; gap: 6px; }
+.grupo-campanha select:first-child { min-width: 92px; }
+.grupo-campanha select:last-child { min-width: 200px; }

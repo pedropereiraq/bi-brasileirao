@@ -152,7 +152,10 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
 
   const yFaixa = faixaDeNumeros(ctx, numeros, 156);
 
-  texto(ctx, nota, MARGEM, CARD.altura - 34, { tamanho: 13.5, cor: COR.cinzaEscuro });
+  if (nota) {
+    texto(ctx, nota, MARGEM, CARD.altura - 34,
+          { tamanho: 13.5, cor: COR.cinzaEscuro });
+  }
   texto(ctx, "@ECBahiaNumeros · Podcast45 · atualizado em " + hoje(),
         CARD.largura - MARGEM, CARD.altura - 34,
         { tamanho: 13.5, cor: COR.cinzaEscuro, alinha: "right" });
@@ -163,6 +166,10 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
 
 /** De 3 a 5 caixas. A primeira é a manchete, em azul cheio. */
 function faixaDeNumeros(ctx, numeros, y) {
+  // Card sem faixa de números: o corpo começa logo abaixo da régua e fica com
+  // a altura toda. É o caso dos cards em que o gráfico é o assunto inteiro.
+  if (!numeros?.length) return y - 8;
+
   const largura = CARD.largura - MARGEM * 2;
   const vao = 12;
   const cada = (largura - vao * (numeros.length - 1)) / numeros.length;
