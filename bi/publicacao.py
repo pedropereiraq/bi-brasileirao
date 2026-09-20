@@ -188,6 +188,56 @@ def referencias_por_posicao(jogos: pd.DataFrame) -> dict:
     return saida
 
 
+# ------------------------------------------------- campanhas semelhantes
+def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
+    """
+    A pontuação acumulada de cada campanha, jogo a jogo.
+
+    Serve à pergunta "quem já esteve nesta situação e o que aconteceu com
+    eles": 46 pontos em 27 jogos é um ponto que dezenas de campanhas já
+    ocuparam, e o desfecho delas é a única resposta honesta sobre o que essa
+    pontuação costuma valer.
+
+    Vai pronto para o site pelo mesmo motivo da régua por posição: responder
+    isso no navegador exigiria baixar as 21 edições da série inteira, meio
+    megabyte, para depois jogar fora 95% do que veio.
+
+    O índice é o **jogo**, não a rodada. Comparar campanhas de anos diferentes
+    só faz sentido pelo n-ésimo jogo disputado: rodada não é tempo, e um jogo
+    adiado deslocaria a comparação inteira.
+
+    `pos_fim` é `None` na edição em andamento. Ela entra no arquivo porque é
+    dela que sai o ponto de partida — a situação de hoje de um clube —, mas não
+    pode entrar na resposta: uma campanha sem desfecho não conta o que
+    aconteceu com ela.
+    """
+    from . import derivadas, motor
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    tabela = motor.campanha(recorte, ordem="data", criterio="ST", local="todos")
+
+    # A grade é preenchida para a frente, então um clube com menos jogos que a
+    # edição repete o último acumulado nas etapas que faltam. `j == etapa`
+    # devolve só os jogos que existiram de fato.
+    reais = tabela[tabela["j"] == tabela["etapa"]].sort_values(
+        ["serie", "ano", "equipe", "etapa"]
+    )
+
+    series: dict[str, dict[str, list]] = {}
+    for (serie, ano, equipe), grupo in reais.groupby(
+        ["serie", "ano", "equipe"], sort=True, observed=True
+    ):
+        encerrada = (ano, serie) in completas
+        series.setdefault(str(serie), {}).setdefault(str(int(ano)), []).append([
+            equipe,
+            int(grupo["pos_fim"].iloc[-1]) if encerrada else None,
+            [int(v) for v in grupo["pts"]],
+        ])
+
+    return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
+
+
 def construir(jogos: pd.DataFrame | None = None,
               clubes: pd.DataFrame | None = None) -> dict:
     jogos = canonico.carregar_jogos() if jogos is None else jogos
@@ -215,6 +265,7 @@ def construir(jogos: pd.DataFrame | None = None,
     dados_clubes = publicar_clubes(recorte, clubes)
     _gravar(DESTINO / "clubes.json", dados_clubes)
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
+    _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
 
     tamanho = sum(p.stat().st_size for p in DESTINO.rglob("*.json"))
     print(f"  {len(edicoes)} edições, {len(dados_clubes)} clubes"

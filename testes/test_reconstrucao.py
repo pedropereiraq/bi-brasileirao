@@ -169,3 +169,61 @@ def test_a_referencia_so_usa_edicao_encerrada(jogos):
         assert medias == sorted(medias, reverse=True), (
             f"série {serie}: a média por posição não é decrescente"
         )
+def test_as_campanhas_publicadas_batem_com_o_canonico(jogos):
+    """A pontuação jogo a jogo também é derivada, não digitada."""
+    from bi import publicacao
+
+    publicado = _dados_do_site("campanhas.json")
+    assert publicado == publicacao.campanhas_por_jogo(jogos)
+
+
+def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
+    """
+    A edição em andamento entra no arquivo — é dela que sai o ponto de partida
+    — mas sem posição final. Se tivesse uma, ela apareceria nas respostas de
+    "o que aconteceu com quem esteve nesta situação", e não aconteceu nada
+    ainda.
+    """
+    from bi import derivadas, publicacao
+
+    dados = publicacao.campanhas_por_jogo(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    disputados = _jogos_disputados(jogos)
+
+    for serie, anos in dados["series"].items():
+        for ano, clubes in anos.items():
+            encerrada = (int(ano), serie) in completas
+            for equipe, pos_fim, pontos in clubes:
+                if encerrada:
+                    assert pos_fim is not None, f"{equipe} {serie}{ano}"
+                    assert 1 <= pos_fim <= cfg.CLUBES_POR_SERIE
+                    # Não são 38 fixos: em 2016 o Chapecoense x Atlético-MG não
+                    # foi disputado, e os dois clubes terminaram com 37 jogos
+                    # numa edição encerrada. O que a campanha tem de ter é
+                    # exatamente o número de jogos que ela jogou.
+                    assert len(pontos) == disputados[(int(ano), serie, equipe)], (
+                        f"{equipe} {serie}{ano}: {len(pontos)} jogos publicados"
+                    )
+                else:
+                    assert pos_fim is None, (
+                        f"{equipe} {serie}{ano} tem posição final numa edição aberta"
+                    )
+                # O acumulado nunca cai, e nunca sobe mais de 3 por jogo.
+                for antes, depois in zip(pontos, pontos[1:]):
+                    assert 0 <= depois - antes <= 3, f"{equipe} {serie}{ano}"
+
+
+def _jogos_disputados(jogos) -> dict:
+    """Quantos jogos cada clube de fato disputou em cada edição."""
+    from bi import publicacao
+
+    recorte = publicacao._recorte_bi(jogos)
+    realizados = recorte[recorte["status"] == cfg.STATUS_REALIZADO]
+    contagem: dict[tuple, int] = {}
+    for coluna in ["mandante", "visitante"]:
+        for chave, n in realizados.groupby(["ano", "serie", coluna]).size().items():
+            ano, serie, equipe = chave
+            contagem[(int(ano), serie, equipe)] = (
+                contagem.get((int(ano), serie, equipe), 0) + int(n)
+            )
+    return contagem

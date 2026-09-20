@@ -555,3 +555,76 @@ table.mini-classificacao {
   margin: 12px 14px 0; font-size: 13px; color: var(--cinza-texto);
 }
 .resumo-meta b { color: var(--azul-escuro); }
+
+/* =====================================================================
+ * Campanhas semelhantes: chaves de série, atalho dos clubes e os dois
+ * controles deslizantes.
+ * =================================================================== */
+.chaves { display: flex; gap: 6px; }
+.chave {
+  font: inherit; font-size: 13px; font-weight: 700; padding: 7px 16px;
+  border: 1px solid var(--linha); border-radius: 999px;
+  background: var(--branco); color: var(--cinza-texto); cursor: pointer;
+  min-height: 34px;
+}
+.chave:hover { border-color: var(--azul-claro); color: var(--azul); }
+.chave[aria-pressed="true"] {
+  background: var(--azul); border-color: var(--azul); color: var(--branco);
+}
+
+.painel-situacao {
+  display: grid; grid-template-columns: 250px 1fr; gap: 24px; margin-top: 18px;
+}
+@media (max-width: 760px) { .painel-situacao { grid-template-columns: 1fr; } }
+
+.lista-clubes {
+  margin-top: 6px; max-height: 296px; overflow-y: auto;
+  border: 1px solid var(--linha); border-radius: var(--raio);
+  background: var(--branco);
+}
+.clube {
+  display: grid; grid-template-columns: 22px 20px 1fr auto;
+  align-items: center; gap: 8px; width: 100%;
+  font: inherit; font-size: 12.5px; text-align: left;
+  padding: 5px 10px; border: 0; border-bottom: 1px solid var(--cinza-claro);
+  background: none; cursor: pointer; color: var(--azul-escuro);
+}
+.clube:last-child { border-bottom: 0; }
+.clube:hover { background: var(--azul-lavado); }
+.clube.ativo { background: var(--azul); color: var(--branco); }
+.clube.ativo .clube-pos, .clube.ativo .clube-situacao { color: var(--azul-claro); }
+.clube-pos { font-weight: 800; color: var(--cinza-escuro); text-align: right; }
+.clube img { width: 20px; height: 20px; object-fit: contain; }
+.clube-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clube-situacao { font-size: 11px; color: var(--cinza-escuro); font-variant-numeric: tabular-nums; }
+
+.coluna-controles { display: flex; flex-direction: column; gap: 20px; }
+.campo-deslizante > label { display: flex; align-items: baseline; gap: 10px; }
+.campo-deslizante output {
+  font-size: 17px; font-weight: 800; color: var(--azul);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
+}
+.campo-deslizante input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 26px; background: none; cursor: pointer; margin: 0;
+}
+.campo-deslizante input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; background: var(--cinza-claro);
+}
+.campo-deslizante input[type="range"]::-moz-range-track {
+  height: 6px; border-radius: 3px; background: var(--cinza-claro);
+}
+.campo-deslizante input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%; margin-top: -8px;
+  background: var(--azul); border: 3px solid var(--branco);
+  box-shadow: 0 2px 6px rgba(7, 55, 99, .28);
+}
+.campo-deslizante input[type="range"]::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--azul); border: 3px solid var(--branco);
+  box-shadow: 0 2px 6px rgba(7, 55, 99, .28);
+}
+.campo-deslizante input[type="range"]:focus-visible {
+  outline: 3px solid var(--azul-claro); outline-offset: 4px; border-radius: 4px;
+}

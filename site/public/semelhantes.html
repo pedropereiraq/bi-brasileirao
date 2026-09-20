@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campanhas semelhantes · Cards ECBahia Números</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+</head>
+<body>
+
+<main class="pagina larga">
+
+  <header class="topo">
+    <div>
+      <h1>Campanhas semelhantes</h1>
+      <p class="subtitulo">Quem já esteve nesta situação, e onde terminou.</p>
+    </div>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/comparativo.html">Comparativo de campanhas</a>
+    <a href="/evolucao.html">Evolução da pontuação</a>
+    <a href="/blocos.html">Blocos de 6 jogos</a>
+    <a href="/semelhantes.html" aria-current="page">Campanhas semelhantes</a>
+    <a href="/">Classificação</a>
+    <a href="/jogos.html">Tabela de jogos</a>
+    <a href="/atualizar.html">Atualizar dados</a>
+  </nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
+      </div>
+      <div class="campo">
+        <label for="edicao">Edição
+          <span class="dica-campo">só para o atalho dos clubes — não entra no card</span>
+        </label>
+        <select id="edicao"></select>
+      </div>
+      <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <div class="painel-situacao">
+      <div class="coluna-clubes">
+        <span class="rotulo">Clubes da edição
+          <span class="dica-campo">clique para levar os controles à situação do clube</span>
+        </span>
+        <div class="lista-clubes" id="clubes"></div>
+      </div>
+
+      <div class="coluna-controles">
+        <div class="campo campo-deslizante">
+          <label for="jogos">Jogos <output id="valor-jogos">—</output></label>
+          <input type="range" id="jogos" min="1" max="38" step="1" value="20">
+        </div>
+        <div class="campo campo-deslizante">
+          <label for="pontos">Pontos <output id="valor-pontos">—</output></label>
+          <input type="range" id="pontos" min="0" max="114" step="1" value="30">
+        </div>
+        <div class="campo campo-posicoes">
+          <label id="rotulo-posicoes">Destacar posições
+            <span class="dica-campo">quem terminou nesta faixa sai em azul; melhor,
+              em verde; pior, em vermelho</span>
+          </label>
+          <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="palco-card">
+    <p id="aviso-card" class="aviso-card" hidden></p>
+    <canvas id="card" width="2400" height="1350"
+            aria-label="card de campanhas semelhantes"></canvas>
+  </section>
+
+  <footer class="rodape">
+    <p>O que está na tela é exatamente a imagem que o botão salva: 2400 × 1350,
+       no padrão dos cards do ECBahia Números.</p>
+    <p><b>ecbahia</b>numeros · Podcast45</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/semelhantes.js"></script>
+</body>
+</html>
