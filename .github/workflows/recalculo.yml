@@ -92,11 +92,19 @@ jobs:
         id: publicacao
         if: success()
         run: |
-          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+          # Segredo de CI chega com espaço, quebra de linha ou BOM com uma
+          # facilidade incômoda, e o sintoma aparece longe da causa: a API da
+          # Cloudflare responde "Invalid format for Authorization header", que
+          # não sugere em nada um caractere invisível. Lista branca resolve.
+          CLOUDFLARE_API_TOKEN="$(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -cd 'A-Za-z0-9_.~-')"
+          export CLOUDFLARE_API_TOKEN
+
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::warning::CLOUDFLARE_API_TOKEN ausente — o site não foi republicado."
             echo "::warning::Os dados novos estão no repositório; ver docs/operacao.md."
             exit 0
           fi
+          echo "token com ${#CLOUDFLARE_API_TOKEN} caracteres utilizáveis"
           npx --yes wrangler@4 pages deploy site/public --project-name bi-brasileirao --branch main --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
