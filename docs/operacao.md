@@ -121,6 +121,26 @@ Publicar à mão, quando precisar:
 cd site && npx wrangler pages deploy public --project-name bi-brasileirao --branch main
 ```
 
+O `cd site` é obrigatório. O wrangler procura a pasta `functions` **ao lado de
+onde ele roda**, não dentro do diretório publicado: rodando da raiz do
+repositório ele não encontra `site/functions`, publica um site só de estático e
+apaga as Functions que estavam no ar — sem erro nenhum, sem aviso nenhum.
+
+O sintoma, quando isso acontece, aparece longe da causa: `/api/bruto` passa a
+devolver o `index.html` com status 200, o POST de `/api/concluido` leva 405, o
+botão de atualizar fica girando para sempre e o site continua no ar como se
+nada tivesse acontecido. Para conferir depois de publicar:
+
+```
+curl -s -o /dev/null -w '%{content_type}
+'   'https://bi-brasileirao.pages.dev/api/bruto?serie=A&ano=2000'
+```
+
+Tem de responder `application/json` — é o 401 da rota reclamando da chave
+ausente, que prova que a Function está lá. Se vier `text/html`, o deploy saiu
+sem elas. O passo de publicação do recálculo faz essa mesma verificação e falha
+quando ela não passa.
+
 ---
 
 ## Quando algo quebra

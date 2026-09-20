@@ -105,7 +105,24 @@ jobs:
             exit 0
           fi
           echo "token com ${#CLOUDFLARE_API_TOKEN} caracteres utilizáveis"
-          npx --yes wrangler@4 pages deploy site/public --project-name bi-brasileirao --branch main --commit-dirty=true
+
+          # `cd site` não é detalhe de gosto: o wrangler procura a pasta
+          # `functions` ao lado de onde ele roda, e não dentro do diretório
+          # publicado. Rodando da raiz, ele não acha `site/functions`, publica
+          # um site sem nenhuma Function e **apaga** as que estavam no ar — sem
+          # erro nenhum. O sintoma aparece longe da causa: `/api/bruto` passa a
+          # devolver o index.html e o POST do aviso leva 405.
+          cd site
+          npx --yes wrangler@4 pages deploy public --project-name bi-brasileirao --branch main --commit-dirty=true
+
+          # Prova de que as Functions subiram: uma rota de API respondendo HTML
+          # quer dizer que só o estático foi publicado.
+          tipo="$(curl -sS -o /dev/null -w '%{content_type}'                   'https://bi-brasileirao.pages.dev/api/bruto?serie=A&ano=2000' || true)"
+          echo "/api/bruto respondeu $tipo"
+          case "$tipo" in
+            application/json*) echo "Functions no ar." ;;
+            *) echo "::error::o deploy saiu sem as Functions (/api/bruto devolveu $tipo)"; exit 1 ;;
+          esac
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
