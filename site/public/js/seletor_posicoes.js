@@ -1,41 +1,45 @@
 /**
- * Seletor de duas posições numa trilha de 20 a 1.
+ * Trilha de posições: a tabela deitada, do 20º à esquerda ao 1º à direita.
  *
- * A trilha é a tabela deitada: o 20º à esquerda, o 1º à direita. Duas alças
- * correm sobre ela — a vermelha marca a posição pior, a verde a melhor — e a
- * faixa entre elas é o intervalo que o card compara.
+ * Serve a duas telas com exigências diferentes. A evolução da pontuação usa
+ * duas alças — a vermelha na posição pior, a verde na melhor — e o que
+ * interessa ali é o intervalo entre elas. Os blocos de 6 jogos usam uma alça
+ * só, a posição que vira meta.
  *
- * Por que uma trilha e não dois `<select>`: as duas escolhas são uma coisa só,
- * um intervalo. Num par de listas o usuário não vê que 4 e 17 são as bordas do
- * G4 e do Z4; na trilha isso é a própria distância entre as alças.
+ * Por que uma trilha e não `<select>`: num par de listas o usuário não vê que
+ * 4 e 17 são as bordas do G4 e do Z4; na trilha isso é a própria distância
+ * entre as alças. Com uma alça só, ele vê de imediato quantos lugares separam
+ * a meta do título e do rebaixamento.
  *
- * A alça vermelha nunca passa da verde. Em vez de trocar as duas de papel no
- * meio do arrasto — o que faria a cor saltar debaixo do dedo — ela para
- * encostada na vizinha.
+ * Com duas alças, a da esquerda nunca passa da direita. Em vez de trocar as
+ * duas de papel no meio do arrasto — o que faria a cor saltar debaixo do dedo
+ * — ela para encostada na vizinha.
  */
 const MIN_DISTANCIA = 1;
 
-export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar }) {
-  const estado = { pior, melhor };
+/**
+ * `alcas` vai da esquerda para a direita, ou seja, da pior posição para a
+ * melhor. Cada uma é `{ nome, classe, descricao, valor }`; `aoMudar` recebe um
+ * objeto com o valor de cada alça pelo nome.
+ */
+export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
+  const estado = Object.fromEntries(alcas.map((a) => [a.nome, a.valor]));
+  const nomes = alcas.map((a) => a.nome);
 
   raiz.classList.add("trilha-posicoes");
   raiz.innerHTML = `
     <div class="trilha-fundo"></div>
     <div class="trilha-faixa"></div>
-    <div class="trilha-marcas"></div>
-    <button type="button" class="alca alca-pior" data-lado="pior"
-            role="slider" aria-label="posição pior, linha vermelha"
-            aria-valuemin="1" aria-valuemax="${total}"></button>
-    <button type="button" class="alca alca-melhor" data-lado="melhor"
-            role="slider" aria-label="posição melhor, linha verde"
-            aria-valuemin="1" aria-valuemax="${total}"></button>`;
+    <div class="trilha-marcas"></div>`
+    + alcas.map((a) => `
+    <button type="button" class="alca ${a.classe}" data-nome="${a.nome}"
+            role="slider" aria-label="${a.descricao}"
+            aria-valuemin="1" aria-valuemax="${total}"></button>`).join("");
 
   const faixa = raiz.querySelector(".trilha-faixa");
   const marcas = raiz.querySelector(".trilha-marcas");
-  const alcas = {
-    pior: raiz.querySelector(".alca-pior"),
-    melhor: raiz.querySelector(".alca-melhor"),
-  };
+  const elemento = Object.fromEntries(
+    nomes.map((nome) => [nome, raiz.querySelector(`[data-nome="${nome}"]`)]));
 
   // Da posição para a fração da trilha: o 20º em 0, o 1º em 1.
   const fracao = (posicao) => (total - posicao) / (total - 1);
@@ -48,29 +52,37 @@ export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar
     .join("");
 
   function pintar() {
-    for (const lado of ["pior", "melhor"]) {
-      const alca = alcas[lado];
-      alca.style.left = `${fracao(estado[lado]) * 100}%`;
-      alca.textContent = estado[lado];
-      alca.setAttribute("aria-valuenow", estado[lado]);
-      alca.setAttribute("aria-valuetext", `${estado[lado]}º lugar`);
+    for (const nome of nomes) {
+      const alca = elemento[nome];
+      alca.style.left = `${fracao(estado[nome]) * 100}%`;
+      alca.textContent = estado[nome];
+      alca.setAttribute("aria-valuenow", estado[nome]);
+      alca.setAttribute("aria-valuetext", `${estado[nome]}º lugar`);
     }
-    const a = fracao(estado.pior) * 100, b = fracao(estado.melhor) * 100;
+
+    // Com duas alças a faixa é o intervalo entre elas; com uma, é dela para a
+    // frente — a meta e tudo que é melhor que a meta.
+    const valores = nomes.map((nome) => estado[nome]);
+    const daEsquerda = Math.max(...valores);
+    const aDireita = nomes.length > 1 ? Math.min(...valores) : 1;
+    const a = fracao(daEsquerda) * 100, b = fracao(aDireita) * 100;
     faixa.style.left = `${a}%`;
     faixa.style.width = `${b - a}%`;
+
     for (const marca of marcas.children) {
       const posicao = Number(marca.dataset.posicao);
-      marca.classList.toggle("dentro",
-        posicao <= estado.pior && posicao >= estado.melhor);
+      marca.classList.toggle("dentro", posicao <= daEsquerda && posicao >= aDireita);
     }
   }
 
-  function definir(lado, posicao, avisar = true) {
-    const limite = lado === "pior"
-      ? Math.min(total, Math.max(estado.melhor + MIN_DISTANCIA, posicao))
-      : Math.max(1, Math.min(estado.pior - MIN_DISTANCIA, posicao));
-    if (limite === estado[lado]) return;
-    estado[lado] = limite;
+  /** Os limites de uma alça são as vizinhas, quando existem. */
+  function definir(nome, posicao, avisar = true) {
+    const i = nomes.indexOf(nome);
+    const piso = i > 0 ? estado[nomes[i - 1]] - MIN_DISTANCIA : total;
+    const teto = i < nomes.length - 1 ? estado[nomes[i + 1]] + MIN_DISTANCIA : 1;
+    const limitada = Math.min(piso, Math.max(teto, posicao));
+    if (limitada === estado[nome]) return;
+    estado[nome] = limitada;
     pintar();
     if (avisar) aoMudar({ ...estado });
   }
@@ -80,8 +92,8 @@ export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar
     return posicaoDe((evento.clientX - caixa.left) / caixa.width);
   };
 
-  for (const lado of ["pior", "melhor"]) {
-    const alca = alcas[lado];
+  for (const nome of nomes) {
+    const alca = elemento[nome];
     alca.addEventListener("pointerdown", (evento) => {
       evento.preventDefault();
       // Captura o ponteiro para o arrasto continuar mesmo quando o dedo sai da
@@ -92,7 +104,7 @@ export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar
     });
     alca.addEventListener("pointermove", (evento) => {
       if (!alca.hasPointerCapture(evento.pointerId)) return;
-      definir(lado, posicaoDoEvento(evento));
+      definir(nome, posicaoDoEvento(evento));
     });
     const soltar = (evento) => {
       alca.classList.remove("arrastando");
@@ -109,7 +121,7 @@ export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar
       const passo = { ArrowRight: -1, ArrowUp: -1, ArrowLeft: 1, ArrowDown: 1 }[evento.key];
       if (passo === undefined) return;
       evento.preventDefault();
-      definir(lado, estado[lado] + passo * (evento.shiftKey ? 5 : 1));
+      definir(nome, estado[nome] + passo * (evento.shiftKey ? 5 : 1));
     });
   }
 
@@ -120,24 +132,47 @@ export function ligarSeletorDePosicoes({ raiz, total = 20, pior, melhor, aoMudar
     const marca = evento.target.closest(".trilha-numero");
     if (!marca) return;
     const posicao = Number(marca.dataset.posicao);
-    const lado = Math.abs(posicao - estado.pior) <= Math.abs(posicao - estado.melhor)
-      ? "pior" : "melhor";
-    definir(lado, posicao);
-    alcas[lado].focus();
+    const nome = nomes.reduce((melhor, atual) =>
+      Math.abs(posicao - estado[atual]) < Math.abs(posicao - estado[melhor])
+        ? atual : melhor, nomes[0]);
+    definir(nome, posicao);
+    elemento[nome].focus();
   });
 
   pintar();
   return {
     valores: () => ({ ...estado }),
-    // As duas de uma vez: aplicar uma e depois a outra faria a primeira
-    // esbarrar no limite que a segunda ainda ia mudar.
+    // Todas de uma vez: aplicar uma e depois a outra faria a primeira esbarrar
+    // no limite que a segunda ainda ia mudar.
     definir: (valores) => {
-      const melhor = Math.max(1, Math.min(total - MIN_DISTANCIA,
-                                          valores.melhor ?? estado.melhor));
-      const pior = Math.min(total, Math.max(melhor + MIN_DISTANCIA,
-                                            valores.pior ?? estado.pior));
-      Object.assign(estado, { melhor, pior });
+      let teto = 1;
+      for (const nome of [...nomes].reverse()) {
+        const querido = valores[nome] ?? estado[nome];
+        estado[nome] = Math.min(total, Math.max(teto, querido));
+        teto = estado[nome] + MIN_DISTANCIA;
+      }
       pintar();
     },
   };
 }
+
+/** Duas alças: a posição pior em vermelho e a melhor em verde. */
+export const ligarSeletorDePosicoes = ({ raiz, total, pior, melhor, aoMudar }) =>
+  ligarTrilhaDePosicoes({
+    raiz, total, aoMudar,
+    alcas: [
+      { nome: "pior", classe: "alca-pior", valor: pior,
+        descricao: "posição pior, linha vermelha" },
+      { nome: "melhor", classe: "alca-melhor", valor: melhor,
+        descricao: "posição melhor, linha verde" },
+    ],
+  });
+
+/** Uma alça só: a posição que vira meta. */
+export const ligarSeletorDePosicao = ({ raiz, total, posicao, aoMudar }) =>
+  ligarTrilhaDePosicoes({
+    raiz, total,
+    aoMudar: ({ meta }) => aoMudar(meta),
+    alcas: [{ nome: "meta", classe: "alca-meta", valor: posicao,
+              descricao: "posição usada como meta" }],
+  });

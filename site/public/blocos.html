@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Comparativo de campanhas · Cards ECBahia Números</title>
+<title>Blocos de 6 jogos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -15,8 +15,8 @@
 
   <header class="topo">
     <div>
-      <h1>Comparativo de campanhas</h1>
-      <p class="subtitulo">Duas campanhas lado a lado. Os filtros desenham o card.</p>
+      <h1>Blocos de 6 jogos</h1>
+      <p class="subtitulo">A campanha repartida em sete blocos, contra uma meta.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -26,9 +26,9 @@
   <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
 
   <nav class="navegacao">
-    <a href="/comparativo.html" aria-current="page">Comparativo de campanhas</a>
+    <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da pontuação</a>
-    <a href="/blocos.html">Blocos de 6 jogos</a>
+    <a href="/blocos.html" aria-current="page">Blocos de 6 jogos</a>
     <a href="/">Classificação</a>
     <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
@@ -40,32 +40,31 @@
         <label for="serie">Série</label>
         <select id="serie"></select>
       </div>
-
-      <div class="grupo-campanha">
-        <span class="rotulo"><i class="pinta azul" aria-hidden="true"></i>Campanha 1</span>
-        <div class="par">
-          <select id="ano-a" aria-label="Ano da campanha 1"></select>
-          <select id="equipe-a" aria-label="Equipe da campanha 1"></select>
-        </div>
+      <div class="campo">
+        <label for="ano">Ano</label>
+        <select id="ano"></select>
       </div>
-
-      <div class="grupo-campanha">
-        <span class="rotulo"><i class="pinta vermelha" aria-hidden="true"></i>Campanha 2</span>
-        <div class="par">
-          <select id="ano-b" aria-label="Ano da campanha 2"></select>
-          <select id="equipe-b" aria-label="Equipe da campanha 2"></select>
-        </div>
+      <div class="campo campo-equipe">
+        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
+        <select id="equipe"></select>
       </div>
-
-      <button type="button" class="botao-texto" id="trocar">Trocar as duas</button>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <div class="campo campo-posicoes">
+      <label id="rotulo-posicoes">Posição meta
+        <span class="dica-campo">arraste a bolinha até a posição que você quer
+          alcançar</span>
+      </label>
+      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      <p class="resumo-meta" id="resumo-meta"></p>
     </div>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de comparativo de campanhas"></canvas>
+            aria-label="card de blocos de 6 jogos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -76,6 +75,6 @@
 
 </main>
 
-<script type="module" src="/js/comparativo.js"></script>
+<script type="module" src="/js/blocos.js"></script>
 </body>
 </html>

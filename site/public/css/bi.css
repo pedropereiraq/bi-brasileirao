@@ -548,3 +548,10 @@ table.mini-classificacao {
 .alca.arrastando { cursor: grabbing; transform: translate(-50%, -50%) scale(1.12); }
 .alca-pior { background: var(--vermelho); }
 .alca-melhor { background: var(--verde); }
+.alca-meta { background: var(--azul); }
+
+/* O que a posição escolhida vira em meta por bloco, fora do card. */
+.resumo-meta {
+  margin: 12px 14px 0; font-size: 13px; color: var(--cinza-texto);
+}
+.resumo-meta b { color: var(--azul-escuro); }

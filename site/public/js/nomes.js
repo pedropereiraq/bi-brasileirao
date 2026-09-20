@@ -40,6 +40,17 @@ const FEMININOS = new Set([
   "CHAPECOENSE", "PONTE PRETA", "PORTUGUESA", "FERROVIÁRIA",
 ]);
 
-/** `do` ou `da`, conforme o clube. */
-export const artigo = (equipe) =>
-  FEMININOS.has(nomeCurto(equipe).toLocaleUpperCase("pt-BR")) ? "da" : "do";
+const feminino = (equipe) =>
+  FEMININOS.has(nomeCurto(equipe).toLocaleUpperCase("pt-BR"));
+
+/** `do` ou `da`: a contração, para "a pontuação **do** Bahia". */
+export const artigo = (equipe) => (feminino(equipe) ? "da" : "do");
+
+/**
+ * `o` ou `a`: o artigo sozinho, para "**o** Bahia está acima da meta".
+ *
+ * Existe separado porque usar a contração como sujeito sai errado — "do Bahia
+ * está 9 pontos acima" — e o erro é fácil de deixar passar quando as duas
+ * formas vêm da mesma função.
+ */
+export const artigoDefinido = (equipe) => (feminino(equipe) ? "a" : "o");
