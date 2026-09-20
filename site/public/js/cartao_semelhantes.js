@@ -23,7 +23,7 @@ import {
 
 const POSICOES = 20;
 const VAO = 6;
-const ALTURA_CARTAO = 72;   // teto: um cartão sozinho não vira um poste
+const ALTURA_CARTAO = 44;   // teto: um cartão sozinho não vira um poste
 const ALTURA_MINIMA = 26;
 
 const num = (v) => v.toFixed(1).replace(".", ",");
@@ -319,16 +319,19 @@ function dicaDaCampanha(campanha, { cor, jogos, pontos }) {
 }
 
 /**
- * Um cartãozinho por campanha: escudo, pontuação final e ano.
+ * Um cartãozinho por campanha: escudo à esquerda, pontuação e ano à direita.
  *
  * Fundo branco com borda na cor da parte da tabela. Preenchido, o escudo
- * precisava de uma pastilha clara atrás para não sumir sobre o vermelho — e o
- * resultado era um escudo dentro de um caixote branco dentro de um cartão
- * colorido. A borda resolve com uma caixa a menos.
+ * precisava de uma pastilha clara atrás para não sumir sobre o vermelho, e o
+ * resultado era escudo dentro de caixote branco dentro de cartão colorido. A
+ * borda resolve com uma caixa a menos.
  *
- * Dois arranjos, conforme a altura que a pilha permitiu. Alto, o conteúdo
- * empilha e usa a largura inteira. Baixo, o escudo vai para a esquerda e o
- * texto para a direita.
+ * Deitado, e não empilhado: o cartão fica baixo, e sete deles numa coluna
+ * ainda cabem. Empilhado, escudo em cima e texto embaixo, ele engordava para o
+ * dobro da altura e a pilha virava uma torre.
+ *
+ * O escudo e o bloco de texto ocupam a mesma faixa vertical — é o que mantém o
+ * cartão com cara de linha, e não de dois pedaços soltos.
  */
 async function cartaoDaCampanha(ctx, { campanha, clubes, cor, x, y, largura, altura }) {
   const alto = altura - 3;
@@ -341,28 +344,21 @@ async function cartaoDaCampanha(ctx, { campanha, clubes, cor, x, y, largura, alt
   ctx.stroke();
   ctx.restore();
 
+  // O escudo é limitado pela largura também: a coluna tem 69px, e um escudo
+  // do tamanho da altura não deixaria lugar para o número.
+  const lado = Math.max(14, Math.min(alto - 8, largura * 0.40));
+  const topo = y + (alto - lado) / 2;
+
   const escudo = await imagem(clubes[campanha.equipe]?.escudo);
+  desenharEscudo(ctx, escudo, x + 4, topo, lado);
 
-  if (alto >= 50) {
-    const lado = Math.min(30, alto * 0.42, largura * 0.5);
-    desenharEscudo(ctx, escudo, x + (largura - lado) / 2, y + 6, lado);
-
-    const corpo = Math.min(17, (alto - lado - 14) * 0.62);
-    texto(ctx, campanha.pontosFim, x + largura / 2, y + 8 + lado + corpo,
-          { tamanho: corpo, peso: 800, alinha: "center", cor });
-    texto(ctx, campanha.ano, x + largura / 2, y + 9 + lado + corpo * 1.82,
-          { tamanho: corpo * .68, peso: 700, alinha: "center",
-            cor: COR.cinzaEscuro });
-    return;
-  }
-
-  const lado = Math.max(14, Math.min(alto - 8, largura * 0.32));
-  desenharEscudo(ctx, escudo, x + 5, y + (alto - lado) / 2, lado);
-
-  const xTexto = x + 5 + lado + 5;
-  const corpo = Math.max(10, Math.min(13, alto * 0.42));
-  texto(ctx, campanha.pontosFim, xTexto, y + alto / 2 - 1,
-        { tamanho: corpo, peso: 800, cor });
-  texto(ctx, campanha.ano, xTexto, y + alto / 2 + corpo * .82,
-        { tamanho: corpo * .7, peso: 700, cor: COR.cinzaEscuro });
+  // Centralizados entre si no que sobra: o ano tem quatro dígitos e a
+  // pontuação dois, e alinhados à esquerda o bloco fica torto.
+  const xTexto = x + 4 + lado + 5;
+  const meio = xTexto + (x + largura - 4 - xTexto) / 2;
+  texto(ctx, campanha.pontosFim, meio, topo + lado * 0.46,
+        { tamanho: lado * 0.52, peso: 800, cor, alinha: "center" });
+  texto(ctx, campanha.ano, meio, topo + lado * 0.98,
+        { tamanho: lado * 0.38, peso: 800, cor: COR.cinzaEscuro,
+          alinha: "center" });
 }
