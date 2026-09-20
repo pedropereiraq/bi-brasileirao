@@ -430,3 +430,39 @@ table.mini-classificacao {
 .mini-classificacao tr.faixa-z4 td.pos { box-shadow: inset 3px 0 0 var(--vermelho); }
 .mini-classificacao tr[aria-selected="true"] td.pos { box-shadow: none; }
 .dica-menu { margin: 8px 12px 4px; }
+
+/* =====================================================================
+ * Páginas de card
+ *
+ * O BI é um gerador de cards: os filtros ficam fora, e o card — o canvas —
+ * é o conteúdo da página. O que está na tela é o PNG que será salvo.
+ * =================================================================== */
+.palco-card {
+  background: var(--cinza-claro);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  padding: 14px;
+}
+.palco-card canvas {
+  display: block; width: 100%; height: auto;
+  border-radius: 4px; box-shadow: var(--sombra);
+  background: var(--offwhite);
+}
+.aviso-card {
+  margin: 0; padding: 60px 20px; text-align: center;
+  color: var(--cinza-texto); font-size: 14px;
+}
+
+.botao-salvar {
+  font: inherit; font-size: 14px; font-weight: 700; padding: 8px 18px;
+  border: 0; border-radius: 6px; background: var(--azul); color: var(--branco);
+  cursor: pointer; min-height: 34px; margin-left: auto;
+}
+.botao-salvar:hover:not(:disabled) { background: var(--azul-escuro); }
+.botao-salvar:disabled { opacity: .5; cursor: not-allowed; }
+
+.campo-equipe select { min-width: 190px; }
+.campo-equipe label { display: flex; align-items: center; gap: 6px; }
+.pinta { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.pinta.azul { background: var(--azul); }
+.pinta.vermelha { background: var(--vermelho); }

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evolução da pontuação · Cards ECBahia Números</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+</head>
+<body>
+
+<main class="pagina larga">
+
+  <header class="topo">
+    <div>
+      <h1>Evolução da pontuação</h1>
+      <p class="subtitulo">Duas equipes, uma campanha. Os filtros desenham o card.</p>
+    </div>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/evolucao.html" aria-current="page">Evolução da pontuação</a>
+    <a href="/">Classificação</a>
+    <a href="/jogos.html">Tabela de jogos</a>
+    <a href="/atualizar.html">Atualizar dados</a>
+  </nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label for="serie">Série</label>
+        <select id="serie"></select>
+      </div>
+      <div class="campo">
+        <label for="ano">Ano da campanha</label>
+        <select id="ano"></select>
+      </div>
+      <div class="campo campo-equipe">
+        <label for="equipe-a">Equipe 1 <i class="pinta azul" aria-hidden="true"></i></label>
+        <select id="equipe-a"></select>
+      </div>
+      <div class="campo campo-equipe">
+        <label for="equipe-b">Equipe 2 <i class="pinta vermelha" aria-hidden="true"></i></label>
+        <select id="equipe-b"></select>
+      </div>
+      <button type="button" class="botao-texto" id="trocar">Trocar as duas</button>
+      <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+  </section>
+
+  <section class="palco-card">
+    <p id="aviso-card" class="aviso-card" hidden></p>
+    <canvas id="card" width="2400" height="1350"
+            aria-label="card de evolução da pontuação"></canvas>
+  </section>
+
+  <footer class="rodape">
+    <p>O que está na tela é exatamente a imagem que o botão salva: 2400 × 1350,
+       no padrão dos cards do ECBahia Números.</p>
+    <p><b>ecbahia</b>numeros · Podcast45</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/evolucao.js"></script>
+</body>
+</html>

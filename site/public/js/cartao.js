@@ -125,21 +125,24 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
   ctx.fillStyle = COR.fundo;
   ctx.fillRect(0, 0, CARD.largura, CARD.altura);
 
-  let x = MARGEM;
-  if (escudo) {
-    const im = await imagem(escudo);
-    if (im) { desenharEscudo(ctx, im, MARGEM, 34, 62); x = MARGEM + 78; }
-  }
-  texto(ctx, titulo, x, 74, {
-    tamanho: 44, peso: 700, cor: COR.azul, familia: "Bree Serif",
-  });
-  texto(ctx, subtitulo, x, 104, { tamanho: 17, cor: COR.cinzaEscuro });
-
+  // Marca no canto superior direito, alinhada ao topo do título, 250px na
+  // régua de 1600 — como manda a skill dos cards.
   const marca = await imagem("/img/marca.png");
   if (marca) {
     const l = 250, a = l * (marca.naturalHeight / marca.naturalWidth);
     ctx.drawImage(marca, CARD.largura - MARGEM - l, 40, l, a);
   }
+
+  let x = MARGEM;
+  if (escudo) {
+    const im = await imagem(escudo);
+    if (im) { desenharEscudo(ctx, im, x, 34, 58); x += 74; }
+  }
+
+  texto(ctx, titulo, x, 74, {
+    tamanho: 42, peso: 700, cor: COR.azul, familia: "Bree Serif",
+  });
+  texto(ctx, subtitulo, x, 104, { tamanho: 17, cor: COR.cinzaEscuro });
 
   // A régua é assinatura da página: entra em todo card.
   const yRegua = 124, largura = CARD.largura - MARGEM * 2;
@@ -235,19 +238,22 @@ export function registrarCartao(fn) {
   if (botao) botao.addEventListener("click", abrirDialogo);
 }
 
-export async function desenharCartao() {
-  const spec = construtor();
-  const canvas = document.createElement("canvas");
+export async function desenharSpec(spec, canvas = document.createElement("canvas")) {
   canvas.width = CARD.largura * CARD.escala;
   canvas.height = CARD.altura * CARD.escala;
   const ctx = canvas.getContext("2d");
-  ctx.scale(CARD.escala, CARD.escala);
+  ctx.setTransform(CARD.escala, 0, 0, CARD.escala, 0, 0);
 
   await carregarFontes();
   const y = await moldura(ctx, spec);
   await spec.corpo(ctx, y, { texto, caixa, linhaH, cortar, imagem, COR, barraTED,
                              polilinha, desenharEscudo, MARGEM, CARD });
   return canvas;
+}
+
+/** O caminho antigo, que pega o spec de quem chamou `registrarCartao`. */
+export async function desenharCartao() {
+  return desenharSpec(construtor());
 }
 
 async function carregarFontes() {
