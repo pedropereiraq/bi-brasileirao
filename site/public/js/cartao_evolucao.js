@@ -23,6 +23,7 @@ import {
   CALHA, CALHA_DIR, JOGOS, campanhaCompleta, disputados, descreverJogo,
   faixaDeJogos, legenda, tracarLinha,
 } from "/js/grafico_campanha.js";
+import { empilhar } from "/js/empilhar.js";
 
 /** Uma casa decimal e vírgula: a média não é inteira e arredondar mentiria. */
 const num = (v) => v.toFixed(1).replace(".", ",");
@@ -135,7 +136,6 @@ function desenharGrafico(ctx, o) {
   const alturaBloco = 108;
   rotulosNaCalha(ctx, {
     x: x1 + 14, topo, limiteBase: topo + alturaPlot - alturaBloco - 16,
-    centro, escala,
     itens: [
       { alvo: escala(fim.pts), ancora: centro(fim.n), altura: 58,
         desenhar: (y) => seloDoClube(ctx, x1 + 14, y, fim, rotulo) },
@@ -152,28 +152,13 @@ function desenharGrafico(ctx, o) {
   });
 }
 
-/**
- * Empilha na calha da direita, sem sobreposição, o que está ancorado no fim de
- * cada linha. Cada item vai para a altura da sua linha; quando dois se
- * encostam, o de baixo desce, e a pilha inteira sobe se passar do limite.
- */
 function rotulosNaCalha(ctx, o) {
-  const { itens, x, topo, limiteBase, escala } = o;
-  const ordenados = [...itens].sort((p, q) => p.alvo - q.alvo);
-
-  let ultimo = -Infinity;
-  for (const item of ordenados) {
-    item.y = Math.max(item.alvo, ultimo + item.altura / 2 + 8);
-    ultimo = item.y + item.altura / 2;
-  }
-  const excesso = ultimo - limiteBase;
-  if (excesso > 0) for (const item of ordenados) item.y -= excesso;
-  for (const item of ordenados) {
-    item.y = Math.max(item.y, topo + item.altura / 2 + 2);
-  }
+  const { itens, x, topo, limiteBase } = o;
+  const ordenados = empilhar(itens, { limiteTopo: topo + 2, limiteBase });
 
   for (const item of ordenados) {
     // Traço cinza discreto da linha até o rótulo: é chamada, não continuação.
+    // Com as caixas fora da altura das suas linhas, é ele que diz qual é qual.
     ctx.save();
     ctx.strokeStyle = COR.cinza;
     ctx.lineWidth = 1.5;
@@ -186,7 +171,6 @@ function rotulosNaCalha(ctx, o) {
 
     item.desenhar(item.y);
   }
-  void escala;
 }
 
 const LARGURA_SELO = 182;
