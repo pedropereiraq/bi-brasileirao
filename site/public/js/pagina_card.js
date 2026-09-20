@@ -146,6 +146,11 @@ function ligarHover(geometria) {
     const recuoX = caixa.left - moldura.left - palco.clientLeft;
     const recuoY = caixa.top - moldura.top - palco.clientTop;
 
+    // Três modos. `caixa` é para gráficos feitos de retângulos — os
+    // cartõezinhos de uma campanha —, em que o alvo não é o mais próximo num
+    // eixo e sim aquele sob o cursor.
+    if (g.eixo === "caixa") return sobreCaixa(g, x, y, recuoX, recuoY, escalaTela);
+
     // Um gráfico deitado — as 20 posições empilhadas, o 1º no alto — se lê
     // pelo eixo vertical: quem está perto do cursor é a linha, não a coluna.
     const deitado = g.eixo === "y";
@@ -165,6 +170,8 @@ function ligarHover(geometria) {
     if (distancia(ponto) > g.largura) return esconder();
 
     guia.style.display = "block";
+    guia.style.background = "var(--azul-claro)";
+    guia.style.border = "0";
     dica.innerHTML = conteudoDaDica(ponto, g);
     dica.style.display = "block";
     const larguraDica = dica.offsetWidth;
@@ -198,6 +205,32 @@ function ligarHover(geometria) {
     dica.style.top = `${recuoY + (g.topo + 10) * escalaTela}px`;
   }
 
+  /** Alvo é o retângulo sob o cursor; a guia vira o contorno dele. */
+  function sobreCaixa(g, x, y, recuoX, recuoY, escalaTela) {
+    const alvo = g.pontos.find((p) =>
+      x >= p.x && x <= p.x + p.l && y >= p.y && y <= p.y + p.a);
+    if (!alvo) return esconder();
+
+    guia.style.display = "block";
+    guia.style.background = "transparent";
+    guia.style.border = "2px solid var(--azul-escuro)";
+    guia.style.borderRadius = "7px";
+    guia.style.transform = "none";
+    guia.style.left = `${recuoX + (alvo.x - 2) * escalaTela}px`;
+    guia.style.top = `${recuoY + (alvo.y - 2) * escalaTela}px`;
+    guia.style.width = `${(alvo.l + 4) * escalaTela}px`;
+    guia.style.height = `${(alvo.a + 4) * escalaTela}px`;
+
+    dica.innerHTML = conteudoDaDica(alvo, g);
+    dica.style.display = "block";
+    const larguraDica = dica.offsetWidth;
+    const aDireita = recuoX + (alvo.x + alvo.l + 12) * escalaTela;
+    const cabe = aDireita + larguraDica + 12 < recuoX + canvas.getBoundingClientRect().width;
+    dica.style.left = `${cabe ? aDireita
+      : recuoX + (alvo.x - 12) * escalaTela - larguraDica}px`;
+    dica.style.top = `${recuoY + alvo.y * escalaTela}px`;
+  }
+
   function esconder() {
     if (guia) guia.style.display = "none";
     if (dica) dica.style.display = "none";
@@ -213,13 +246,19 @@ function conteudoDaDica(ponto, g) {
       <span class="dica-detalhe">${item.detalhe}</span>
     </div>`).join("");
 
-  const diferenca = ponto.diferenca
-    ? `<div class="dica-diferenca">${ponto.diferenca.valor === 0
-        ? "campanhas empatadas"
-        : `<b style="color:${ponto.diferenca.cor}">${ponto.diferenca.valor} `
-          + `${ponto.diferenca.valor === 1 ? "ponto" : "pontos"}</b> · `
-          + ponto.diferenca.texto}</div>`
-    : "";
+  // `rotulo` dá o destaque pronto, para o que não se mede em pontos — uma
+  // variação percentual, por exemplo. Sem ele, continua o formato antigo.
+  const d = ponto.diferenca;
+  const diferenca = !d ? ""
+    : `<div class="dica-diferenca">${
+        d.rotulo
+          ? `<b style="color:${d.cor}">${d.rotulo}</b>`
+            + (d.texto ? ` · ${d.texto}` : "")
+          : d.valor === 0
+            ? "campanhas empatadas"
+            : `<b style="color:${d.cor}">${d.valor} `
+              + `${d.valor === 1 ? "ponto" : "pontos"}</b> · ${d.texto}`
+      }</div>`;
 
   return `<div class="dica-titulo">${g.unidade} ${ponto.n}</div>${linhas}${diferenca}`;
 }

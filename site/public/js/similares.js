@@ -56,14 +56,33 @@ export function campanhasSemelhantes(dados, { serie, jogos, pontos }) {
       if (acumulado.length < jogos) continue;
       if (acumulado[jogos - 1] !== pontos) continue;
 
+      const pontosFim = acumulado[acumulado.length - 1];
+      const jogosDepois = acumulado.length - jogos;
+      const pontosDepois = pontosFim - pontos;
+
+      // Aproveitamento antes e depois do corte, e o quanto um mudou em
+      // relação ao outro. É o que separa "somou 29 pontos" de "jogou melhor":
+      // 29 em 11 jogos é outra campanha, não a mesma esticada.
+      const aproveitaAntes = pontos / (3 * jogos);
+      const aproveitaDepois = jogosDepois > 0
+        ? pontosDepois / (3 * jogosDepois) : null;
+      // Sem pontos antes do corte não há do que variar: 0% não melhora nem
+      // piora em porcentagem, só em pontos.
+      const variacao = aproveitaDepois === null || aproveitaAntes === 0
+        ? null : (aproveitaDepois / aproveitaAntes - 1) * 100;
+
       achadas.push({
         equipe,
         ano: Number(ano),
         posFim,
-        pontosFim: acumulado[acumulado.length - 1],
+        pontosFim,
         jogosTotais: acumulado.length,
         // O que ela ainda somou depois do corte, que é a resposta em si.
-        depois: acumulado[acumulado.length - 1] - pontos,
+        depois: pontosDepois,
+        jogosDepois,
+        aproveitaAntes,
+        aproveitaDepois,
+        variacao,
       });
     }
   }

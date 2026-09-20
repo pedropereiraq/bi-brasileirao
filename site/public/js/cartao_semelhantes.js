@@ -6,13 +6,14 @@
  * começo, que é justamente o que ninguém sabe. Responde-se com precedente: as
  * campanhas que já passaram exatamente por ali, e onde elas foram parar.
  *
- * O assunto do card é a posição final, então ele é organizado por ela: a
- * tabela deitada à esquerda, com o 1º no alto, e a lista ordenada de cima para
- * baixo. A pontuação final continua ali, mas como detalhe de cada linha — 67
- * pontos valeram o 2º lugar em 2006 e o 4º em 2025, e é a posição que compara.
+ * Gráfico e lista são a mesma coisa. As 20 posições ficam no topo, do 20º à
+ * esquerda ao 1º à direita — a ordem da trilha do filtro —, e cada campanha é
+ * um cartãozinho empilhado na posição em que terminou. A pilha mais alta é a
+ * posição mais frequente: a barra do histograma é feita das próprias equipes,
+ * em vez de resumi-las num número que depois precisa de legenda.
  */
 import {
-  CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
+  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import {
@@ -21,9 +22,9 @@ import {
 } from "/js/similares.js";
 
 const POSICOES = 20;
-const COLUNAS = 3;
-const VAO_COLUNA = 28;
-const ALTURA_LINHA = 26;
+const VAO = 6;
+const ALTURA_CARTAO = 72;   // teto: um cartão sozinho não vira um poste
+const ALTURA_MINIMA = 26;
 
 const num = (v) => v.toFixed(1).replace(".", ",");
 const ordinal = (p) => `${p}º`;
@@ -73,26 +74,10 @@ export function montarCartao(estado) {
       pizzaDasZonas(ctx, { achadas, zonas, cores, faixa, x: 900, y: y + 6 });
       linhaH(ctx, MARGEM, CARD.largura - MARGEM, y + 86, COR.linha);
 
-      const topo = y + 116, alturaPlot = POSICOES * ALTURA_LINHA;
-      const larguraTabela = 330;
-
-      const pontosDoHover = tabelaDeitada(ctx, {
-        contagem, achadas, faixa, cores, zonas,
-        x: MARGEM, largura: larguraTabela, topo,
+      spec.hover = await faixaDePosicoes(ctx, {
+        achadas, contagem, faixa, cores, zonas, clubes, jogos, pontos,
+        y: y + 112,
       });
-
-      await listaDeCampanhas(ctx, {
-        achadas, clubes, faixa, cores, pontos,
-        x: MARGEM + larguraTabela + 40,
-        largura: CARD.largura - MARGEM - (MARGEM + larguraTabela + 40),
-        topo,
-      });
-
-      spec.hover = {
-        pontos: pontosDoHover, eixo: "y", unidade: "posição",
-        topo, alturaPlot, largura: ALTURA_LINHA / 2,
-        x0: MARGEM, x1: MARGEM + larguraTabela,
-      };
     },
   };
   return spec;
@@ -111,8 +96,8 @@ function semPrecedente(ctx, { y, jogos, pontos, serie }) {
 /**
  * Três números em tira fina, e não na faixa de blocos grandes.
  *
- * Eles contextualizam o card; o assunto é a tabela e a lista. Blocos de 96px
- * tomavam um oitavo da altura para dizer três coisas curtas.
+ * Eles contextualizam o card; o assunto é a faixa de posições logo abaixo.
+ * Blocos de 96px tomavam um oitavo da altura para dizer três coisas curtas.
  */
 function resumoEnxuto(ctx, { resumo, y }) {
   const itens = [
@@ -191,170 +176,193 @@ function pizzaDasZonas(ctx, { achadas, zonas, cores, faixa, x, y }) {
   }
 }
 
-/* ------------------------------------------------- a tabela deitada */
+/* --------------------------------------------- a faixa das 20 posições */
 /**
- * As 20 posições empilhadas, o 1º no alto, com a barra do que aconteceu.
+ * As 20 posições no topo e, sob cada uma, as campanhas que terminaram ali.
  *
- * Deitada porque é assim que uma tabela de campeonato se lê: de cima para
- * baixo. Em pé, com as posições no eixo x, era preciso traduzir "coluna 4"
- * para "quarto lugar" a cada olhada.
+ * A ordem é a mesma da trilha do filtro — 20º à esquerda, 1º à direita —, para
+ * que mexer no filtro e olhar o card não exijam inverter a leitura no meio do
+ * caminho.
  */
-function tabelaDeitada(ctx, { contagem, achadas, faixa, cores, zonas, x, largura, topo }) {
-  texto(ctx, "onde terminaram", x, topo - 16,
-        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
-          cor: COR.cinzaEscuro });
+async function faixaDePosicoes(ctx, { achadas, contagem, faixa, cores, zonas,
+                                      clubes, jogos, pontos, y }) {
+  const largura = (CARD.largura - MARGEM * 2 - VAO * (POSICOES - 1)) / POSICOES;
+  const posicaoDaColuna = (i) => POSICOES - i;
+  const xDaColuna = (i) => MARGEM + i * (largura + VAO);
+  const centro = (i) => xDaColuna(i) + largura / 2;
 
-  const xBarra = x + 38, larguraBarra = largura - 38 - 44;
+  const yTiras = y, yNumero = y + 28, yContagem = y + 46;
+  const topoPilha = y + 62;
+  const disponivel = CARD.altura - 96 - topoPilha;
 
-  // Uma tira colorida por parte da tabela, na margem: é o que torna a divisa
-  // visível de longe, antes de qualquer barra ser lida.
-  for (const zona of zonas) {
-    const de = topo + (zona.de - 1) * ALTURA_LINHA;
-    const ate = topo + zona.ate * ALTURA_LINHA;
-    caixa(ctx, x, de + 1, 4, ate - de - 2,
-          cores[zona.nome] ?? COR.cinzaClaro, 2);
-  }
+  // Todas as pilhas usam a mesma altura de cartão — é o que faz a mais alta
+  // ser a mais numerosa. Ela encolhe até a maior das pilhas caber.
   const maximo = Math.max(1, ...contagem);
-  const meio = (pos) => topo + (pos - 0.5) * ALTURA_LINHA;
-  const pontos = [];
+  const altura = Math.min(ALTURA_CARTAO,
+                          Math.max(ALTURA_MINIMA, disponivel / maximo));
+  const cabem = Math.max(1, Math.floor(disponivel / altura));
 
-  for (let pos = 1; pos <= POSICOES; pos++) {
+  // Tira de cor por parte da tabela, cobrindo as colunas daquela parte.
+  for (const zona of zonas) {
+    const de = xDaColuna(POSICOES - zona.ate);
+    const ate = xDaColuna(POSICOES - zona.de) + largura;
+    caixa(ctx, de, yTiras, ate - de, 8, cores[zona.nome] ?? COR.cinzaClaro, 4);
+  }
+
+  for (let i = 0; i < POSICOES; i++) {
+    const pos = posicaoDaColuna(i);
     const n = contagem[pos - 1];
     const cor = cores[zonaDaPosicao(pos, faixa)] ?? COR.cinzaEscuro;
-    const yLinha = meio(pos);
 
-    texto(ctx, pos, x + 28, yLinha + 4,
-          { tamanho: 12, peso: n ? 800 : 400, alinha: "right",
+    texto(ctx, ordinal(pos), centro(i), yNumero,
+          { tamanho: 15, peso: 800, alinha: "center", cor: n ? cor : COR.cinza });
+    texto(ctx, n ? `${n}` : "—", centro(i), yContagem,
+          { tamanho: 11, peso: n ? 800 : 400, alinha: "center",
             cor: n ? COR.azulEscuro : COR.cinza });
-
-    if (n) {
-      const comprimento = Math.max(6, (n / maximo) * larguraBarra);
-      caixa(ctx, xBarra, yLinha - 8, comprimento, 16, cor, 4);
-      texto(ctx, n, xBarra + comprimento + 8, yLinha + 4,
-            { tamanho: 12, peso: 800, cor });
-
-      pontos.push({
-        n: pos, y: yLinha, x: xBarra,
-        itens: achadas.filter((c) => c.posFim === pos).map((c) => ({
-          rotulo: `${nomeBonito(c.equipe)} ${c.ano}`,
-          cor,
-          pontos: c.pontosFim,
-          detalhe: `${c.depois >= 0 ? "+" : ""}${c.depois} pontos depois do corte`,
-        })),
-        diferenca: null,
-      });
-    } else {
-      linhaH(ctx, xBarra, xBarra + 10, yLinha, COR.cinzaClaro, 2);
-    }
   }
 
-  // As divisas entre as partes da tabela, que é o que o filtro define.
+  linhaH(ctx, MARGEM, CARD.largura - MARGEM, topoPilha - 10, COR.linha);
+
+  // Divisas entre as partes: a linha cai no vão entre duas colunas, não sobre
+  // uma delas.
   for (const zona of zonas.slice(1)) {
-    const yDivisa = topo + (zona.de - 1) * ALTURA_LINHA;
+    const xDivisa = xDaColuna(POSICOES - zona.de + 1) - VAO / 2;
     ctx.save();
     ctx.strokeStyle = COR.azulEscuro;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x, yDivisa);
-    ctx.lineTo(x + largura, yDivisa);
+    ctx.moveTo(xDivisa, yTiras - 6);
+    ctx.lineTo(xDivisa, topoPilha + disponivel);
     ctx.stroke();
     ctx.restore();
-
-    const rotulo = `a partir do ${ordinal(zona.de)}`;
-    ctx.save();
-    ctx.font = '800 9px "Assistant", sans-serif';
-    const largo = ctx.measureText(rotulo.toUpperCase()).width + rotulo.length * .6 + 14;
-    ctx.restore();
-    caixa(ctx, x + largura - largo, yDivisa - 8, largo, 16, COR.azulEscuro, 4);
-    texto(ctx, rotulo, x + largura - largo / 2, yDivisa + 3,
-          { tamanho: 9, peso: 800, alinha: "center", cor: COR.branco,
-            maiuscula: true, espaco: .6 });
   }
 
-  return pontos;
+  const pontosDoHover = [];
+
+  for (let i = 0; i < POSICOES; i++) {
+    const pos = posicaoDaColuna(i);
+    const daPosicao = achadas.filter((c) => c.posFim === pos);
+    if (!daPosicao.length) continue;
+
+    const cor = cores[zonaDaPosicao(pos, faixa)] ?? COR.cinzaEscuro;
+    const visiveis = daPosicao.length > cabem
+      ? daPosicao.slice(0, cabem - 1) : daPosicao;
+
+    for (const [k, campanha] of visiveis.entries()) {
+      const yCartao = topoPilha + k * altura;
+      await cartaoDaCampanha(ctx, {
+        campanha, clubes, cor, x: xDaColuna(i), y: yCartao, largura, altura,
+      });
+      pontosDoHover.push({
+        n: pos,
+        x: xDaColuna(i), y: yCartao, l: largura, a: altura - 3,
+        ...dicaDaCampanha(campanha, { cor, jogos, pontos }),
+      });
+    }
+
+    if (daPosicao.length > visiveis.length) {
+      const escondidas = daPosicao.slice(visiveis.length);
+      const yResto = topoPilha + visiveis.length * altura;
+      caixa(ctx, xDaColuna(i), yResto, largura, altura - 3, COR.cinzaClaro, 5);
+      texto(ctx, `+${escondidas.length}`, centro(i), yResto + altura / 2 + 2,
+            { tamanho: 13, peso: 800, alinha: "center", cor: COR.cinzaEscuro });
+
+      // O que não coube na pilha continua alcançável pela dica.
+      pontosDoHover.push({
+        n: pos,
+        x: xDaColuna(i), y: yResto, l: largura, a: altura - 3,
+        itens: escondidas.map((c) => ({
+          rotulo: `${nomeBonito(c.equipe)} ${c.ano}`,
+          cor, pontos: c.pontosFim,
+          detalhe: `${ponto(c.variacao)} de aproveitamento depois do corte`,
+        })),
+        diferenca: null,
+      });
+    }
+  }
+
+  return {
+    pontos: pontosDoHover, unidade: "posição", eixo: "caixa",
+    topo: yTiras, alturaPlot: disponivel + (topoPilha - yTiras),
+    x0: MARGEM, x1: CARD.largura - MARGEM, largura: largura / 2 + VAO / 2,
+  };
 }
 
-/* --------------------------------------------------------------- lista */
+const pct = (v) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
+const ponto = (v) => (v === null ? "sem variação"
+  : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(0)}%`);
+
 /**
- * As campanhas, na ordem da posição final, alinhadas com a tabela ao lado.
+ * O que a dica mostra de uma campanha.
  *
- * O número de colunas sai da quantidade, e não o contrário: 13 campanhas cabem
- * numa coluna só, e aí ela ocupa a largura inteira — a barra fica longa e
- * precisa, e sobra espaço para dizer quanto cada uma somou depois do corte.
- * Com 40, são três colunas estreitas e esse detalhe sai.
+ * "Somou 29 pontos" não diz se ela jogou melhor: 29 em 11 jogos é outra
+ * campanha, não a mesma esticada. O que responde isso é o aproveitamento antes
+ * e depois do corte, e a variação de um para o outro.
  */
-async function listaDeCampanhas(ctx, { achadas, clubes, faixa, cores, pontos,
-                                       x, largura, topo }) {
-  const cabem = COLUNAS * POSICOES;
-  const mostradas = achadas.slice(0, cabem);
-  const colunas = Math.max(1, Math.ceil(mostradas.length / POSICOES));
-  const larguraColuna = (largura - VAO_COLUNA * (colunas - 1)) / colunas;
-  const linhasPorColuna = Math.ceil(mostradas.length / colunas);
-  // A lista ocupa exatamente a altura da tabela ao lado: com 13 campanhas as
-  // linhas ficam altas e as duas metades do card terminam juntas, em vez de
-  // uma parar no meio do caminho.
-  const alturaLinha = Math.min(40, Math.max(ALTURA_LINHA,
-    (POSICOES * ALTURA_LINHA) / Math.max(linhasPorColuna, 1)));
+function dicaDaCampanha(campanha, { cor, jogos, pontos }) {
+  const melhorou = campanha.variacao === null ? 0 : campanha.variacao;
+  return {
+    itens: [{
+      rotulo: `${nomeBonito(campanha.equipe)} ${campanha.ano}`,
+      cor,
+      pontos: campanha.pontosFim,
+      detalhe: `${pontos} em ${jogos} jogos · ${campanha.depois} nos `
+             + `${campanha.jogosDepois} que faltavam`,
+    }],
+    diferenca: campanha.aproveitaDepois === null ? null : {
+      rotulo: ponto(campanha.variacao),
+      texto: `aproveitamento ${pct(campanha.aproveitaAntes)} → `
+           + `${pct(campanha.aproveitaDepois)}`,
+      cor: melhorou > 0 ? COR.azul : melhorou < 0 ? COR.vermelho : COR.cinzaEscuro,
+    },
+  };
+}
 
-  texto(ctx, "as campanhas, da melhor posição para a pior", x, topo - 16,
-        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
-          cor: COR.cinzaEscuro });
+/**
+ * Um cartãozinho por campanha: escudo, pontuação final e ano.
+ *
+ * Fundo branco com borda na cor da parte da tabela. Preenchido, o escudo
+ * precisava de uma pastilha clara atrás para não sumir sobre o vermelho — e o
+ * resultado era um escudo dentro de um caixote branco dentro de um cartão
+ * colorido. A borda resolve com uma caixa a menos.
+ *
+ * Dois arranjos, conforme a altura que a pilha permitiu. Alto, o conteúdo
+ * empilha e usa a largura inteira. Baixo, o escudo vai para a esquerda e o
+ * texto para a direita.
+ */
+async function cartaoDaCampanha(ctx, { campanha, clubes, cor, x, y, largura, altura }) {
+  const alto = altura - 3;
+  caixa(ctx, x, y, largura, alto, COR.branco, 5);
+  ctx.save();
+  ctx.strokeStyle = cor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, largura - 2, alto - 2, 5);
+  ctx.stroke();
+  ctx.restore();
 
-  const maximo = Math.max(...achadas.map((c) => c.pontosFim), pontos + 1);
+  const escudo = await imagem(clubes[campanha.equipe]?.escudo);
 
-  // A tag de posição para bem antes da borda: colada nela, encostava no escudo
-  // da coluna seguinte e as duas se liam como uma coisa só.
-  const larguraTag = 42, recuoTag = 20;
-  const xTag = larguraColuna - larguraTag - recuoTag;
-  const xPontos = xTag - 16;
-  const larguraNome = Math.min(200, Math.max(96, larguraColuna * 0.28));
-  const xBarra = 24 + larguraNome + 10;
+  if (alto >= 50) {
+    const lado = Math.min(30, alto * 0.42, largura * 0.5);
+    desenharEscudo(ctx, escudo, x + (largura - lado) / 2, y + 6, lado);
 
-  // Cabe dizer o que ela somou depois do corte? Só quando a coluna é larga.
-  const mostrarDepois = larguraColuna > 460;
-  const xDepois = xPontos - 46;
-  const fimBarra = (mostrarDepois ? xDepois - 52 : xPontos - 46);
-  const larguraBarra = Math.max(40, fimBarra - xBarra);
-
-  for (const [i, campanha] of mostradas.entries()) {
-    const coluna = Math.floor(i / linhasPorColuna);
-    const linha = i % linhasPorColuna;
-    const xCol = x + coluna * (larguraColuna + VAO_COLUNA);
-    const yLinha = topo + linha * alturaLinha + (alturaLinha - 18) / 2;
-    const cor = cores[zonaDaPosicao(campanha.posFim, faixa)] ?? COR.cinzaEscuro;
-
-    const escudo = await imagem(clubes[campanha.equipe]?.escudo);
-    desenharEscudo(ctx, escudo, xCol, yLinha, 17);
-    texto(ctx, cortar(ctx, `${nomeBonito(campanha.equipe)} ${campanha.ano}`,
-                      larguraNome, 11.5, 700),
-          xCol + 24, yLinha + 13, { tamanho: 11.5, peso: 700, cor: COR.azulEscuro });
-
-    caixa(ctx, xCol + xBarra, yLinha + 5, larguraBarra, 7, COR.cinzaClaro, 3.5);
-    const cheio = Math.max(3,
-      ((campanha.pontosFim - pontos) / (maximo - pontos)) * larguraBarra);
-    caixa(ctx, xCol + xBarra, yLinha + 5, cheio, 7, cor, 3.5);
-
-    if (mostrarDepois) {
-      texto(ctx, `+${campanha.depois}`, xCol + xDepois, yLinha + 13,
-            { tamanho: 11.5, peso: 700, cor: COR.cinzaEscuro, alinha: "right" });
-    }
-    texto(ctx, campanha.pontosFim, xCol + xPontos, yLinha + 13,
-          { tamanho: 13, peso: 800, cor: COR.azulEscuro, alinha: "right" });
-
-    caixa(ctx, xCol + xTag, yLinha + 1, larguraTag, 17, cor, 5);
-    texto(ctx, ordinal(campanha.posFim), xCol + xTag + larguraTag / 2, yLinha + 14,
-          { tamanho: 11.5, peso: 800, cor: COR.branco, alinha: "center" });
+    const corpo = Math.min(17, (alto - lado - 14) * 0.62);
+    texto(ctx, campanha.pontosFim, x + largura / 2, y + 8 + lado + corpo,
+          { tamanho: corpo, peso: 800, alinha: "center", cor });
+    texto(ctx, campanha.ano, x + largura / 2, y + 9 + lado + corpo * 1.82,
+          { tamanho: corpo * .68, peso: 700, alinha: "center",
+            cor: COR.cinzaEscuro });
+    return;
   }
 
-  if (mostrarDepois && mostradas.length) {
-    texto(ctx, "pts depois do corte", x + xDepois, topo - 16,
-          { tamanho: 9, peso: 700, maiuscula: true, espaco: .7,
-            cor: COR.cinzaEscuro, alinha: "right" });
-  }
+  const lado = Math.max(14, Math.min(alto - 8, largura * 0.32));
+  desenharEscudo(ctx, escudo, x + 5, y + (alto - lado) / 2, lado);
 
-  if (achadas.length > cabem) {
-    texto(ctx, `e mais ${achadas.length - cabem} — todas entram nas contas`,
-          x, topo + linhasPorColuna * alturaLinha + 18,
-          { tamanho: 12, peso: 700, cor: COR.cinzaEscuro });
-  }
+  const xTexto = x + 5 + lado + 5;
+  const corpo = Math.max(10, Math.min(13, alto * 0.42));
+  texto(ctx, campanha.pontosFim, xTexto, y + alto / 2 - 1,
+        { tamanho: corpo, peso: 800, cor });
+  texto(ctx, campanha.ano, xTexto, y + alto / 2 + corpo * .82,
+        { tamanho: corpo * .7, peso: 700, cor: COR.cinzaEscuro });
 }

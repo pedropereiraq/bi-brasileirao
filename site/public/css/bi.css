@@ -575,12 +575,24 @@ table.mini-classificacao {
 .painel-situacao { display: flex; flex-direction: column; gap: 22px; margin-top: 18px; }
 
 /* A classificação deitada: vinte botões na ordem da tabela. */
+/*
+ * Grade de 20 colunas iguais em vez de flex com quebra: numa tela de
+ * computador os vinte clubes ficam numa linha só, e cada botão ocupa a fração
+ * que sobrar da largura. Em tela estreita a grade passa a dez por linha.
+ */
 .lista-clubes {
-  margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px; display: grid; gap: 4px;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+}
+@media (max-width: 1180px) {
+  .lista-clubes { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .lista-clubes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 .clube {
   display: grid; grid-template-rows: auto auto auto auto; justify-items: center;
-  gap: 1px; width: 62px; padding: 5px 2px 6px;
+  gap: 1px; min-width: 0; padding: 4px 1px 5px;
   font: inherit; border: 1px solid var(--linha); border-radius: var(--raio);
   background: var(--branco); cursor: pointer; color: var(--azul-escuro);
 }
@@ -588,9 +600,9 @@ table.mini-classificacao {
 .clube.ativo { background: var(--azul); border-color: var(--azul); color: var(--branco); }
 .clube.ativo .clube-pos, .clube.ativo .clube-situacao { color: var(--azul-claro); }
 .clube-pos { font-size: 10px; font-weight: 800; color: var(--cinza-escuro); }
-.clube img { width: 24px; height: 24px; object-fit: contain; }
-.clube-pts { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.clube-situacao { font-size: 9.5px; color: var(--cinza-escuro); }
+.clube img { width: 22px; height: 22px; object-fit: contain; }
+.clube-pts { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.clube-situacao { font-size: 9px; color: var(--cinza-escuro); white-space: nowrap; }
 
 .coluna-controles { display: flex; flex-direction: column; gap: 20px; }
 .campo-deslizante > label { display: flex; align-items: baseline; gap: 10px; }

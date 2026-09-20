@@ -106,6 +106,41 @@ test("cada campanha diz quanto somou depois do corte", () => {
   const [alfa] = campanhasSemelhantes(dados, { serie: "A", jogos: 3, pontos: 6 });
   assert.equal(alfa.pontosFim, 76);
   assert.equal(alfa.depois, 70, "76 no fim menos os 6 do corte");
+  assert.equal(alfa.jogosDepois, 35);
+});
+
+test("o aproveitamento antes e depois, e a variação de um para o outro", () => {
+  // ALFA soma 2 por jogo o tempo todo: 6 em 3 e 70 nos 35 seguintes. O
+  // aproveitamento é o mesmo dos dois lados, então a variação é zero.
+  const [alfa] = campanhasSemelhantes(dados, { serie: "A", jogos: 3, pontos: 6 });
+  assert.equal(alfa.aproveitaAntes, 6 / 9);
+  assert.equal(alfa.aproveitaDepois, 70 / 105);
+  assert.ok(Math.abs(alfa.variacao) < 1e-9, "mesma campanha, variação zero");
+
+  // GAMA faz 6 em 3 e só mais 34 em 35: despencou.
+  const gama = campanhasSemelhantes(dados, { serie: "A", jogos: 3, pontos: 6 })
+    .find((c) => c.equipe.startsWith("GAMA"));
+  assert.equal(gama.aproveitaAntes, 6 / 9);
+  assert.equal(gama.aproveitaDepois, 34 / 105);
+  assert.ok(gama.variacao < -50, `variação de ${gama.variacao}`);
+});
+
+test("sem jogo depois do corte, não há aproveitamento depois", () => {
+  const cheia = { series: { A: { 2020: [["ÔMEGA (SP)", 3, reta(2)]] } } };
+  const [c] = campanhasSemelhantes(cheia, { serie: "A", jogos: 38, pontos: 76 });
+  assert.equal(c.jogosDepois, 0);
+  assert.equal(c.aproveitaDepois, null);
+  assert.equal(c.variacao, null, "dividir por zero jogo não vira porcentagem");
+});
+
+test("sem pontos antes do corte, não há variação percentual", () => {
+  // 0 em 3 jogos: melhorar 100% de zero não quer dizer nada.
+  const zerada = { series: { A: { 2020: [["ZERO (SP)", 18,
+    [0, 0, 0, ...Array(35).fill(0).map((_, i) => i + 1)]]] } } };
+  const [c] = campanhasSemelhantes(zerada, { serie: "A", jogos: 3, pontos: 0 });
+  assert.equal(c.aproveitaAntes, 0);
+  assert.ok(c.aproveitaDepois > 0);
+  assert.equal(c.variacao, null);
 });
 
 test("a zona sai da faixa destacada", () => {

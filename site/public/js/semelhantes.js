@@ -1,9 +1,9 @@
 /**
  * Página do card de campanhas semelhantes.
  *
- * Fora do card: a série, a edição, e a situação — jogos e pontos — que se quer
- * investigar. A edição não entra no card: ela existe para dar o atalho dos
- * clubes, que levam os controles direto para a situação de cada um hoje.
+ * Fora do card: a série e a situação — jogos e pontos — que se quer
+ * investigar. A classificação ao lado é sempre a da edição corrente, e serve
+ * de atalho: clicar num clube leva os controles à situação dele hoje.
  *
  * Os controles de jogos e pontos são `<input type=range>` e não a trilha de
  * posições. A trilha é uma tabela deitada, com 20 posições nomeadas; aqui são
@@ -54,7 +54,6 @@ async function inicializar() {
   };
 
   montarChavesDeSerie([...new Set(estado.edicoes.map((e) => e.serie))].sort());
-  el("edicao").addEventListener("change", () => trocarEdicao(el("edicao").value));
 
   el("jogos").addEventListener("input", () => {
     estado.jogos = Number(el("jogos").value);
@@ -100,14 +99,11 @@ async function trocarSerie(serie, url = {}) {
   estado.referencia = estado.referencias[serie] ?? null;
   pintarChaves();
 
+  // Sempre a edição corrente: ela só existe aqui para dar o atalho dos clubes,
+  // e um seletor de ano levaria a escolher a classificação de 2014 para
+  // investigar uma situação que não é de 2014.
   const anos = estado.edicoes.filter((e) => e.serie === serie);
-  el("edicao").innerHTML = anos
-    .map((e) => `<option value="${e.apelido}">${e.ano}</option>`).join("");
-
-  const desejada = url.edicao ?? estado.apelido;
-  const escolhida = anos.some((e) => e.apelido === desejada)
-    ? desejada : anos[0].apelido;
-  await trocarEdicao(escolhida, { silencioso: true });
+  await carregarEdicao(anos[0].apelido);
 
   // A situação vem da URL quando ela traz uma; senão, do líder da edição.
   if (url.jogos && url.pontos !== null && url.pontos !== undefined) {
@@ -118,22 +114,19 @@ async function trocarSerie(serie, url = {}) {
   aplicar();
 }
 
-async function trocarEdicao(apelido, { silencioso = false } = {}) {
+async function carregarEdicao(apelido) {
   const edicao = estado.edicoes.find((e) => e.apelido === apelido);
   if (!edicao) return;
   estado.apelido = apelido;
   estado.edicao = edicao;
-  el("edicao").value = apelido;
 
   const jogos = await fetch(`/dados/jogos/${apelido}.json`).then((r) => r.json());
   const classificados = tabela(jogos, clubesDaEdicao(jogos), {});
   desenharClubes(classificados);
+  el("rotulo-clubes").firstChild.textContent =
+    `Classificação da Série ${estado.serie} ${edicao.ano} `;
 
-  if (!silencioso) {
-    // Trocar de edição sem mexer na situação deixaria a lista de clubes
-    // apontando para uma coisa e os controles para outra.
-    irParaClube(classificados[0]);
-  } else if (classificados.length) {
+  if (classificados.length) {
     estado.jogos = classificados[0].j || estado.jogos;
     estado.pontos = classificados[0].pts ?? estado.pontos;
   }
@@ -204,7 +197,7 @@ function daUrl() {
     const v = Number(p.get(chave));
     return p.get(chave) !== null && Number.isInteger(v) ? v : null;
   };
-  return { serie: p.get("serie"), edicao: p.get("edicao"),
+  return { serie: p.get("serie"),
            jogos: inteiro("jogos"), pontos: inteiro("pontos"),
            melhor: inteiro("melhor"), pior: inteiro("pior") };
 }
@@ -212,7 +205,6 @@ function daUrl() {
 function atualizarUrl() {
   const p = new URLSearchParams();
   if (estado.serie) p.set("serie", estado.serie);
-  if (estado.apelido) p.set("edicao", estado.apelido);
   p.set("jogos", estado.jogos);
   p.set("pontos", estado.pontos);
   p.set("melhor", estado.faixa.melhor);
