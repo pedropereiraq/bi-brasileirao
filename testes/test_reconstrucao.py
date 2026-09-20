@@ -16,6 +16,8 @@ num clone novo o banco pode não ter sido gerado ainda.
 """
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -86,3 +88,53 @@ def test_o_excel_nao_disputa_ano_com_a_coleta(jogos):
     assert conflitantes.empty, (
         "edições com duas origens:\n" + conflitantes.to_string()
     )
+
+
+# ---------------------------------------------------------- dados do site
+#
+# O site não lê os parquets: ele lê JSON em `site/public/dados`, gerado por
+# `bi.publicacao`. Já aconteceu de o recálculo atualizar o canônico e deixar
+# esse JSON para trás — o repositório fresco e o site mostrando a coleta
+# anterior, sem nenhum erro em lugar nenhum. Estes testes pegam isso.
+
+def _dados_do_site(nome: str):
+    caminho = cfg.RAIZ / "site" / "public" / "dados" / nome
+    if not caminho.exists():
+        pytest.skip("dados do site não gerados — rode `python -m bi construir`")
+    return json.loads(caminho.read_text(encoding="utf-8"))
+
+
+def test_o_resumo_das_edicoes_bate_com_o_canonico(jogos):
+    """Cada edição publicada tem de descrever o que o canônico realmente tem."""
+    from bi import publicacao
+
+    publicado = {e["apelido"]: e for e in _dados_do_site("edicoes.json")["edicoes"]}
+    recorte = publicacao._recorte_bi(jogos)
+
+    for (ano, serie), grupo in recorte.groupby(["ano", "serie"]):
+        apelido = f"{serie}{ano}"
+        assert apelido in publicado, f"{apelido} não foi publicado para o site"
+        esperado = publicacao.resumir_edicao(grupo)
+        for campo, valor in esperado.items():
+            assert publicado[apelido][campo] == valor, (
+                f"{apelido}: {campo} publicado como "
+                f"{publicado[apelido][campo]}, esperado {valor}"
+            )
+
+
+def test_a_lista_de_jogos_publicada_bate_com_o_canonico(jogos):
+    """
+    O arquivo de jogos de cada edição é o que o navegador usa para calcular
+    tudo. Se ele envelhecer, o site mostra a tabela da semana passada.
+    """
+    from bi import publicacao
+
+    recorte = publicacao._recorte_bi(jogos)
+    for (ano, serie), grupo in recorte.groupby(["ano", "serie"]):
+        apelido = f"{serie}{ano}"
+        publicado = _dados_do_site(f"jogos/{apelido}.json")
+        esperado = publicacao.publicar_edicao(grupo)
+        assert publicado == esperado, (
+            f"{apelido}: {len(publicado)} jogos publicados contra "
+            f"{len(esperado)} no canônico — dados do site desatualizados"
+        )
