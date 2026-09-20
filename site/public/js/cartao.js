@@ -139,8 +139,18 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
     if (im) { desenharEscudo(ctx, im, x, 34, 58); x += 74; }
   }
 
+  // O título agora carrega a frase inteira e varia muito de comprimento;
+  // encolhe até caber em vez de invadir a marca.
+  const limite = CARD.largura - MARGEM - 250 - 28 - x;
+  let corpoTitulo = 42;
+  ctx.save();
+  for (; corpoTitulo > 26; corpoTitulo -= 1) {
+    ctx.font = `700 ${corpoTitulo}px "Bree Serif", Georgia, serif`;
+    if (ctx.measureText(titulo).width <= limite) break;
+  }
+  ctx.restore();
   texto(ctx, titulo, x, 74, {
-    tamanho: 42, peso: 700, cor: COR.azul, familia: "Bree Serif",
+    tamanho: corpoTitulo, peso: 700, cor: COR.azul, familia: "Bree Serif",
   });
   texto(ctx, subtitulo, x, 104, { tamanho: 17, cor: COR.cinzaEscuro });
 

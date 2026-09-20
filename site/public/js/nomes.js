@@ -28,3 +28,18 @@ export function nomeBonito(equipe) {
 
 /** A sigla de estado, para desempatar clubes de nome parecido. */
 export const uf = (equipe) => (equipe.match(/\(([A-Z]{2})\)$/) ?? [, ""])[1];
+
+/**
+ * Clubes que pedem artigo feminino: "a Chapecoense", "a Ponte Preta".
+ *
+ * A lista é curta porque quase todo clube brasileiro leva artigo masculino,
+ * mesmo quando o nome é uma palavra feminina — diz-se "o Juventude" e "o
+ * Vila Nova". Só estes quatro, no recorte de 2006 em diante, fogem disso.
+ */
+const FEMININOS = new Set([
+  "CHAPECOENSE", "PONTE PRETA", "PORTUGUESA", "FERROVIÁRIA",
+]);
+
+/** `do` ou `da`, conforme o clube. */
+export const artigo = (equipe) =>
+  FEMININOS.has(nomeCurto(equipe).toLocaleUpperCase("pt-BR")) ? "da" : "do";
