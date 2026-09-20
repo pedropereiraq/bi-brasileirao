@@ -67,9 +67,14 @@ export function montarCartao(estado) {
         blocos, resumo, metas, rotulo: nomeBonito(clube), clube,
         x: MARGEM, y: yTabela + 30, largura: 500,
       });
-      graficoAcumulado(ctx, {
-        blocos, x: MARGEM + 560, largura: CARD.largura - MARGEM - (MARGEM + 560),
-        y: yBaixo, altura: 348,
+      const xDireita = MARGEM + 560;
+      const larguraDireita = CARD.largura - MARGEM - xDireita;
+      barrasPorBloco(ctx, {
+        blocos, metas, x: xDireita, largura: larguraDireita,
+        y: yBaixo, altura: 128,
+      });
+      termometro(ctx, {
+        resumo, metas, x: xDireita, largura: larguraDireita, y: yBaixo + 208,
       });
     },
   };
@@ -127,21 +132,37 @@ async function linhaDeJogo(ctx, { passo, clubes, x, largura, y }) {
 
   ctx.save();
   if (!realizado) ctx.globalAlpha = 0.42;
-  desenharEscudo(ctx, escudo, x + 10, y, 21);
+  desenharEscudo(ctx, escudo, x + 8, y, 20);
   ctx.restore();
 
-  texto(ctx, jogo.mando === "casa" ? "C" : "F", x + 38, y + 15,
-        { tamanho: 9.5, peso: 800, cor: COR.cinzaEscuro });
+  // Casa e fora por extenso, cada um na sua cor, como na faixa de jogos dos
+  // outros cards. Inicial economiza espaço e cobra uma tradução de quem lê.
+  const emCasa = jogo.mando === "casa";
+  const rotulo = emCasa ? "casa" : "fora";
+  caixa(ctx, x + 32, y + 3, 32, 15,
+        realizado ? (emCasa ? COR.azulLavado : COR.cinzaClaro) : COR.fundo, 4);
+  if (!realizado) {
+    ctx.save();
+    ctx.strokeStyle = COR.linha;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x + 32.5, y + 3.5, 31, 14, 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+  texto(ctx, rotulo, x + 48, y + 14,
+        { tamanho: 9, peso: 800, alinha: "center", maiuscula: true, espaco: .4,
+          cor: emCasa && realizado ? COR.azul : COR.cinzaEscuro });
 
   if (realizado) {
-    texto(ctx, `${jogo.gp}×${jogo.gc}`, x + 52, y + 16,
+    texto(ctx, `${jogo.gp}×${jogo.gc}`, x + 70, y + 16,
           { tamanho: 13, peso: 800, cor: corDoResultado(jogo.resultado) });
     const ganhos = pontosDoResultado(jogo.resultado);
     texto(ctx, ganhos ? `+${ganhos}` : "0", x + largura - 12, y + 16,
           { tamanho: 12, peso: 700, alinha: "right",
             cor: ganhos ? corDoResultado(jogo.resultado) : COR.cinza });
   } else {
-    linhaH(ctx, x + 52, x + 70, y + 12, COR.cinzaClaro, 2);
+    linhaH(ctx, x + 70, x + 88, y + 12, COR.cinzaClaro, 2);
   }
 }
 
@@ -187,7 +208,20 @@ function rodapeDoPainel(ctx, { bloco, x, y, largura }) {
   texto(ctx, rotulo, x + largura - 12 - larguraChip / 2, yBase + 29,
         { tamanho: 12, peso: 800, cor: COR.branco, alinha: "center" });
 
-  if (!bloco.completo) {
+  // À direita da meta, a conta que interessa ao longo da campanha: onde o
+  // saldo acumulado chegou depois deste bloco. Num bloco ainda aberto ela não
+  // existe, e o lugar mostra o que resta dele.
+  if (bloco.completo) {
+    texto(ctx, "acum.", x + largura - 12, yBase + 50,
+          { tamanho: 10.5, cor: COR.cinzaEscuro, alinha: "right" });
+    ctx.save();
+    ctx.font = '400 10.5px "Assistant", sans-serif';
+    const largoRotulo = ctx.measureText("acum.").width;
+    ctx.restore();
+    texto(ctx, comSinal(bloco.acumulado), x + largura - 16 - largoRotulo, yBase + 50,
+          { tamanho: 12, peso: 800, alinha: "right",
+            cor: corDoSaldo(bloco.acumulado) });
+  } else {
     texto(ctx, `em ${bloco.restam} ${bloco.restam === 1 ? "jogo" : "jogos"}`,
           x + largura - 12, yBase + 50,
           { tamanho: 10.5, cor: COR.cinzaEscuro, alinha: "right" });
@@ -309,92 +343,151 @@ function vereditoDaCampanha(ctx, o) {
         { tamanho: 12.5, cor: COR.cinzaTexto });
 }
 
-/* ------------------------------------------------------------- gráfico */
-function graficoAcumulado(ctx, { blocos, x, largura, y, altura }) {
-  texto(ctx, "Diferença acumulada em relação à meta", x, y,
-        { tamanho: 11, peso: 700, maiuscula: true, espaco: .9,
+/* ------------------------------------------------- pontos por bloco */
+/**
+ * Barras do que cada bloco rendeu, com a meta pontilhada por cima.
+ *
+ * Deliberadamente pequeno: aqui a pergunta é "como foi cada bloco", e ela se
+ * responde de relance. A pergunta que o card existe para responder — como está
+ * a conta contra a meta — é a de baixo, e é ela que fica grande.
+ *
+ * A meta é desenhada em degrau, um traço por bloco, porque o bloco extra tem
+ * meta própria. Uma linha reta atravessando os sete diria que o extra também
+ * precisa de 7 pontos em 2 jogos.
+ */
+function barrasPorBloco(ctx, { blocos, metas, x, largura, y, altura }) {
+  texto(ctx, "pontos por bloco", x, y,
+        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
 
-  const topo = y + 26, alturaPlot = altura - 52;
+  const topo = y + 18;
+  const maximo = Math.max(6, ...blocos.map((b) => Math.max(b.pontos, b.meta))) + 3;
+  const escala = (v) => topo + altura * (1 - v / maximo);
   const passo = largura / blocos.length;
   const centro = (i) => x + (i + 0.5) * passo;
+  const larguraBarra = Math.min(44, passo * 0.5);
+  const base = escala(0);
 
-  // A escala segue o que existe, e não um intervalo simétrico. Uma campanha
-  // que só ficou acima da meta desperdiçaria metade da altura com um espaço
-  // negativo que nunca vai ser usado.
-  const valores = blocos.flatMap((b) => [b.saldo, b.acumulado])
-    .filter((v) => v !== null);
-  const teto = Math.max(2, ...valores);
-  const piso = Math.min(-2, ...valores);
-  const escala = (v) => topo + alturaPlot * ((teto - v) / (teto - piso));
-  const yZero = escala(0);
+  linhaH(ctx, x, x + largura, base, COR.cinza);
 
-  for (const v of [teto, 0, piso]) {
-    linhaH(ctx, x, x + largura, escala(v), v === 0 ? COR.cinza : COR.cinzaClaro);
-    texto(ctx, comSinal(v), x - 8, escala(v) + 4,
-          { tamanho: 10.5, cor: COR.cinzaEscuro, alinha: "right" });
-  }
-
-  // A barra é o saldo do bloco; a linha é o acumulado. Juntas respondem as
-  // duas perguntas de uma vez: como foi aquele bloco, e como está a conta.
-  const larguraBarra = passo * 0.36;
-  for (const [i, bloco] of blocos.entries()) {
-    if (!bloco.completo || bloco.saldo === 0) continue;
-    const yTopo = Math.min(yZero, escala(bloco.saldo));
-    caixa(ctx, centro(i) - larguraBarra / 2, yTopo, larguraBarra,
-          Math.abs(escala(bloco.saldo) - yZero), corDoSaldo(bloco.saldo), 3);
-  }
-
-  const pontos = blocos
-    .map((bloco, i) => ({ bloco, i }))
-    .filter(({ bloco }) => bloco.acumulado !== null);
-
-  if (pontos.length > 1) {
-    ctx.save();
-    ctx.strokeStyle = COR.azulEscuro;
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    pontos.forEach(({ bloco, i }, k) => {
-      const xy = [centro(i), escala(bloco.acumulado)];
-      if (k === 0) ctx.moveTo(...xy); else ctx.lineTo(...xy);
-    });
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  for (const { bloco, i } of pontos) {
-    ctx.save();
-    ctx.fillStyle = COR.fundo;
-    ctx.beginPath();
-    ctx.arc(centro(i), escala(bloco.acumulado), 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = COR.azulEscuro;
-    ctx.beginPath();
-    ctx.arc(centro(i), escala(bloco.acumulado), 3.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  const ultimo = pontos.at(-1);
-  if (ultimo) {
-    const rotulo = comSinal(ultimo.bloco.acumulado);
-    ctx.save();
-    ctx.font = '800 15px "Assistant", sans-serif';
-    const largo = ctx.measureText(rotulo).width + 20;
-    ctx.restore();
-    const xChip = Math.min(centro(ultimo.i) + 14, x + largura - largo);
-    caixa(ctx, xChip, escala(ultimo.bloco.acumulado) - 13, largo, 26,
-          corDoSaldo(ultimo.bloco.acumulado), 6);
-    texto(ctx, rotulo, xChip + largo / 2, escala(ultimo.bloco.acumulado) + 5,
-          { tamanho: 15, peso: 800, cor: COR.branco, alinha: "center" });
-  }
+  ctx.save();
+  ctx.strokeStyle = COR.cinzaEscuro;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath();
+  blocos.forEach((bloco, i) => {
+    const yMeta = escala(bloco.meta);
+    ctx.moveTo(centro(i) - passo / 2 + 3, yMeta);
+    ctx.lineTo(centro(i) + passo / 2 - 3, yMeta);
+  });
+  ctx.stroke();
+  ctx.restore();
+  texto(ctx, `meta ${metas.bloco}`, x + 2, escala(metas.bloco) - 7,
+        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
+          cor: COR.cinzaEscuro });
 
   for (const [i, bloco] of blocos.entries()) {
-    texto(ctx, bloco.curto, centro(i), topo + alturaPlot + 22,
+    if (bloco.iniciado) {
+      const topoBarra = escala(bloco.pontos);
+      // Bloco aberto em azul claro: ainda não é um resultado, é um parcial.
+      const cor = bloco.completo ? corDoSaldo(bloco.saldo) : COR.azulClaro;
+      caixa(ctx, centro(i) - larguraBarra / 2, Math.min(topoBarra, base - 2),
+            larguraBarra, Math.max(2, base - topoBarra), cor, 4);
+      texto(ctx, bloco.pontos, centro(i), topoBarra - 8,
+            { tamanho: 13, peso: 800, alinha: "center",
+              cor: bloco.completo ? corDoSaldo(bloco.saldo) : COR.azul });
+    }
+    texto(ctx, bloco.curto, centro(i), base + 18,
           { tamanho: 11, peso: 700, alinha: "center",
-            cor: bloco.completo ? COR.azulEscuro : COR.cinza });
+            cor: bloco.iniciado ? COR.azulEscuro : COR.cinza });
   }
-  void cortar;
-  void BLOCOS;
+}
+
+/* ---------------------------------------------------------- termômetro */
+/**
+ * O destaque do rodapé: quantos pontos a campanha está acima ou abaixo da meta.
+ *
+ * Termômetro e não gráfico. Um gráfico responde "como chegamos aqui"; a
+ * pergunta que se faz olhando um card de meta é "estamos bem ou mal, e por
+ * quanto". Zero no meio, azul crescendo para a direita, vermelho para a
+ * esquerda: dá para ler sem passar pelos números.
+ *
+ * A escala é simétrica de propósito, ao contrário da do gráfico de linha. Num
+ * medidor, a simetria é a informação — o mesmo desvio pesa igual dos dois
+ * lados.
+ */
+function termometro(ctx, { resumo, metas, x, largura, y }) {
+  const { saldo, blocosFechados } = resumo;
+  const altura = 56;
+
+  texto(ctx, "diferença acumulada em relação à meta", x, y,
+        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
+          cor: COR.cinzaEscuro });
+  texto(ctx, blocosFechados === 0 ? "nenhum bloco fechado"
+             : `${blocosFechados} ${blocosFechados === 1 ? "bloco fechado" : "blocos fechados"}`
+               + ` · ${resumo.pontos} pontos contra ${resumo.meta} de meta`,
+        x + largura, y,
+        { tamanho: 11, cor: COR.cinzaEscuro, alinha: "right" });
+
+  const yTrilho = y + 18;
+  const meio = x + largura / 2;
+  const meia = largura / 2 - 8;
+  // A escala cresce em múltiplos de 3 — um triunfo de folga por degrau.
+  const limite = Math.max(6, Math.ceil(Math.abs(saldo) * 1.25 / 3) * 3);
+  const posicao = (v) => meio + (v / limite) * meia;
+
+  caixa(ctx, x, yTrilho, largura, altura, COR.cinzaClaro, altura / 2);
+
+  const xValor = posicao(saldo);
+  const de = Math.min(meio, xValor), ate = Math.max(meio, xValor);
+  const cor = corDoSaldo(saldo);
+  if (ate - de > 1) {
+    caixa(ctx, de, yTrilho, ate - de, altura, cor, Math.min(altura / 2, (ate - de) / 2));
+  }
+
+  // O zero é a referência do medidor: fica marcado mesmo sob o preenchimento.
+  ctx.save();
+  ctx.strokeStyle = ate - de > 1 ? COR.branco : COR.cinzaEscuro;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(meio, yTrilho + 8);
+  ctx.lineTo(meio, yTrilho + altura - 8);
+  ctx.stroke();
+  ctx.restore();
+
+  const rotulo = comSinal(saldo);
+  ctx.save();
+  ctx.font = '800 34px "Assistant", sans-serif';
+  const largoNumero = ctx.measureText(rotulo).width;
+  ctx.restore();
+
+  // Dentro do preenchimento quando cabe; do lado de fora quando o desvio é
+  // pequeno demais para a barra segurar o número.
+  const cabeDentro = ate - de > largoNumero + 34;
+  const yTexto = yTrilho + altura / 2 + 12;
+  if (saldo === 0) {
+    texto(ctx, "na meta", meio + 20, yTexto - 1,
+          { tamanho: 20, peso: 800, cor: COR.cinzaEscuro });
+  } else if (cabeDentro) {
+    texto(ctx, rotulo, saldo > 0 ? ate - 18 : de + 18, yTexto,
+          { tamanho: 34, peso: 800, cor: COR.branco,
+            alinha: saldo > 0 ? "right" : "left" });
+  } else {
+    texto(ctx, rotulo, saldo > 0 ? ate + 16 : de - 16, yTexto,
+          { tamanho: 34, peso: 800, cor, alinha: saldo > 0 ? "left" : "right" });
+  }
+
+  // Números e palavras em linhas separadas: na mesma linha, o rótulo da ponta
+  // e o limite da escala caem um em cima do outro.
+  const yEscala = yTrilho + altura + 20;
+  for (const v of [-limite, 0, limite]) {
+    texto(ctx, comSinal(v), posicao(v), yEscala,
+          { tamanho: 11, peso: 700, cor: COR.cinzaEscuro, alinha: "center" });
+  }
+  texto(ctx, "abaixo da meta", x, yEscala + 18,
+        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.vermelho });
+  texto(ctx, "acima da meta", x + largura, yEscala + 18,
+        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.azul,
+          alinha: "right" });
+  void metas;
 }
