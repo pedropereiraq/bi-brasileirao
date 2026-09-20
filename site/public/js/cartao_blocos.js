@@ -47,34 +47,40 @@ export function montarCartao(estado) {
   const spec = {
     titulo: `Blocos de 6 jogos ${artigo(clube)} ${nomeBonito(clube)}`
           + ` na Série ${serie} ${edicao.ano}`,
-    subtitulo: `Meta do ${ordinal(posicao)} lugar: ${metas.bloco} pontos por `
-             + `bloco e ${metas.extra} no extra — ${metas.total} no total`,
+    // As premissas são o assunto do card tanto quanto os blocos: sem saber de
+    // onde vem a meta, o saldo de cada bloco não quer dizer nada. Por isso elas
+    // sobem para a faixa de números em vez de ficarem num subtítulo miúdo.
+    subtitulo: "",
     arquivo: `blocos-${nomeCurto(clube)}-${edicao.ano}-${posicao}`,
-    numeros: [],
+    numeros: [
+      { valor: metas.bloco, nome: "meta por bloco", destaque: "azul" },
+      { valor: metas.total, nome: "pontuação total", destaque: "escuro" },
+      { valor: ordinal(posicao), nome: "equivale à pontuação deste lugar" },
+    ],
     nota: `A meta sai da média de quem terminou em ${ordinal(posicao)} nas `
         + `${referencia.edicoes} edições encerradas da Série ${serie} `
         + `(${referencia.ano_primeiro}–${referencia.ano_ultimo}): `
         + `${num(media)} pontos, repartidos em 6 blocos de 6 jogos mais os 2 últimos.`,
     corpo: async (ctx, y) => {
-      const yPaineis = y + 14;
+      const yPaineis = y + 8;
       await faixaDeBlocos(ctx, { blocos, clubes, y: yPaineis });
 
-      const yBaixo = yPaineis + ALTURA_PAINEL + 40;
-      linhaH(ctx, MARGEM, CARD.largura - MARGEM, yBaixo - 20, COR.linha);
+      const yBaixo = yPaineis + ALTURA_PAINEL + 26;
+      linhaH(ctx, MARGEM, CARD.largura - MARGEM, yBaixo - 18, COR.linha);
 
       const yTabela = tabelaDeBlocos(ctx, { blocos, resumo, x: MARGEM, y: yBaixo });
       vereditoDaCampanha(ctx, {
         blocos, resumo, metas, rotulo: nomeBonito(clube), clube,
-        x: MARGEM, y: yTabela + 30, largura: 500,
+        x: MARGEM, y: yTabela + 18, largura: 500,
       });
       const xDireita = MARGEM + 560;
       const larguraDireita = CARD.largura - MARGEM - xDireita;
       barrasPorBloco(ctx, {
         blocos, metas, x: xDireita, largura: larguraDireita,
-        y: yBaixo, altura: 128,
+        y: yBaixo, altura: 106,
       });
       termometro(ctx, {
-        resumo, metas, x: xDireita, largura: larguraDireita, y: yBaixo + 208,
+        resumo, metas, x: xDireita, largura: larguraDireita, y: yBaixo + 160,
       });
     },
   };
@@ -82,9 +88,9 @@ export function montarCartao(estado) {
 }
 
 /* ------------------------------------------------------------- painéis */
-const ALTURA_PAINEL = 250;
+const ALTURA_PAINEL = 218;
 const VAO = 12;
-const ALTURA_LINHA = 24;
+const ALTURA_LINHA = 21;
 
 async function faixaDeBlocos(ctx, { blocos, clubes, y }) {
   const disponivel = CARD.largura - MARGEM * 2;
@@ -110,13 +116,13 @@ async function painelDoBloco(ctx, { bloco, clubes, x, y, largura }) {
   ctx.stroke();
   ctx.restore();
 
-  texto(ctx, bloco.nome, x + 12, y + 22,
+  texto(ctx, bloco.nome, x + 12, y + 20,
         { tamanho: 11, peso: 800, maiuscula: true, espaco: .9,
           cor: bloco.iniciado ? COR.azul : COR.cinzaEscuro });
-  texto(ctx, `${bloco.de}–${bloco.ate}`, x + largura - 12, y + 22,
+  texto(ctx, `${bloco.de}–${bloco.ate}`, x + largura - 12, y + 20,
         { tamanho: 10, peso: 700, cor: COR.cinzaEscuro, alinha: "right" });
 
-  const yLinhas = y + 36;
+  const yLinhas = y + 32;
   for (const [i, passo] of bloco.jogos.entries()) {
     await linhaDeJogo(ctx, {
       passo, clubes, x, largura, y: yLinhas + i * ALTURA_LINHA,
@@ -132,37 +138,37 @@ async function linhaDeJogo(ctx, { passo, clubes, x, largura, y }) {
 
   ctx.save();
   if (!realizado) ctx.globalAlpha = 0.42;
-  desenharEscudo(ctx, escudo, x + 8, y, 20);
+  desenharEscudo(ctx, escudo, x + 8, y + 1, 18);
   ctx.restore();
 
   // Casa e fora por extenso, cada um na sua cor, como na faixa de jogos dos
   // outros cards. Inicial economiza espaço e cobra uma tradução de quem lê.
   const emCasa = jogo.mando === "casa";
   const rotulo = emCasa ? "casa" : "fora";
-  caixa(ctx, x + 32, y + 3, 32, 15,
+  caixa(ctx, x + 30, y + 3, 31, 14,
         realizado ? (emCasa ? COR.azulLavado : COR.cinzaClaro) : COR.fundo, 4);
   if (!realizado) {
     ctx.save();
     ctx.strokeStyle = COR.linha;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(x + 32.5, y + 3.5, 31, 14, 4);
+    ctx.roundRect(x + 30.5, y + 3.5, 30, 13, 4);
     ctx.stroke();
     ctx.restore();
   }
-  texto(ctx, rotulo, x + 48, y + 14,
+  texto(ctx, rotulo, x + 45.5, y + 13,
         { tamanho: 9, peso: 800, alinha: "center", maiuscula: true, espaco: .4,
           cor: emCasa && realizado ? COR.azul : COR.cinzaEscuro });
 
   if (realizado) {
-    texto(ctx, `${jogo.gp}×${jogo.gc}`, x + 70, y + 16,
-          { tamanho: 13, peso: 800, cor: corDoResultado(jogo.resultado) });
+    texto(ctx, `${jogo.gp}×${jogo.gc}`, x + 68, y + 14,
+          { tamanho: 12.5, peso: 800, cor: corDoResultado(jogo.resultado) });
     const ganhos = pontosDoResultado(jogo.resultado);
-    texto(ctx, ganhos ? `+${ganhos}` : "0", x + largura - 12, y + 16,
+    texto(ctx, ganhos ? `+${ganhos}` : "0", x + largura - 12, y + 14,
           { tamanho: 12, peso: 700, alinha: "right",
             cor: ganhos ? corDoResultado(jogo.resultado) : COR.cinza });
   } else {
-    linhaH(ctx, x + 70, x + 88, y + 12, COR.cinzaClaro, 2);
+    linhaH(ctx, x + 68, x + 86, y + 10, COR.cinzaClaro, 2);
   }
 }
 
@@ -170,7 +176,7 @@ const corDoResultado = (resultado) => resultado === "T" ? COR.azul
   : resultado === "E" ? COR.cinzaEscuro : COR.vermelho;
 
 function rodapeDoPainel(ctx, { bloco, x, y, largura }) {
-  const yBase = y - 58;
+  const yBase = y - 56;
   linhaH(ctx, x + 12, x + largura - 12, yBase, COR.linha);
 
   if (!bloco.iniciado) {
@@ -180,16 +186,16 @@ function rodapeDoPainel(ctx, { bloco, x, y, largura }) {
     return;
   }
 
-  texto(ctx, bloco.pontos, x + 12, yBase + 32,
-        { tamanho: 28, peso: 800, cor: corDoSaldo(bloco.saldo) });
+  texto(ctx, bloco.pontos, x + 12, yBase + 31,
+        { tamanho: 26, peso: 800, cor: corDoSaldo(bloco.saldo) });
   ctx.save();
-  ctx.font = '800 28px "Assistant", sans-serif';
+  ctx.font = '800 26px "Assistant", sans-serif';
   const largo = ctx.measureText(String(bloco.pontos)).width;
   ctx.restore();
-  texto(ctx, "pts", x + 18 + largo, yBase + 32,
+  texto(ctx, "pts", x + 18 + largo, yBase + 31,
         { tamanho: 11, peso: 700, cor: COR.cinzaEscuro });
 
-  texto(ctx, `meta ${bloco.meta}`, x + 12, yBase + 50,
+  texto(ctx, `meta ${bloco.meta}`, x + 12, yBase + 48,
         { tamanho: 11, peso: 700, cor: COR.cinzaEscuro });
 
   // A etiqueta da direita: saldo quando o bloco fechou, e o que ainda falta
@@ -204,26 +210,26 @@ function rodapeDoPainel(ctx, { bloco, x, y, largura }) {
   ctx.font = '800 12px "Assistant", sans-serif';
   const larguraChip = ctx.measureText(rotulo).width + 18;
   ctx.restore();
-  caixa(ctx, x + largura - 12 - larguraChip, yBase + 14, larguraChip, 22, cor, 6);
-  texto(ctx, rotulo, x + largura - 12 - larguraChip / 2, yBase + 29,
+  caixa(ctx, x + largura - 12 - larguraChip, yBase + 12, larguraChip, 21, cor, 6);
+  texto(ctx, rotulo, x + largura - 12 - larguraChip / 2, yBase + 27,
         { tamanho: 12, peso: 800, cor: COR.branco, alinha: "center" });
 
   // À direita da meta, a conta que interessa ao longo da campanha: onde o
   // saldo acumulado chegou depois deste bloco. Num bloco ainda aberto ela não
   // existe, e o lugar mostra o que resta dele.
   if (bloco.completo) {
-    texto(ctx, "acum.", x + largura - 12, yBase + 50,
+    texto(ctx, "acum.", x + largura - 12, yBase + 48,
           { tamanho: 10.5, cor: COR.cinzaEscuro, alinha: "right" });
     ctx.save();
     ctx.font = '400 10.5px "Assistant", sans-serif';
     const largoRotulo = ctx.measureText("acum.").width;
     ctx.restore();
-    texto(ctx, comSinal(bloco.acumulado), x + largura - 16 - largoRotulo, yBase + 50,
+    texto(ctx, comSinal(bloco.acumulado), x + largura - 16 - largoRotulo, yBase + 48,
           { tamanho: 12, peso: 800, alinha: "right",
             cor: corDoSaldo(bloco.acumulado) });
   } else {
     texto(ctx, `em ${bloco.restam} ${bloco.restam === 1 ? "jogo" : "jogos"}`,
-          x + largura - 12, yBase + 50,
+          x + largura - 12, yBase + 48,
           { tamanho: 10.5, cor: COR.cinzaEscuro, alinha: "right" });
   }
 }
@@ -247,7 +253,7 @@ function tabelaDeBlocos(ctx, { blocos, resumo, x, y }) {
   }
   linhaH(ctx, x, x + 458, y + 8, COR.linha);
 
-  const alturaLinha = 25;
+  const alturaLinha = 22;
   blocos.forEach((bloco, i) => {
     const yLinha = y + 30 + i * alturaLinha;
     const apagado = !bloco.iniciado;
@@ -294,7 +300,7 @@ function tabelaDeBlocos(ctx, { blocos, resumo, x, y }) {
  */
 function vereditoDaCampanha(ctx, o) {
   const { blocos, resumo, metas, rotulo, clube, x, y, largura } = o;
-  const altura = 98;
+  const altura = 88;
 
   caixa(ctx, x, y, largura, altura, COR.branco, 8);
   ctx.save();
@@ -305,7 +311,7 @@ function vereditoDaCampanha(ctx, o) {
   ctx.stroke();
   ctx.restore();
 
-  texto(ctx, "onde a campanha está", x + 16, y + 24,
+  texto(ctx, "onde a campanha está", x + 16, y + 22,
         { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
 
@@ -321,8 +327,8 @@ function vereditoDaCampanha(ctx, o) {
 
   // A frase pode começar pelo artigo do clube, que é minúsculo.
   const comMaiuscula = frase.charAt(0).toLocaleUpperCase("pt-BR") + frase.slice(1);
-  texto(ctx, cortar(ctx, comMaiuscula, largura - 32, 15.5, 700), x + 16, y + 52,
-        { tamanho: 15.5, peso: 700, cor: corDoSaldo(resumo.saldo) });
+  texto(ctx, cortar(ctx, comMaiuscula, largura - 32, 15, 700), x + 16, y + 48,
+        { tamanho: 15, peso: 700, cor: corDoSaldo(resumo.saldo) });
 
   // "Faltam 11 para os 64 da meta" só faz sentido enquanto há jogo pela
   // frente. Numa edição encerrada não falta nada: ela terminou abaixo.
@@ -339,7 +345,7 @@ function vereditoDaCampanha(ctx, o) {
           ? `a meta total de ${metas.total} já está cumprida`
           : `já passou os ${metas.total} da meta por ${sobra}`);
   const segunda = `${resumo.pontosTotais} pontos em ${disputados} jogos · ${fecho}`;
-  texto(ctx, cortar(ctx, segunda, largura - 32, 12.5, 400), x + 16, y + 76,
+  texto(ctx, cortar(ctx, segunda, largura - 32, 12.5, 400), x + 16, y + 70,
         { tamanho: 12.5, cor: COR.cinzaTexto });
 }
 
