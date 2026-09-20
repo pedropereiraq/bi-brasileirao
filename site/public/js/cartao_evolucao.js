@@ -76,6 +76,16 @@ export function montarCartao(estado) {
   const campanhaB = disputados(agendaB);
   if (!campanhaA.length && !campanhaB.length) return null;
 
+  // Uma campanha está encerrada quando não sobrou jogo na agenda dela. Se uma
+  // já acabou e a outra ainda corre, comparar os totais seria comparar 38 jogos
+  // com 20: o ponto de comparação passa a ser o número de jogos da que está em
+  // curso. O que a encerrada fez dali em diante não some — vira linha
+  // pontilhada e uma conta à parte no selo.
+  const encerradaA = campanhaA.length === agendaA.length;
+  const encerradaB = campanhaB.length === agendaB.length;
+  const emCurso = encerradaA ? campanhaB.length : campanhaA.length;
+  const corte = encerradaA !== encerradaB && emCurso > 0 ? emCurso : null;
+
   const anosIguais = a.edicao.ano === b.edicao.ano;
   const rotuloA = anosIguais ? nomeBonito(a.clube)
                              : `${nomeBonito(a.clube)} ${a.edicao.ano}`;
@@ -84,8 +94,7 @@ export function montarCartao(estado) {
 
   const spec = {
     titulo: tituloDoCard({ serie, a, b, anosIguais }),
-    subtitulo: "Jogos em ordem cronológica · cada linha termina no último "
-             + "jogo disputado · os jogos que faltam aparecem esmaecidos",
+    subtitulo: "Jogos em ordem cronológica",
     arquivo: `evolucao-${nomeCurto(a.clube)}-${a.edicao.ano}`
            + `-${nomeCurto(b.clube)}-${b.edicao.ano}`,
     numeros: [],   // sem faixa de números: o gráfico fica com a altura toda
@@ -109,7 +118,8 @@ export function montarCartao(estado) {
       await legenda(ctx, MARGEM, y, clubes,
                     [[a.clube, rotuloA, COR.azul], [b.clube, rotuloB, COR.vermelho]]);
       desenharLinhas(ctx, { campanhaA, campanhaB, centro, topo, alturaPlot,
-                            x0, x1, rotuloA, rotuloB });
+                            x0, x1, rotuloA, rotuloB,
+                            encerradaA, encerradaB, corte });
 
       for (let n = 1; n <= JOGOS; n++) {
         if (n !== 1 && n !== JOGOS && n % 2 === 0) continue;
@@ -205,9 +215,8 @@ function tituloDoCard({ serie, a, b, anosIguais }) {
 /* --------------------------------------------------------------- linhas */
 function desenharLinhas(ctx, o) {
   const { campanhaA, campanhaB, centro, topo, alturaPlot, x0, x1,
-          rotuloA, rotuloB } = o;
-  const fimA = campanhaA.at(-1), fimB = campanhaB.at(-1);
-  const maximo = Math.max(fimA?.pts ?? 0, fimB?.pts ?? 0, 1);
+          rotuloA, rotuloB, encerradaA, encerradaB, corte } = o;
+  const maximo = Math.max(campanhaA.at(-1)?.pts ?? 0, campanhaB.at(-1)?.pts ?? 0, 1);
   const escala = (pts) => topo + alturaPlot - (pts / maximo) * alturaPlot;
 
   const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
@@ -217,53 +226,84 @@ function desenharLinhas(ctx, o) {
           { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
   }
 
-  const comparacao = compararCampanhas(campanhaA, campanhaB);
-  bandaEntreLinhas(ctx, comparacao, centro, escala);
-  marcarMaiorDiferenca(ctx, comparacao, centro, escala);
-
-  // Contorno claro antes da cor: onde as duas linhas andam juntas, é o que
-  // mantém a de baixo visível em vez de sumir por completo sob a de cima.
-  for (const [campanha, cor] of [[campanhaA, COR.azul], [campanhaB, COR.vermelho]]) {
-    if (!campanha.length) continue;
-    for (const [espessura, tinta] of [[9, COR.fundo], [4.5, cor]]) {
-      ctx.save();
-      ctx.strokeStyle = tinta;
-      ctx.lineWidth = espessura;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      campanha.forEach((p, i) => {
-        const ponto = [centro(p.n), escala(p.pts)];
-        if (i === 0) ctx.moveTo(...ponto); else ctx.lineTo(...ponto);
-      });
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  for (const [campanha, cor] of [[campanhaA, COR.azul], [campanhaB, COR.vermelho]]) {
-    for (const p of campanha) {
-      ctx.save();
-      ctx.fillStyle = COR.fundo;
-      ctx.beginPath();
-      ctx.arc(centro(p.n), escala(p.pts), 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cor;
-      ctx.beginPath();
-      ctx.arc(centro(p.n), escala(p.pts), 3.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  rotulosFinais(ctx, {
-    series: [{ fim: fimA, cor: COR.azul, rotulo: rotuloA },
-             { fim: fimB, cor: COR.vermelho, rotulo: rotuloB }].filter((v) => v.fim),
-    centro, escala, x1, topo, alturaPlot,
+  // Cada linha com dois dados a mais: onde o selo pousa e o que veio depois
+  // dele. Entre campanhas em pé de igualdade o selo pousa no fim da linha;
+  // quando uma já acabou e a outra não, ele pousa no jogo do corte.
+  const series = [
+    { campanha: campanhaA, cor: COR.azul, rotulo: rotuloA, encerrada: encerradaA },
+    { campanha: campanhaB, cor: COR.vermelho, rotulo: rotuloB, encerrada: encerradaB },
+  ].filter((s) => s.campanha.length).map((s) => {
+    const cortada = Boolean(corte) && s.encerrada && corte < s.campanha.length;
+    return {
+      ...s,
+      corte: cortada ? corte : null,
+      fim: cortada ? s.campanha[corte - 1] : s.campanha.at(-1),
+      resto: cortada
+        ? { pontos: s.campanha.at(-1).pts - s.campanha[corte - 1].pts,
+            jogos: s.campanha.length - corte }
+        : null,
+    };
   });
 
-  blocosDeDiferenca(ctx, { comparacao, fimA, fimB, x: x1 + 18, topo, alturaPlot,
-                           rotuloA, rotuloB });
+  const comparacao = compararCampanhas(campanhaA, campanhaB);
+  bandaEntreLinhas(ctx, comparacao, centro, escala);
+
+  for (const s of series) {
+    const ate = s.corte ?? s.campanha.length;
+    tracarLinha(ctx, s.campanha.slice(0, ate), s.cor, centro, escala, false);
+    // O trecho além do corte é a mesma linha, pontilhada: continua sendo a
+    // campanha dela, só deixou de ser comparação.
+    if (s.corte) tracarLinha(ctx, s.campanha.slice(ate - 1), s.cor, centro, escala, true);
+  }
+
+  marcarMaiorDiferenca(ctx, comparacao, centro, escala, { topo, alturaPlot, x0, x1 });
+
+  for (const s of series) {
+    for (const ponto of s.campanha) {
+      ctx.save();
+      if (s.corte && ponto.n > s.corte) ctx.globalAlpha = 0.5;
+      ctx.fillStyle = COR.fundo;
+      ctx.beginPath();
+      ctx.arc(centro(ponto.n), escala(ponto.pts), 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = s.cor;
+      ctx.beginPath();
+      ctx.arc(centro(ponto.n), escala(ponto.pts), 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  const alturaBloco = 76;
+  rotulosFinais(ctx, { series, centro, escala, x1, topo,
+                       limiteBase: topo + alturaPlot - alturaBloco - 14 });
+  blocoDeDiferenca(ctx, { series, x: x1 + 18, corte,
+                          y: topo + alturaPlot - alturaBloco, altura: alturaBloco });
+}
+
+/**
+ * Uma linha, com contorno claro por baixo: onde as duas campanhas andam juntas
+ * é o que mantém a de baixo visível em vez de sumir sob a de cima.
+ */
+function tracarLinha(ctx, pontos, cor, centro, escala, pontilhada) {
+  if (pontos.length < 2) return;
+  for (const [espessura, tinta] of [[9, COR.fundo], [4.5, cor]]) {
+    ctx.save();
+    ctx.strokeStyle = tinta;
+    ctx.lineWidth = espessura;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    // Traço de comprimento zero com ponta redonda vira bolinha: é o pontilhado
+    // que não se confunde com a linha cheia nem com a faixa de fundo.
+    if (pontilhada) ctx.setLineDash([0.1, 11]);
+    ctx.beginPath();
+    pontos.forEach((ponto, i) => {
+      const xy = [centro(ponto.n), escala(ponto.pts)];
+      if (i === 0) ctx.moveTo(...xy); else ctx.lineTo(...xy);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /**
@@ -308,11 +348,19 @@ function bandaEntreLinhas(ctx, { pontos }, centro, escala) {
   }
 }
 
-/** Traço vertical no jogo em que a distância entre as campanhas foi maior. */
-function marcarMaiorDiferenca(ctx, { maior }, centro, escala) {
+/**
+ * O jogo em que a distância entre as campanhas foi maior: traço vertical entre
+ * as duas linhas e uma tag abaixo da mais baixa.
+ *
+ * A tag fica fora do intervalo entre as linhas de propósito. No meio ela cai
+ * em cima da faixa, disputa espaço com os pontos e, quando as campanhas andam
+ * perto, não cabe.
+ */
+function marcarMaiorDiferenca(ctx, { maior }, centro, escala, plot) {
   if (!maior || maior.diferenca === 0) return;
   const x = centro(maior.n);
   const yA = escala(maior.ptsA), yB = escala(maior.ptsB);
+  const embaixo = Math.max(yA, yB), emCima = Math.min(yA, yB);
 
   ctx.save();
   ctx.strokeStyle = COR.cinzaEscuro;
@@ -324,52 +372,95 @@ function marcarMaiorDiferenca(ctx, { maior }, centro, escala) {
   ctx.stroke();
   ctx.restore();
 
-  const meio = (yA + yB) / 2;
-  const valor = String(Math.abs(maior.diferenca));
+  const valor = Math.abs(maior.diferenca);
+  const frase = `${valor} ${valor === 1 ? "ponto" : "pontos"} · jogo ${maior.n}`;
+  const titulo = "maior distância";
+
   ctx.save();
-  ctx.font = '800 15px "Assistant", sans-serif';
-  const l = ctx.measureText(valor).width + 18;
+  ctx.font = '800 13px "Assistant", sans-serif';
+  const l1 = ctx.measureText(frase).width;
+  ctx.font = '700 9px "Assistant", sans-serif';
+  const l2 = ctx.measureText(titulo.toUpperCase()).width + titulo.length * 0.8;
   ctx.restore();
-  caixa(ctx, x - l / 2, meio - 12, l, 24, COR.cinzaEscuro, 5);
-  texto(ctx, valor, x, meio + 5,
-        { tamanho: 15, peso: 800, cor: COR.branco, alinha: "center" });
+
+  const largura = Math.max(l1, l2) + 24, altura = 38, folga = 16;
+  const cx = Math.min(Math.max(x, plot.x0 + largura / 2), plot.x1 - largura / 2);
+  // Abaixo da linha mais baixa, a não ser que não caiba — aí sobe.
+  let y = embaixo + folga;
+  let ancora = embaixo;
+  if (y + altura > plot.topo + plot.alturaPlot) {
+    y = emCima - altura - folga;
+    ancora = emCima;
+  }
+
+  ctx.save();
+  ctx.strokeStyle = COR.cinza;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, ancora);
+  ctx.lineTo(x, y < ancora ? y + altura : y);
+  ctx.stroke();
+  ctx.restore();
+
+  caixa(ctx, cx - largura / 2, y, largura, altura, COR.cinzaEscuro, 7);
+  texto(ctx, titulo, cx, y + 15,
+        { tamanho: 9, peso: 700, cor: COR.branco, alinha: "center",
+          maiuscula: true, espaco: .8 });
+  texto(ctx, frase, cx, y + 31,
+        { tamanho: 13, peso: 800, cor: COR.branco, alinha: "center" });
 }
 
 /**
- * Pontuação final na calha da direita, fora do plot — nunca por cima das
- * linhas. Um traço pontilhado liga cada rótulo ao fim da sua linha.
+ * Pontuação na calha da direita, fora do plot — nunca por cima das linhas.
+ *
+ * Um selo acima da linha de cima e outro abaixo da de baixo. Quando os dois
+ * ficavam na altura da própria linha, o traço que ligava o selo saía quase na
+ * horizontal e se lia como continuação da campanha; subindo um e descendo o
+ * outro, o traço passa a ser visivelmente uma chamada — e é cinza claro, para
+ * não competir com a linha que ele aponta.
  */
 function rotulosFinais(ctx, o) {
-  const { series, centro, escala, x1, topo, alturaPlot } = o;
-  const altura = 58, larguraSelo = 182;
+  const { series, centro, escala, x1, topo, limiteBase } = o;
+  const larguraSelo = 182, alturaBase = 58, alturaResto = 26, folga = 18;
+  const alturaDe = (s) => alturaBase + (s.resto ? alturaResto : 0);
 
   const ordenadas = series
     .map((s) => ({ ...s, alvo: escala(s.fim.pts) }))
     .sort((p, q) => p.alvo - q.alvo);
 
-  // Empurra para baixo o de trás quando os dois terminam perto, e depois puxa
-  // a pilha para cima se ela tiver passado do fim do plot.
-  let ultimo = -Infinity;
-  for (const s of ordenadas) {
-    s.y = Math.max(s.alvo, ultimo + altura + 10);
-    ultimo = s.y;
+  ordenadas.forEach((s, i) => {
+    s.y = i === 0 ? s.alvo - alturaDe(s) / 2 - folga
+                  : s.alvo + alturaDe(s) / 2 + folga;
+  });
+
+  const dentro = (s) => Math.min(Math.max(s.y, topo + alturaDe(s) / 2 + 2),
+                                 limiteBase - alturaDe(s) / 2);
+  for (const s of ordenadas) s.y = dentro(s);
+
+  if (ordenadas.length === 2) {
+    const [p, q] = ordenadas;
+    const minimo = (alturaDe(p) + alturaDe(q)) / 2 + 12;
+    if (q.y - p.y < minimo) {
+      q.y = Math.min(p.y + minimo, limiteBase - alturaDe(q) / 2);
+      p.y = Math.max(q.y - minimo, topo + alturaDe(p) / 2 + 2);
+    }
   }
-  const excesso = ultimo + altura / 2 - (topo + alturaPlot);
-  if (excesso > 0) for (const s of ordenadas) s.y -= excesso;
 
   for (const s of ordenadas) {
     ctx.save();
-    ctx.strokeStyle = s.cor;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = COR.cinza;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 5]);
     ctx.beginPath();
     ctx.moveTo(centro(s.fim.n), s.alvo);
     ctx.lineTo(x1 + 14, s.y);
     ctx.stroke();
     ctx.restore();
 
-    caixa(ctx, x1 + 14, s.y - altura / 2, larguraSelo, altura, s.cor, 9);
-    texto(ctx, s.fim.pts, x1 + 28, s.y + 5, { tamanho: 34, peso: 800, cor: COR.branco });
+    const alto = alturaDe(s), topoSelo = s.y - alto / 2;
+    caixa(ctx, x1 + 14, topoSelo, larguraSelo, alto, s.cor, 9);
+    texto(ctx, s.fim.pts, x1 + 28, topoSelo + 41,
+          { tamanho: 34, peso: 800, cor: COR.branco });
 
     ctx.save();
     ctx.font = '800 34px "Assistant", sans-serif';
@@ -377,71 +468,63 @@ function rotulosFinais(ctx, o) {
     ctx.restore();
 
     const xTexto = x1 + 38 + larguraNumero;
-    texto(ctx, cortar(ctx, s.rotulo, larguraSelo - larguraNumero - 46, 12.5, 700),
-          xTexto, s.y - 3, { tamanho: 12.5, peso: 700, cor: COR.branco });
-    texto(ctx, "pontos", xTexto, s.y + 13,
-          { tamanho: 10, peso: 700, cor: COR.azulClaro, maiuscula: true, espaco: .8 });
+    const cabe = larguraSelo - larguraNumero - 46;
+    texto(ctx, cortar(ctx, s.rotulo, cabe, 12.5, 700), xTexto, topoSelo + 26,
+          { tamanho: 12.5, peso: 700, cor: COR.branco });
+    // Dizer em quantos jogos é o que permite pôr lado a lado uma campanha
+    // encerrada e uma em curso sem que o número maior engane.
+    texto(ctx, cortar(ctx, `pts em ${s.fim.n} jogos`, cabe, 10, 700),
+          xTexto, topoSelo + 42,
+          { tamanho: 10, peso: 700, cor: COR.branco, maiuscula: true, espaco: .8 });
+
+    if (!s.resto) continue;
+    const yFita = topoSelo + alturaBase - 2;
+    caixa(ctx, x1 + 20, yFita, larguraSelo - 12, alturaResto - 6, COR.fundo, 6);
+    const jogos = `${s.resto.jogos} ${s.resto.jogos === 1 ? "jogo" : "jogos"}`;
+    texto(ctx, cortar(ctx, `depois: +${s.resto.pontos} em ${jogos}`,
+                      larguraSelo - 28, 11, 700),
+          x1 + 28, yFita + 14, { tamanho: 11, peso: 700, cor: s.cor });
   }
 }
 
-/** Diferença atual e maior diferença, na parte de baixo da calha direita. */
-function blocosDeDiferenca(ctx, o) {
-  const { comparacao, fimA, fimB, x, topo, alturaPlot, rotuloA, rotuloB } = o;
-  const { maior } = comparacao;
-  if (!fimA || !fimB) return;
+/**
+ * A diferença entre as duas campanhas, na base da calha direita.
+ *
+ * Medida nos mesmos pontos que os selos mostram — senão o card se contradiria
+ * na própria imagem, dizendo 57 a 57 em cima e 1 de diferença embaixo.
+ */
+function blocoDeDiferenca(ctx, o) {
+  const { series, x, y, altura, corte } = o;
+  if (series.length < 2) return;
+  const [primeira, segunda] = series;
+  const d = primeira.fim.pts - segunda.fim.pts;
 
-  // "Agora" é entre os totais de hoje, e não no último jogo em comum. Quando
-  // uma jogou a mais, as duas leituras divergem — e o card mostra os totais
-  // nos selos, então dizer outra coisa aqui se contradiz na mesma imagem.
-  const atual = { diferenca: fimA.pts - fimB.pts };
+  const largura = 182;
+  const titulo = corte ? `diferença em ${corte} jogos` : "diferença agora";
+  const valor = String(Math.abs(d));
+  const detalhe = d === 0 ? "campanhas empatadas"
+                          : `${(d > 0 ? primeira : segunda).rotulo} à frente`;
+  const cor = d === 0 ? COR.cinzaEscuro : (d > 0 ? primeira.cor : segunda.cor);
 
-  const largura = 182, altura = 66;
-  const base = topo + alturaPlot - altura * 2 - 10;
+  caixa(ctx, x, y, largura, altura, COR.branco, 8);
+  ctx.save();
+  ctx.strokeStyle = COR.linha;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 8);
+  ctx.stroke();
+  ctx.restore();
 
-  const descrever = (p, sufixo) => {
-    if (!p || p.diferenca === 0) return ["0", `campanhas empatadas${sufixo}`];
-    const quem = p.diferenca > 0 ? rotuloA : rotuloB;
-    return [String(Math.abs(p.diferenca)), `${quem} à frente${sufixo}`];
-  };
-
-  // A maior diferença é medida no mesmo número de jogos das duas — senão
-  // "estar na frente" viraria só "ter jogado mais".
-  const blocos = [
-    ["diferença agora", ...descrever(atual, ""), COR.azulEscuro],
-    ["maior diferença", ...descrever(maior, maior ? ` · jogo ${maior.n}` : ""),
-     COR.cinzaEscuro],
-  ];
-
-  blocos.forEach(([titulo, valor, detalhe, cor], i) => {
-    const y = base + i * (altura + 10);
-    caixa(ctx, x, y, largura, altura, COR.branco, 8);
-    ctx.save();
-    ctx.strokeStyle = COR.linha;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 8);
-    ctx.stroke();
-    ctx.restore();
-
-    texto(ctx, titulo, x + 14, y + 18,
-          { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
-            cor: COR.cinzaEscuro });
-    texto(ctx, valor, x + 14, y + 48, { tamanho: 26, peso: 800, cor });
-
-    ctx.save();
-    ctx.font = '800 26px "Assistant", sans-serif';
-    const largo = ctx.measureText(valor).width;
-    ctx.restore();
-    texto(ctx, cortar(ctx, detalhe, largura - largo - 34, 11, 400),
-          x + 24 + largo, y + 46, { tamanho: 11, cor: COR.cinzaEscuro });
-  });
+  texto(ctx, titulo, x + 14, y + 18,
+        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
+          cor: COR.cinzaEscuro });
+  texto(ctx, valor, x + 14, y + 50, { tamanho: 26, peso: 800, cor });
+  texto(ctx, cortar(ctx, detalhe, largura - 28, 11.5, 400), x + 14, y + 68,
+        { tamanho: 11.5, cor: COR.cinzaEscuro });
 }
 
 async function legenda(ctx, x, y, clubes, series) {
-  texto(ctx, "Pontos acumulados", x, y + 16,
-        { tamanho: 21, peso: 700, cor: COR.azul, familia: "Bree Serif" });
-
-  let cx = x + 260;
+  let cx = x;
   for (const [clube, rotulo, cor] of series) {
     caixa(ctx, cx, y + 5, 30, 7, cor, 3);
     const escudo = await imagem(clubes[clube]?.escudo);

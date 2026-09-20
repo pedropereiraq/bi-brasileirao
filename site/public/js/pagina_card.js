@@ -136,6 +136,16 @@ function ligarHover(geometria) {
     const x = (evento.clientX - caixa.left) / escalaTela;
     const y = (evento.clientY - caixa.top) / escalaTela;
 
+    // A dica e a guia são posicionadas dentro do palco, mas o canvas não
+    // começa na borda dele — o palco tem recuo e centraliza o card. Sem somar
+    // esse deslocamento, a guia saía à esquerda dos pontos, caindo no vão
+    // entre um jogo e outro.
+    // `left` conta a partir da caixa de preenchimento, de dentro da borda:
+    // por isso o desconto de clientLeft/clientTop.
+    const moldura = palco.getBoundingClientRect();
+    const recuoX = caixa.left - moldura.left - palco.clientLeft;
+    const recuoY = caixa.top - moldura.top - palco.clientTop;
+
     // Fora da área do gráfico não há o que mostrar.
     if (y < g.topo - 20 || y > g.topo + g.alturaPlot + 20
         || x < g.x0 - g.largura || x > g.x1 + g.largura) return esconder();
@@ -145,19 +155,19 @@ function ligarHover(geometria) {
       g.pontos[0]);
     if (Math.abs(ponto.x - x) > g.largura) return esconder();
 
+    const esquerda = recuoX + ponto.x * escalaTela;
     guia.style.display = "block";
-    guia.style.left = `${ponto.x * escalaTela}px`;
-    guia.style.top = `${g.topo * escalaTela}px`;
+    guia.style.left = `${esquerda}px`;
+    guia.style.top = `${recuoY + g.topo * escalaTela}px`;
     guia.style.height = `${g.alturaPlot * escalaTela}px`;
 
     dica.innerHTML = conteudoDaDica(ponto, g);
     dica.style.display = "block";
-    // Vira para a esquerda quando está perto da borda direita.
+    // Vira para a esquerda quando está perto da borda direita do canvas.
     const larguraDica = dica.offsetWidth;
-    const esquerda = ponto.x * escalaTela;
-    const paraEsquerda = esquerda + larguraDica + 24 > caixa.width;
+    const paraEsquerda = esquerda + larguraDica + 24 > recuoX + caixa.width;
     dica.style.left = `${esquerda + (paraEsquerda ? -larguraDica - 14 : 14)}px`;
-    dica.style.top = `${(g.topo + 10) * escalaTela}px`;
+    dica.style.top = `${recuoY + (g.topo + 10) * escalaTela}px`;
   }
 
   function esconder() {

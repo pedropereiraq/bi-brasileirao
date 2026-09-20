@@ -166,7 +166,7 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
     texto(ctx, nota, MARGEM, CARD.altura - 34,
           { tamanho: 13.5, cor: COR.cinzaEscuro });
   }
-  texto(ctx, "@ECBahiaNumeros · Podcast45 · atualizado em " + hoje(),
+  texto(ctx, "@ECBahiaNumeros · atualizado em " + hoje(),
         CARD.largura - MARGEM, CARD.altura - 34,
         { tamanho: 13.5, cor: COR.cinzaEscuro, alinha: "right" });
   linhaH(ctx, MARGEM, CARD.largura - MARGEM, CARD.altura - 58);
