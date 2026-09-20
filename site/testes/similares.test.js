@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 
 import {
   campanhasSemelhantes, distribuicaoPorPosicao, resumoDasSemelhantes,
-  zonaDaPosicao,
+  zonaDaPosicao, zonasDaFaixa,
 } from "../public/js/similares.js";
 
 /** Campanha de 38 jogos que soma `porJogo` a cada jogo, para o teste. */
@@ -48,6 +48,7 @@ test("acha toda campanha encerrada com aquela pontuação naquele jogo", () => {
   const achadas = campanhasSemelhantes(dados, { serie: "A", jogos: 3, pontos: 6 });
   assert.deepEqual(achadas.map((c) => `${c.equipe} ${c.ano}`),
     ["ALFA (SP) 2020", "DELTA (BA) 2021", "ÉPSILON (PE) 2021", "GAMA (MG) 2020"]);
+  assert.deepEqual(achadas.map((c) => c.posFim), [1, 4, 8, 20]);
 });
 
 test("campanha sem desfecho não entra na resposta", () => {
@@ -75,10 +76,30 @@ test("série sem dado nenhum devolve lista vazia, não estoura", () => {
   assert.deepEqual(campanhasSemelhantes(undefined, { serie: "A", jogos: 3, pontos: 6 }), []);
 });
 
-test("a ordem é da melhor pontuação final para a pior", () => {
+test("a ordem é da melhor posição final para a pior", () => {
+  // Posição e pontuação não dão a mesma ordem: 67 pontos valeram o 2º lugar em
+  // 2006 e o 4º em 2025. O que se compara aqui é onde a campanha foi parar.
   const achadas = campanhasSemelhantes(dados, { serie: "A", jogos: 3, pontos: 6 });
-  const finais = achadas.map((c) => c.pontosFim);
-  assert.deepEqual(finais, [...finais].sort((a, b) => b - a));
+  const posicoes = achadas.map((c) => c.posFim);
+  assert.deepEqual(posicoes, [...posicoes].sort((a, b) => a - b));
+});
+
+test("a faixa corta a tabela em uma, duas ou três partes", () => {
+  assert.deepEqual(zonasDaFaixa({ melhor: 1, pior: 4 }).map((z) => z.nome),
+    ["dentro", "abaixo"]);
+  assert.deepEqual(zonasDaFaixa({ melhor: 17, pior: 20 }).map((z) => z.nome),
+    ["acima", "dentro"]);
+  assert.deepEqual(zonasDaFaixa({ melhor: 5, pior: 16 }).map((z) => z.nome),
+    ["acima", "dentro", "abaixo"]);
+  assert.deepEqual(zonasDaFaixa({ melhor: 1, pior: 20 }).map((z) => z.nome),
+    ["dentro"]);
+  // As partes cobrem as 20 posições sem buraco nem sobreposição.
+  for (const faixa of [{ melhor: 1, pior: 4 }, { melhor: 5, pior: 16 },
+                       { melhor: 17, pior: 20 }, { melhor: 10, pior: 10 }]) {
+    const cobertas = zonasDaFaixa(faixa)
+      .flatMap((z) => Array.from({ length: z.ate - z.de + 1 }, (_, i) => z.de + i));
+    assert.deepEqual(cobertas, Array.from({ length: 20 }, (_, i) => i + 1));
+  }
 });
 
 test("cada campanha diz quanto somou depois do corte", () => {
@@ -114,8 +135,13 @@ test("o resumo conta as zonas e trata o conjunto vazio", () => {
   assert.equal(r.acima, 0);
   assert.equal(r.alcancaram, 2);
 
+  // 1º, 4º, 8º e 20º: média 8,25.
+  assert.equal(r.posicaoMedia, 8.25);
+  assert.equal(r.mediaFim, (76 + 76 + 75 + 40) / 4);
+
   const vazio = resumoDasSemelhantes([], faixa);
   assert.equal(vazio.total, 0);
   assert.equal(vazio.mediaFim, null);
+  assert.equal(vazio.posicaoMedia, null);
   assert.equal(vazio.melhorFim, null);
 });

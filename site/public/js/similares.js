@@ -18,6 +18,22 @@
  * Node e cobra a regra.
  */
 
+/**
+ * Em quantas partes a faixa destacada corta a tabela, e quais são elas.
+ *
+ * Escolher de 1º a 4º divide as 20 posições em duas: a faixa e o resto. De 5º
+ * a 16º divide em três. De 1º a 20º não divide em nada. O card colore cada
+ * parte conforme a quantidade — com duas, verde e vermelho; com três, verde,
+ * cinza e vermelho — e para isso precisa saber quantas existem.
+ */
+export function zonasDaFaixa({ melhor, pior }, total = 20) {
+  return [
+    { nome: "acima", de: 1, ate: melhor - 1 },
+    { nome: "dentro", de: melhor, ate: pior },
+    { nome: "abaixo", de: pior + 1, ate: total },
+  ].filter((zona) => zona.ate >= zona.de);
+}
+
 /** Onde uma posição final cai em relação à faixa destacada. */
 export function zonaDaPosicao(posicao, { melhor, pior }) {
   if (posicao < melhor) return "acima";
@@ -52,8 +68,11 @@ export function campanhasSemelhantes(dados, { serie, jogos, pontos }) {
     }
   }
 
+  // Ordenadas pela posição final, não pela pontuação. São coisas diferentes:
+  // 67 pontos deram o 2º lugar em 2006 e o 4º em 2025, e o que se compara aqui
+  // é onde a campanha foi parar.
   achadas.sort((a, b) =>
-    b.pontosFim - a.pontosFim || a.posFim - b.posFim
+    a.posFim - b.posFim || b.pontosFim - a.pontosFim
     || a.ano - b.ano || a.equipe.localeCompare(b.equipe, "pt-BR"));
   return achadas;
 }
@@ -84,6 +103,10 @@ export function resumoDasSemelhantes(achadas, faixa) {
     // destacada é um objetivo, e terminar melhor que ela também o cumpre.
     alcancaram: zonas.dentro + zonas.acima,
     mediaFim: media(achadas.map((c) => c.pontosFim)),
+    // A posição média é a resposta mais direta de todas: "quem esteve aqui
+    // terminou, em média, em 6,2º". Pontuação média depende da edição — 67
+    // pontos valeram o 2º em 2006 e o 4º em 2025.
+    posicaoMedia: media(achadas.map((c) => c.posFim)),
     mediaDepois: media(achadas.map((c) => c.depois)),
     melhorFim: achadas.length ? Math.max(...achadas.map((c) => c.pontosFim)) : null,
     piorFim: achadas.length ? Math.min(...achadas.map((c) => c.pontosFim)) : null,

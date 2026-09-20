@@ -146,25 +146,53 @@ function ligarHover(geometria) {
     const recuoX = caixa.left - moldura.left - palco.clientLeft;
     const recuoY = caixa.top - moldura.top - palco.clientTop;
 
+    // Um gráfico deitado — as 20 posições empilhadas, o 1º no alto — se lê
+    // pelo eixo vertical: quem está perto do cursor é a linha, não a coluna.
+    const deitado = g.eixo === "y";
+
     // Fora da área do gráfico não há o que mostrar.
-    if (y < g.topo - 20 || y > g.topo + g.alturaPlot + 20
-        || x < g.x0 - g.largura || x > g.x1 + g.largura) return esconder();
+    const foraNoEixo = deitado
+      ? y < g.topo - g.largura || y > g.topo + g.alturaPlot + g.largura
+      : x < g.x0 - g.largura || x > g.x1 + g.largura;
+    const foraNoOutro = deitado
+      ? x < g.x0 - 20 || x > g.x1 + 20
+      : y < g.topo - 20 || y > g.topo + g.alturaPlot + 20;
+    if (foraNoEixo || foraNoOutro) return esconder();
 
+    const distancia = (p) => Math.abs((deitado ? p.y : p.x) - (deitado ? y : x));
     const ponto = g.pontos.reduce(
-      (melhor, p) => (Math.abs(p.x - x) < Math.abs(melhor.x - x) ? p : melhor),
-      g.pontos[0]);
-    if (Math.abs(ponto.x - x) > g.largura) return esconder();
+      (melhor, p) => (distancia(p) < distancia(melhor) ? p : melhor), g.pontos[0]);
+    if (distancia(ponto) > g.largura) return esconder();
 
-    const esquerda = recuoX + ponto.x * escalaTela;
     guia.style.display = "block";
-    guia.style.left = `${esquerda}px`;
-    guia.style.top = `${recuoY + g.topo * escalaTela}px`;
-    guia.style.height = `${g.alturaPlot * escalaTela}px`;
-
     dica.innerHTML = conteudoDaDica(ponto, g);
     dica.style.display = "block";
-    // Vira para a esquerda quando está perto da borda direita do canvas.
     const larguraDica = dica.offsetWidth;
+
+    if (deitado) {
+      const cima = recuoY + ponto.y * escalaTela;
+      guia.style.left = `${recuoX + g.x0 * escalaTela}px`;
+      guia.style.top = `${cima}px`;
+      guia.style.width = `${(g.x1 - g.x0) * escalaTela}px`;
+      guia.style.height = "2px";
+      guia.style.transform = "translateY(-1px)";
+
+      const depois = recuoX + (g.x1 + 14) * escalaTela;
+      const cabe = depois + larguraDica + 14 < recuoX + caixa.width;
+      dica.style.left = `${cabe ? depois
+        : recuoX + g.x0 * escalaTela - larguraDica - 14}px`;
+      dica.style.top = `${Math.max(recuoY, cima - dica.offsetHeight / 2)}px`;
+      return;
+    }
+
+    const esquerda = recuoX + ponto.x * escalaTela;
+    guia.style.left = `${esquerda}px`;
+    guia.style.top = `${recuoY + g.topo * escalaTela}px`;
+    guia.style.width = "2px";
+    guia.style.height = `${g.alturaPlot * escalaTela}px`;
+    guia.style.transform = "translateX(-1px)";
+
+    // Vira para a esquerda quando está perto da borda direita do canvas.
     const paraEsquerda = esquerda + larguraDica + 24 > recuoX + caixa.width;
     dica.style.left = `${esquerda + (paraEsquerda ? -larguraDica - 14 : 14)}px`;
     dica.style.top = `${recuoY + (g.topo + 10) * escalaTela}px`;

@@ -140,12 +140,16 @@ async function trocarEdicao(apelido, { silencioso = false } = {}) {
 }
 
 function desenharClubes(classificados) {
+  // Deitada, na ordem da tabela: o escudo identifica, e pontos e jogos são a
+  // situação que o clique leva para os controles. O nome sai — vinte nomes
+  // lado a lado não cabem, e o escudo já diz quem é.
   el("clubes").innerHTML = classificados.map((c) => `
-    <button type="button" class="clube" data-equipe="${c.equipe}">
+    <button type="button" class="clube" data-equipe="${c.equipe}"
+            title="${nomeBonito(c.equipe)} · ${c.pts} pontos em ${c.j} jogos">
       <span class="clube-pos">${c.pos}</span>
-      <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="">
-      <span class="clube-nome">${nomeBonito(c.equipe)}</span>
-      <span class="clube-situacao">${c.pts} em ${c.j}</span>
+      <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="${nomeBonito(c.equipe)}">
+      <span class="clube-pts">${c.pts}</span>
+      <span class="clube-situacao">${c.j} jogos</span>
     </button>`).join("");
 
   el("clubes").onclick = (evento) => {
@@ -187,9 +191,10 @@ function aplicar() {
 /** Destaca o clube da edição que está exatamente na situação escolhida. */
 function marcarClubeAtivo() {
   for (const botao of el("clubes").children) {
-    const situacao = botao.querySelector(".clube-situacao").textContent;
+    const pontos = Number(botao.querySelector(".clube-pts").textContent);
+    const jogos = parseInt(botao.querySelector(".clube-situacao").textContent, 10);
     botao.classList.toggle("ativo",
-      situacao === `${estado.pontos} em ${estado.jogos}`);
+      pontos === estado.pontos && jogos === estado.jogos);
   }
 }
 
