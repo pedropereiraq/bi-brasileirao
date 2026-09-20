@@ -138,3 +138,34 @@ def test_a_lista_de_jogos_publicada_bate_com_o_canonico(jogos):
             f"{apelido}: {len(publicado)} jogos publicados contra "
             f"{len(esperado)} no canônico — dados do site desatualizados"
         )
+def test_as_referencias_publicadas_batem_com_o_canonico(jogos):
+    """A régua de pontuação por posição é derivada, não digitada."""
+    from bi import publicacao
+
+    publicado = _dados_do_site("referencias.json")
+    assert publicado == publicacao.referencias_por_posicao(jogos)
+
+
+def test_a_referencia_so_usa_edicao_encerrada(jogos):
+    """
+    Uma edição em andamento não tem posição final. Se entrasse na média, a
+    régua inteira desceria — todo mundo com 27 jogos parece pior do que é.
+    """
+    from bi import derivadas, publicacao
+
+    referencias = publicacao.referencias_por_posicao(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+
+    for serie, dados in referencias.items():
+        anos = {ano for ano, s in completas if s == serie}
+        assert dados["edicoes"] == len(anos), (
+            f"série {serie}: {dados['edicoes']} edições na média contra "
+            f"{len(anos)} encerradas no canônico"
+        )
+        assert dados["ano_ultimo"] == max(anos)
+        # Toda posição da série tem média, e elas caem de 1 a 20.
+        medias = [dados["media"][str(pos)]
+                  for pos in range(1, cfg.CLUBES_POR_SERIE + 1)]
+        assert medias == sorted(medias, reverse=True), (
+            f"série {serie}: a média por posição não é decrescente"
+        )

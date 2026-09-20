@@ -141,6 +141,53 @@ def resumir_edicao(jogos: pd.DataFrame) -> dict:
     }
 
 
+# ---------------------------------------------- referências por posição
+def referencias_por_posicao(jogos: pd.DataFrame) -> dict:
+    """
+    Quantos pontos costuma fazer quem termina em cada posição.
+
+    É o que permite comparar uma campanha em curso com um objetivo — o ritmo de
+    quem termina em 4º, o ritmo de quem escapa em 16º — em vez de com outro
+    clube. A média divide por 38 e vira uma reta: não é a campanha de ninguém,
+    é o ritmo que aquela posição costuma exigir.
+
+    Entram só as edições **encerradas**. Uma em andamento não tem posição final
+    e entraria na conta como se tivesse, puxando toda a régua para baixo.
+    "Encerrada" aqui é o critério do histórico de pontuação: sem jogo pendente.
+    O 2016 de Chapecoense x Atlético-MG conta como encerrado — o jogo não foi
+    disputado, mas o campeonato terminou.
+
+    Vai para o site pronto, e não como jogos: são 20 edições por série, e o
+    navegador teria de baixar meio megabyte para calcular vinte números.
+    """
+    from . import derivadas, motor
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    chaves = list(zip(recorte["ano"].tolist(), recorte["serie"].tolist()))
+    fechadas = recorte[[c in completas for c in chaves]]
+    if fechadas.empty:
+        return {}
+
+    # Sem tapetão e na ordem da rodada: é a mesma conta que o motor do
+    # navegador faz, então a régua e a linha do clube falam a mesma língua.
+    final = motor.campanha(fechadas, ordem="rodada", criterio="ST", local="todos")
+    ultima = final.groupby(["ano", "serie"])["etapa"].transform("max")
+    tabela = final[final["etapa"] == ultima]
+
+    saida = {}
+    for serie, grupo in tabela.groupby("serie", observed=True):
+        medias = grupo.groupby("pos")["pts"].mean().round(2)
+        saida[str(serie)] = {
+            "edicoes": int(grupo["ano"].nunique()),
+            "ano_primeiro": int(grupo["ano"].min()),
+            "ano_ultimo": int(grupo["ano"].max()),
+            "rodadas": int(grupo["etapa"].max()),
+            "media": {str(int(pos)): float(v) for pos, v in medias.items()},
+        }
+    return saida
+
+
 def construir(jogos: pd.DataFrame | None = None,
               clubes: pd.DataFrame | None = None) -> dict:
     jogos = canonico.carregar_jogos() if jogos is None else jogos
@@ -167,6 +214,7 @@ def construir(jogos: pd.DataFrame | None = None,
     # o trabalho por causa de um número no print.
     dados_clubes = publicar_clubes(recorte, clubes)
     _gravar(DESTINO / "clubes.json", dados_clubes)
+    _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
 
     tamanho = sum(p.stat().st_size for p in DESTINO.rglob("*.json"))
     print(f"  {len(edicoes)} edições, {len(dados_clubes)} clubes"

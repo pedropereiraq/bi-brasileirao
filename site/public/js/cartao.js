@@ -32,6 +32,12 @@ const COR = {
   azulLavado: "#E2EBF4",
   vermelho: "#CC4125",
   vermelhoLavado: "#F5E3DE",
+  // O verde não está na identidade porque nenhum card precisava dele até a
+  // régua por posição. Sai da mesma paleta de onde vieram o azul e o vermelho
+  // do ECBahia, para não destoar: é o verde escuro daquele conjunto.
+  verde: "#6AA84F",
+  verdeEscuro: "#38761D",
+  verdeLavado: "#E6EFE1",
   cinza: "#CCCCCC",
   cinzaEscuro: "#8A8A8A",
   cinzaTexto: "#5C5C5C",
