@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blocos de 6 jogos · Cards ECBahia Números</title>
+<title>Recortes iniciais · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -15,8 +15,8 @@
 
   <header class="topo">
     <div>
-      <h1>Blocos de 6 jogos</h1>
-      <p class="subtitulo">A campanha repartida em sete blocos, contra uma meta.</p>
+      <h1>Recortes iniciais</h1>
+      <p class="subtitulo">A largada de um clube, edição por edição.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -28,9 +28,9 @@
   <nav class="navegacao">
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da pontuação</a>
-    <a href="/blocos.html" aria-current="page">Blocos de 6 jogos</a>
+    <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
-    <a href="/recortes.html">Recortes iniciais</a>
+    <a href="/recortes.html" aria-current="page">Recortes iniciais</a>
     <a href="/">Classificação</a>
     <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
@@ -39,34 +39,41 @@
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
-      </div>
-      <div class="campo">
-        <label for="ano">Ano</label>
-        <select id="ano"></select>
+        <label id="rotulo-serie">Divisão</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
-        <select id="equipe"></select>
+        <label for="equipe">Equipe</label>
+        <div class="equipe-com-escudo">
+          <img id="escudo-equipe" alt="">
+          <select id="equipe"></select>
+        </div>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posição meta
-        <span class="dica-campo">arraste a bolinha até a posição que você quer
-          alcançar</span>
-      </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-      <p class="resumo-meta" id="resumo-meta"></p>
+    <div class="coluna-controles">
+      <div class="campo campo-deslizante">
+        <label for="jogos">Jogos <output id="valor-jogos">—</output>
+          <span class="dica-campo">escolher a equipe leva o corte para os jogos
+            que ela tem hoje</span>
+        </label>
+        <input type="range" id="jogos" min="1" max="38" step="1" value="20">
+      </div>
+      <div class="campo campo-posicoes">
+        <label id="rotulo-posicoes">Destacar posições
+          <span class="dica-campo">quem terminou nesta faixa sai em cinza; melhor,
+            em verde; pior, em vermelho</span>
+        </label>
+        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      </div>
     </div>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de blocos de 6 jogos"></canvas>
+            aria-label="card de recortes iniciais"></canvas>
   </section>
 
   <footer class="rodape">
@@ -77,6 +84,6 @@
 
 </main>
 
-<script type="module" src="/js/blocos.js"></script>
+<script type="module" src="/js/recortes.js"></script>
 </body>
 </html>

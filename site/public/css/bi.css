@@ -634,3 +634,8 @@ table.mini-classificacao {
 .campo-deslizante input[type="range"]:focus-visible {
   outline: 3px solid var(--azul-claro); outline-offset: 4px; border-radius: 4px;
 }
+
+/* Escudo ao lado do seletor de equipe: o select não mostra imagem. */
+.equipe-com-escudo { display: flex; align-items: center; gap: 8px; }
+.equipe-com-escudo img { width: 26px; height: 26px; object-fit: contain; }
+.equipe-com-escudo select { min-width: 210px; }

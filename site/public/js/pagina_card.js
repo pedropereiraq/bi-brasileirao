@@ -260,5 +260,8 @@ function conteudoDaDica(ponto, g) {
               + `${d.valor === 1 ? "ponto" : "pontos"}</b> · ${d.texto}`
       }</div>`;
 
-  return `<div class="dica-titulo">${g.unidade} ${ponto.n}</div>${linhas}${diferenca}`;
+  // Sem unidade — numa lista de anos, o ano já é o título — não sobra espaço
+  // em branco antes do número.
+  const titulo = [g.unidade, ponto.n].filter(Boolean).join(" ");
+  return `<div class="dica-titulo">${titulo}</div>${linhas}${diferenca}`;
 }
