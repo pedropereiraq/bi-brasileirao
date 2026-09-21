@@ -223,13 +223,27 @@ function ligarHover(geometria) {
 
     dica.innerHTML = conteudoDaDica(alvo, g);
     dica.style.display = "block";
-    const larguraDica = dica.offsetWidth;
-    const aDireita = recuoX + (alvo.x + alvo.l + 12) * escalaTela;
-    const cabe = aDireita + larguraDica + 12 < recuoX + canvas.getBoundingClientRect().width;
-    dica.style.left = `${cabe ? aDireita
-      : recuoX + (alvo.x - 12) * escalaTela - larguraDica}px`;
-    dica.style.top = `${recuoY + alvo.y * escalaTela}px`;
+
+    // Ao lado do **cursor**, e não da caixa. Numa linha que atravessa o card
+    // inteiro — uma edição da lista de recortes —, "ao lado da caixa" é fora
+    // da tela, e a dica sumia encostada na borda esquerda.
+    const molduraCanvas = canvas.getBoundingClientRect();
+    const larguraDica = dica.offsetWidth, alturaDica = dica.offsetHeight;
+    const cursorX = recuoX + x * escalaTela;
+    const cursorY = recuoY + y * escalaTela;
+
+    let esquerda = cursorX + 18;
+    if (esquerda + larguraDica > recuoX + molduraCanvas.width) {
+      esquerda = cursorX - 18 - larguraDica;
+    }
+    dica.style.left = `${limitar(esquerda, recuoX,
+                                 recuoX + molduraCanvas.width - larguraDica)}px`;
+    dica.style.top = `${limitar(cursorY - alturaDica / 2, recuoY,
+                                recuoY + molduraCanvas.height - alturaDica)}px`;
   }
+
+  const limitar = (valor, minimo, maximo) =>
+    Math.min(Math.max(valor, minimo), Math.max(minimo, maximo));
 
   function esconder() {
     if (guia) guia.style.display = "none";

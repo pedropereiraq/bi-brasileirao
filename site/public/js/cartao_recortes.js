@@ -78,12 +78,12 @@ function semEdicoes(ctx, { y, nome, artigo, serie, jogos }) {
 
 /* ------------------------------------------------------------- resumo */
 function resumoEnxuto(ctx, { resumo, jogos, y }) {
+  // A posição final média saiu: cada linha do card já traz a posição daquela
+  // edição, e a média delas não diz nada que a coluna de etiquetas não diga.
   const itens = [
     { valor: resumo.total, nome: "edições nesta série", cor: COR.azul },
     { valor: num(resumo.mediaNoCorte), nome: `pontos em média em ${jogos} jogos`,
       cor: COR.azulEscuro },
-    { valor: resumo.posicaoMedia === null ? "—" : `${num(resumo.posicaoMedia)}º`,
-      nome: "posição final média", cor: COR.azulEscuro },
   ];
 
   const largura = 244, altura = 56;
