@@ -6,11 +6,13 @@
  * daquela posição. É assim que se lê de relance se a briga pelo título está
  * mais dura que o normal ou se o meio da tabela está mais embolado.
  *
- * A cor varia dentro de cada ano: a maior pontuação da coluna é o azul cheio e
- * a menor é o cinza, com todo o resto no meio do caminho. Como a pontuação cai
- * de cima para baixo na tabela, cada coluna vira um degradê — e o que se
- * compara de um ano para o outro é o **formato** dele. Ano com líder disparado
- * tem um salto no alto; campeonato embolado tem uma rampa mansa.
+ * A cor varia na horizontal, dentro de cada posição: os limites são a menor e
+ * a maior pontuação que aquela posição já teve nesta rodada. Assim cada linha
+ * responde a uma pergunta direta — em que anos o 5º lugar pontuou mais? — e a
+ * comparação entre anos fica na mesma altura do olho, que é onde ela existe.
+ *
+ * Pela coluna a escala não serviria: a pontuação cai de cima para baixo em
+ * toda edição, e todas as colunas sairiam com o mesmo degradê.
  *
  * Os quadrados de um mesmo ano se encostam, sem vão nem canto arredondado: é o
  * que faz a coluna se ler como uma faixa contínua em vez de vinte pastilhas.
@@ -159,18 +161,21 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
     });
   }
 
-  for (const [i, coluna] of colunas.entries()) {
-    const pontos = coluna.celulas.map((c) => c.pontos);
-    const alto = Math.max(...pontos), baixo = Math.min(...pontos);
-    // A escala é do próprio ano: o maior da coluna vai a azul cheio e o menor
-    // a cinza. Campeonato com pontuações apertadas gera um degradê manso, e é
-    // essa diferença de formato que se compara de um ano para o outro.
-    const forca = (valor) => (alto === baixo ? 1 : (valor - baixo) / (alto - baixo));
+  // Os limites de cada linha saem das próprias colunas desenhadas, inclusive a
+  // edição em andamento: se ela passar do recorde, a escala tem de acompanhar,
+  // senão o quadrado dela sai fora da rampa.
+  const extremos = Array.from({ length: POSICOES }, (_, i) => {
+    const valores = colunas.map((c) => c.celulas[i]?.pontos)
+      .filter((v) => v !== undefined);
+    return { baixo: Math.min(...valores), alto: Math.max(...valores) };
+  });
 
+  for (const [i, coluna] of colunas.entries()) {
     const xc = xDaColuna(i);
     for (const celula of coluna.celulas) {
       const yLinha = yDaLinha(celula.posicao);
-      const t = forca(celula.pontos);
+      const { baixo, alto } = extremos[celula.posicao - 1];
+      const t = alto === baixo ? 1 : (celula.pontos - baixo) / (alto - baixo);
 
       ctx.save();
       ctx.fillStyle = mistura(RAMPA_BAIXO, RAMPA_ALTO, t);
@@ -243,45 +248,52 @@ function dicaDaCelula(celula, { media }) {
  * O ano escolhido contra o que cada posição costuma valer.
  *
  * Os números de mínimo, média e máximo eram três colunas ao lado da
- * classificação, e ler "57, mín 51, méd 58,0, máx 67" exigia montar a régua na
- * cabeça a cada linha. Aqui a régua está desenhada: o trilho vai do mínimo ao
- * máximo, e o ponto marca onde este ano caiu.
+ * classificação, e ler "57, mín 51, méd 58,0, máx 67" obrigava a montar a
+ * régua na cabeça a cada linha. Aqui a régua está desenhada: o trilho vai do
+ * mínimo ao máximo e a pontuação fica dentro de uma bolinha, no lugar exato
+ * que ela ocupa entre os dois.
  *
- * O destaque é a **diferença**, não o valor: o traço grosso sai da média e vai
- * até o ponto, então ela se lê pelo comprimento e pela cor ao mesmo tempo. A
- * média em si fica do lado de fora, em número — dentro do gráfico seria mais
- * uma marca competindo com o ponto.
+ * A cor da bolinha é a diferença para a média — cinza no zero, azul acima,
+ * vermelho abaixo —, então posição e cor dizem a mesma coisa por dois
+ * caminhos. A média e a diferença em número ficam ao lado, fora do gráfico:
+ * dentro, virariam marcas disputando espaço com a bolinha.
  */
 function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
                             cores, x, largura, y }) {
   const larguraTime = 52;
   const centroTime = x + 20 + larguraTime / 2;
-  const xPts = x + 106;
-  const xMin = x + 134, trilho = { de: x + 140, ate: x + 300 }, xMax = x + 306;
-  const xMed = x + 372;
+  const xMin = x + 94, trilho = { de: x + 102, ate: x + 298 }, xMax = x + 304;
+  const xMed = x + 374;
   const xDif = x + largura - 4, larguraDif = 56;
+  const raio = 11.5;
 
   texto(ctx, `${escolhida?.ano ?? ""}`, x + 11, y + 16,
         { tamanho: 11.5, peso: 800, alinha: "center", cor: COR.azul });
-  const rotulo = (texto_, xr, alinha) =>
-    texto(ctx, texto_, xr, y + 16,
+  const rotulo = (conteudo, xr, alinha) =>
+    texto(ctx, conteudo, xr, y + 16,
           { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
             alinha, cor: COR.cinzaEscuro });
   rotulo("time", centroTime, "center");
-  rotulo("pts", xPts, "right");
   rotulo("mín", xMin, "right");
+  rotulo("pontos", (trilho.de + trilho.ate) / 2, "center");
   rotulo("máx", xMax, "left");
   rotulo("méd", xMed, "right");
   rotulo("dif", xDif, "right");
 
-  // A escala da diferença é a da própria coluna: cinza no zero, azul quanto
-  // mais acima da média, vermelho quanto mais abaixo.
+  // A escala da cor é a da própria coluna: cinza no zero, e a cor cheia na
+  // maior diferença que aparecer, para os dois lados.
   const maiorDif = Math.max(1, ...comparada.map((l) => Math.abs(l.diferenca ?? 0)));
+  const corDaDiferenca = (diferenca) => {
+    const t = Math.min(1, Math.abs(diferenca) / maiorDif);
+    return mistura(COR.cinzaTexto, diferenca >= 0 ? COR.azul : COR.vermelho, t);
+  };
+
   const alvos = [];
 
   for (const [i, linha] of comparada.entries()) {
     const yLinha = y + 26 + i * ALTURA_LINHA;
     const meio = yLinha + ALTURA_LINHA / 2 + 3;
+    const centro = yLinha + ALTURA_LINHA / 2 - 1;
     const estatistica = estatisticas[i];
     caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 2,
           i % 2 ? COR.fundo : COR.branco, 3);
@@ -296,8 +308,6 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
       ?? nomeBonito(linha.equipe).slice(0, 3).toUpperCase();
     texto(ctx, cortar(ctx, sigla, larguraTime, 12.5, 700), centroTime, meio,
           { tamanho: 12.5, peso: 700, alinha: "center", cor: COR.azulEscuro });
-    texto(ctx, linha.pontos, xPts, meio,
-          { tamanho: 12.5, peso: 800, alinha: "right", cor: COR.azulEscuro });
 
     alvos.push({
       n: `${escolhida?.ano ?? ""} · ${ordinal(linha.posicao)}`,
@@ -305,53 +315,51 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
       ...dicaDaCelula(linha, { media: estatistica.media }),
     });
 
-    if (estatistica.media === null) continue;
+    if (estatistica.media === null) {
+      texto(ctx, linha.pontos, (trilho.de + trilho.ate) / 2, meio,
+            { tamanho: 13, peso: 800, alinha: "center", cor: COR.azulEscuro });
+      continue;
+    }
 
-    const { minimo, maximo, media } = estatistica;
-    // A escala abre para caber o ano escolhido: o mínimo e o máximo vêm das
-    // edições encerradas, e o ano em curso pode estar fora dos dois.
-    const piso = Math.min(minimo, linha.pontos, media);
-    const teto = Math.max(maximo, linha.pontos, media);
-    const onde = (v) => (teto === piso ? (trilho.de + trilho.ate) / 2
-      : trilho.de + ((v - piso) / (teto - piso)) * (trilho.ate - trilho.de));
+    const { minimo, maximo } = estatistica;
+    // A escala abre para caber o ano escolhido quando ele passa do recorde: o
+    // mínimo e o máximo vêm das encerradas, e a em curso pode estar fora dos
+    // dois. O trilho continua sendo só o intervalo mínimo–máximo.
+    const piso = Math.min(minimo, linha.pontos);
+    const teto = Math.max(maximo, linha.pontos);
+    const util = { de: trilho.de + raio, ate: trilho.ate - raio };
+    const onde = (v) => (teto === piso ? (util.de + util.ate) / 2
+      : util.de + ((v - piso) / (teto - piso)) * (util.ate - util.de));
 
     texto(ctx, minimo, xMin, meio,
           { tamanho: 11, alinha: "right", cor: COR.cinzaEscuro });
     texto(ctx, maximo, xMax, meio,
           { tamanho: 11, alinha: "left", cor: COR.cinzaEscuro });
 
-    caixa(ctx, onde(minimo), meio - 8, Math.max(2, onde(maximo) - onde(minimo)), 5,
-          COR.cinzaClaro, 2.5);
+    caixa(ctx, onde(minimo), centro - 3, Math.max(2, onde(maximo) - onde(minimo)),
+          6, COR.cinzaClaro, 3);
 
-    const t = Math.min(1, Math.abs(linha.diferenca) / maiorDif);
-    const forte = linha.diferenca >= 0
-      ? mistura(COR.cinza, COR.azul, Math.max(t, 0.18))
-      : mistura(COR.cinza, COR.vermelho, Math.max(t, 0.18));
-
-    // O traço da média até o ponto: é a diferença virando comprimento.
-    const de = Math.min(onde(media), onde(linha.pontos));
-    const ate = Math.max(onde(media), onde(linha.pontos));
-    caixa(ctx, de, meio - 8, Math.max(2, ate - de), 5, forte, 2.5);
-
+    const cor = corDaDiferenca(linha.diferenca);
     ctx.save();
     ctx.fillStyle = COR.fundo;
     ctx.beginPath();
-    ctx.arc(onde(linha.pontos), meio - 5.5, 5.5, 0, Math.PI * 2);
+    ctx.arc(onde(linha.pontos), centro, raio + 1.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = forte;
+    ctx.fillStyle = cor;
     ctx.beginPath();
-    ctx.arc(onde(linha.pontos), meio - 5.5, 4, 0, Math.PI * 2);
+    ctx.arc(onde(linha.pontos), centro, raio, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+    texto(ctx, linha.pontos, onde(linha.pontos), centro + 5,
+          { tamanho: 13.5, peso: 800, alinha: "center", cor: COR.branco });
 
-    texto(ctx, num(media), xMed, meio,
+    texto(ctx, num(estatistica.media), xMed, meio,
           { tamanho: 12, alinha: "right", cor: COR.cinzaTexto });
 
     caixa(ctx, xDif - larguraDif, yLinha + 3, larguraDif, ALTURA_LINHA - 8,
-          forte, 4);
+          cor, 4);
     texto(ctx, comSinal(linha.diferenca), xDif - larguraDif / 2, meio,
-          { tamanho: 12, peso: 800, alinha: "center",
-            cor: t > 0.48 ? COR.branco : COR.azulEscuro });
+          { tamanho: 12, peso: 800, alinha: "center", cor: COR.branco });
   }
 
   return alvos;
