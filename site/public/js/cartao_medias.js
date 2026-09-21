@@ -15,6 +15,11 @@
  * Os quadrados de um mesmo ano se encostam, sem vão nem canto arredondado: é o
  * que faz a coluna se ler como uma faixa contínua em vez de vinte pastilhas.
  * O vão fica só entre um ano e outro, que é a divisão que importa.
+ *
+ * A rampa para no azul médio de propósito. Indo até o azul cheio, o número
+ * precisava virar branco no meio da coluna, e uma tabela em que a fonte troca
+ * de cor sozinha se lê pior do que uma com menos contraste de fundo — o olho
+ * passa a procurar o motivo da troca. Assim o número é sempre azul-escuro.
  */
 import { CARD, COR, MARGEM, texto, caixa, cortar } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
@@ -25,6 +30,12 @@ import { zonaDaPosicao, zonasDaFaixa } from "/js/similares.js";
 
 const ALTURA_LINHA = 30;
 const VAO_COLUNA = 2;
+
+// A rampa da grade: cinza claro quente na menor pontuação do ano, azul médio
+// na maior. O teto é escolhido para o azul-escuro do número continuar legível
+// em cima dele do começo ao fim da coluna.
+const RAMPA_BAIXO = "#E7E4DE";
+const RAMPA_ALTO = "#7EAFD8";
 
 const num = (v, casas = 1) => v.toFixed(casas).replace(".", ",");
 const ordinal = (p) => `${p}º`;
@@ -162,25 +173,20 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
       const t = forca(celula.pontos);
 
       ctx.save();
-      ctx.fillStyle = mistura(COR.cinza, COR.azul, t);
+      ctx.fillStyle = mistura(RAMPA_BAIXO, RAMPA_ALTO, t);
       ctx.fillRect(xc, yLinha, larguraAno, ALTURA_LINHA);
       ctx.restore();
 
-      // A borda marca onde aquele clube **terminou**, e não como ele estava
-      // nesta rodada: é a informação que a grade sozinha não tem.
+      texto(ctx, celula.pontos, xc + larguraAno / 2, yLinha + ALTURA_LINHA / 2 + 5,
+            { tamanho: 15, peso: 800, alinha: "center", cor: COR.azulEscuro });
+
+      // Onde aquele clube **terminou** — informação que a grade sozinha não
+      // tem — num pontinho no canto. A borda que fazia esse papel disputava a
+      // atenção com o número e quebrava a continuidade da coluna; o ponto fica
+      // fora do caminho e não desloca nada.
       const cor = celula.posFim === null
         ? null : cores[zonaDaPosicao(celula.posFim, faixa)];
-      if (cor) {
-        ctx.save();
-        ctx.strokeStyle = cor;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(xc + 1, yLinha + 1, larguraAno - 2, ALTURA_LINHA - 2);
-        ctx.restore();
-      }
-
-      texto(ctx, celula.pontos, xc + larguraAno / 2, yLinha + ALTURA_LINHA / 2 + 4,
-            { tamanho: 12.5, peso: 800, alinha: "center",
-              cor: t > 0.48 ? COR.branco : COR.azulEscuro });
+      if (cor) marcaDeDestino(ctx, xc + larguraAno - 6, yLinha + 6, cor);
 
       alvos.push({
         n: `${coluna.ano} · ${ordinal(celula.posicao)}`,
@@ -196,6 +202,20 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
           { tamanho: 12, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
   }
   return alvos;
+}
+
+/** Pontinho com anel claro: legível em qualquer ponto da rampa. */
+function marcaDeDestino(ctx, x, y, cor) {
+  ctx.save();
+  ctx.fillStyle = COR.branco;
+  ctx.beginPath();
+  ctx.arc(x, y, 4.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = cor;
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function dicaDaCelula(celula, { media }) {
