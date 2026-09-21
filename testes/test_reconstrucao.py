@@ -213,6 +213,51 @@ def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
                     assert 0 <= depois - antes <= 3, f"{equipe} {serie}{ano}"
 
 
+def test_as_posicoes_publicadas_batem_com_o_canonico(jogos):
+    """A tabela de cada rodada também é derivada, não digitada."""
+    from bi import publicacao
+
+    publicado = _dados_do_site("posicoes.json")
+    assert publicado == publicacao.posicoes_por_rodada(jogos)
+
+
+def test_a_grade_de_rodadas_e_uma_tabela_de_verdade(jogos):
+    """
+    Cada rodada tem as 20 posições, uma vez cada, em ordem não crescente de
+    pontos. Se a ordem se perdesse, a posição 1 poderia não ser a do líder — e
+    o card inteiro é uma grade de posições.
+    """
+    from bi import publicacao
+
+    dados = publicacao.posicoes_por_rodada(jogos)
+    for serie, anos in dados["series"].items():
+        for ano, edicao in anos.items():
+            assert len(edicao["clubes"]) == cfg.CLUBES_POR_SERIE
+            assert len(edicao["grade"]) == edicao["rodadas"]
+
+            for i, rodada in enumerate(edicao["grade"], start=1):
+                indices = [idx for idx, _ in rodada]
+                assert sorted(indices) == list(range(cfg.CLUBES_POR_SERIE)), (
+                    f"{serie}{ano} rodada {i}: clube repetido ou faltando"
+                )
+                pontos = [pts for _, pts in rodada]
+                assert pontos == sorted(pontos, reverse=True), (
+                    f"{serie}{ano} rodada {i}: fora da ordem de pontos"
+                )
+
+            # A última rodada da edição encerrada tem de reproduzir o `fim`.
+            if edicao["encerrada"]:
+                ultima = edicao["grade"][-1]
+                for posicao, (idx, pts) in enumerate(ultima, start=1):
+                    assert edicao["fim"][idx] == [posicao, pts], (
+                        f"{serie}{ano}: {edicao['clubes'][idx]} fecha diferente"
+                    )
+            else:
+                assert all(f is None for f in edicao["fim"]), (
+                    f"{serie}{ano} está em andamento e tem posição final"
+                )
+
+
 def _jogos_disputados(jogos) -> dict:
     """Quantos jogos cada clube de fato disputou em cada edição."""
     from bi import publicacao

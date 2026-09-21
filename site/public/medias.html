@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Comparativo de campanhas · Cards ECBahia Números</title>
+<title>Média por posição e rodada · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -15,8 +15,8 @@
 
   <header class="topo">
     <div>
-      <h1>Comparativo de campanhas</h1>
-      <p class="subtitulo">Duas campanhas lado a lado. Os filtros desenham o card.</p>
+      <h1>Média por posição e rodada</h1>
+      <p class="subtitulo">Como está este campeonato perto do que costuma ser.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -26,12 +26,12 @@
   <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
 
   <nav class="navegacao">
-    <a href="/comparativo.html" aria-current="page">Comparativo de campanhas</a>
+    <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da pontuação</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
-    <a href="/medias.html">Média por posição e rodada</a>
+    <a href="/medias.html" aria-current="page">Média por posição e rodada</a>
     <a href="/">Classificação</a>
     <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
@@ -40,35 +40,33 @@
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
-
-      <div class="grupo-campanha">
-        <span class="rotulo"><i class="pinta azul" aria-hidden="true"></i>Campanha 1</span>
-        <div class="par">
-          <select id="ano-a" aria-label="Ano da campanha 1"></select>
-          <select id="equipe-a" aria-label="Equipe da campanha 1"></select>
-        </div>
-      </div>
-
-      <div class="grupo-campanha">
-        <span class="rotulo"><i class="pinta vermelha" aria-hidden="true"></i>Campanha 2</span>
-        <div class="par">
-          <select id="ano-b" aria-label="Ano da campanha 2"></select>
-          <select id="equipe-b" aria-label="Equipe da campanha 2"></select>
-        </div>
-      </div>
-
-      <button type="button" class="botao-texto" id="trocar">Trocar as duas</button>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <div class="coluna-controles">
+      <div class="campo campo-deslizante">
+        <label for="rodada">Rodada <output id="valor-rodada">—</output>
+          <span class="dica-campo">começa na rodada do campeonato em andamento</span>
+        </label>
+        <input type="range" id="rodada" min="1" max="38" step="1" value="10">
+      </div>
+      <div class="campo campo-posicoes">
+        <label id="rotulo-posicoes">Destacar posições finais
+          <span class="dica-campo">a borda de cada quadrado marca onde aquele clube
+            terminou: verde acima da faixa, vermelho abaixo</span>
+        </label>
+        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      </div>
     </div>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de comparativo de campanhas"></canvas>
+            aria-label="card de média por posição e rodada"></canvas>
   </section>
 
   <footer class="rodape">
@@ -79,6 +77,6 @@
 
 </main>
 
-<script type="module" src="/js/comparativo.js"></script>
+<script type="module" src="/js/medias.js"></script>
 </body>
 </html>

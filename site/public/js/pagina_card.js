@@ -125,8 +125,12 @@ function ligarHover(geometria) {
     palco.append(guia, dica);
     palco.addEventListener("pointermove", aoMover);
     palco.addEventListener("pointerleave", esconder);
+    palco.addEventListener("click", aoClicar);
   }
   hoverAtual = geometria;
+  // Cursor de mão só quando há o que clicar: um card que só mostra dica não
+  // deve prometer clique.
+  palco.classList.toggle("clicavel", Boolean(geometria.aoClicar));
 
   function aoMover(evento) {
     const g = hoverAtual;
@@ -244,6 +248,20 @@ function ligarHover(geometria) {
 
   const limitar = (valor, minimo, maximo) =>
     Math.min(Math.max(valor, minimo), Math.max(minimo, maximo));
+
+  /** O clique só existe em gráficos feitos de retângulos. */
+  function aoClicar(evento) {
+    const g = hoverAtual;
+    if (!g?.aoClicar || g.eixo !== "caixa") return;
+    const caixa = canvas.getBoundingClientRect();
+    const escalaTela = caixa.width / CARD.largura;
+    const x = (evento.clientX - caixa.left) / escalaTela;
+    const y = (evento.clientY - caixa.top) / escalaTela;
+    const alvo = g.pontos.find((ponto) =>
+      x >= ponto.x && x <= ponto.x + ponto.l
+      && y >= ponto.y && y <= ponto.y + ponto.a);
+    if (alvo) g.aoClicar(alvo);
+  }
 
   function esconder() {
     if (guia) guia.style.display = "none";

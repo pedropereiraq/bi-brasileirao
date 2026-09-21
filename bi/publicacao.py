@@ -238,6 +238,64 @@ def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
     return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
 
 
+# ------------------------------------------- pontuação por posição e rodada
+def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
+    """
+    A tabela de cada rodada de cada edição: quem estava em cada posição e com
+    quantos pontos.
+
+    O índice aqui é a **rodada**, e não o n-ésimo jogo como em
+    `campanhas_por_jogo`. São perguntas diferentes: "como está o campeonato na
+    rodada 10" é sobre o campeonato, que anda por rodada, enquanto "o clube
+    depois de 10 jogos" é sobre a campanha dele. Um clube com jogo adiado
+    aparece na rodada 10 com nove jogos, e é assim que a tabela do dia mostra.
+
+    Vai a ordem inteira, e não só a pontuação, porque a posição entre clubes
+    empatados sai do critério de desempate do motor — pontos, triunfos, saldo,
+    gols pró e ordem alfabética. Recalcular isso no navegador com vinte edições
+    seria refazer o motor pela terceira vez.
+
+    `fim` é `None` na edição em andamento: ela não tem posição nem pontuação
+    final. A grade dela entra igual, porque é justamente a edição que se quer
+    comparar com a média das outras.
+    """
+    from . import derivadas, motor
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    tabela = motor.campanha(recorte, ordem="rodada", criterio="ST", local="todos")
+
+    series: dict[str, dict[str, dict]] = {}
+    for (serie, ano), grupo in tabela.groupby(["serie", "ano"], sort=True,
+                                              observed=True):
+        clubes = sorted(grupo["equipe"].unique())
+        indice = {nome: i for i, nome in enumerate(clubes)}
+        ultima = int(grupo["etapa"].max())
+        encerrada = (ano, serie) in completas
+
+        fim = [None] * len(clubes)
+        if encerrada:
+            final = grupo[grupo["etapa"] == ultima]
+            for linha in final.itertuples():
+                fim[indice[linha.equipe]] = [int(linha.pos), int(linha.pts)]
+
+        grade = []
+        for etapa in range(1, ultima + 1):
+            da_rodada = grupo[grupo["etapa"] == etapa].sort_values("pos")
+            grade.append([[indice[l.equipe], int(l.pts)]
+                          for l in da_rodada.itertuples()])
+
+        series.setdefault(str(serie), {})[str(int(ano))] = {
+            "clubes": clubes,
+            "fim": fim,
+            "rodadas": ultima,
+            "encerrada": encerrada,
+            "grade": grade,
+        }
+
+    return {"campos": ["indice_do_clube", "pontos"], "series": series}
+
+
 def construir(jogos: pd.DataFrame | None = None,
               clubes: pd.DataFrame | None = None) -> dict:
     jogos = canonico.carregar_jogos() if jogos is None else jogos
@@ -266,6 +324,7 @@ def construir(jogos: pd.DataFrame | None = None,
     _gravar(DESTINO / "clubes.json", dados_clubes)
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
     _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
+    _gravar(DESTINO / "posicoes.json", posicoes_por_rodada(jogos))
 
     tamanho = sum(p.stat().st_size for p in DESTINO.rglob("*.json"))
     print(f"  {len(edicoes)} edições, {len(dados_clubes)} clubes"

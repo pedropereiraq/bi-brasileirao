@@ -639,3 +639,6 @@ table.mini-classificacao {
 .equipe-com-escudo { display: flex; align-items: center; gap: 8px; }
 .equipe-com-escudo img { width: 26px; height: 26px; object-fit: contain; }
 .equipe-com-escudo select { min-width: 210px; }
+
+/* Card em que dá para clicar: a mão avisa antes de o usuário tentar. */
+.palco-card.clicavel canvas { cursor: pointer; }
