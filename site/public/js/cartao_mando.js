@@ -12,10 +12,13 @@
  * barra deitada põe o nome de cada um na horizontal e deixa a ordem ser lida
  * de cima para baixo, como qualquer outra lista do card.
  *
- * Azul é casa e vermelho é estrada, em toda coluna: o degradê de cada uma vai
- * do menor valor da edição ao maior, então a comparação é sempre dentro da
- * própria coluna. Um campeonato equilibrado produz uma coluna quase uniforme,
- * que é a informação correta.
+ * Azul é casa e vermelho é estrada. Na lista de jogos quem ganha cor é a
+ * diferença entre os dois lados, e não cada lado: 14 e 14 são dois números
+ * sem assunto, e o assunto é o zero que eles produzem. Azul quando sobrou
+ * jogo em casa, vermelho quando sobrou fora, sem preenchimento nenhum quando
+ * está equilibrado — um campeonato em dia deixa a coluna limpa, que é a
+ * informação correta. Nas listas de pontos o degradê vai do menor valor da
+ * coluna ao maior, e a comparação é sempre dentro da própria coluna.
  *
  * Nas duas listas de recorte, a seta diz quantas posições o clube ganha ou
  * perde em relação à geral. É o número que responde de uma vez o que as três
@@ -32,14 +35,14 @@ import {
 import { nomeBonito } from "/js/nomes.js";
 import { ordenarPor } from "/js/vagas.js";
 import {
-  jogosPorMando, linhasDeIndependencia,
+  jogosPorMando, linhasDeIndependencia, maiorDesequilibrio,
 } from "/js/independencia.js";
 
 const percentual = (v) =>
   v === null ? "—" : `${(v * 100).toFixed(1).replace(".", ",")}%`;
 const inteiroPorCento = (v) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 
-const LARGURA = { geral: 268, casa: 238, fora: 238 };
+const LARGURA = { geral: 292, casa: 238, fora: 238 };
 const VAO = 14;
 const VAO_GRAFICO = 40;
 
@@ -55,6 +58,7 @@ export function montarCartao(estado) {
     fora: ordenarPor(fora, criterio),
   };
   const jogos = jogosPorMando(casa, fora);
+  const desequilibrio = maiorDesequilibrio(jogos);
   const independencia = linhasDeIndependencia(casa, fora);
   const naGeral = new Map(tabelas.geral.map((c) => [c.equipe, c.pos]));
   // Subir na tabela é diminuir o número da posição: o sinal inverte para que
@@ -66,10 +70,6 @@ export function montarCartao(estado) {
 
   // Cada degradê é calibrado dentro da própria coluna: é lá que a comparação
   // acontece, e usar uma escala comum apagaria a variação da menor delas.
-  const faixaJogos = {
-    casa: extremos(Object.values(jogos).map((j) => j.casa)),
-    fora: extremos(Object.values(jogos).map((j) => j.fora)),
-  };
   const valorDe = (c) => (porAproveitamento ? c.aproveitamento ?? 0 : c.pts);
   const faixaPontos = {
     casa: extremos(tabelas.casa.map(valorDe)),
@@ -97,12 +97,8 @@ export function montarCartao(estado) {
       };
       const xGrafico = x.fora + LARGURA.fora + VAO_GRAFICO;
 
-      const formato = (chave, faixa, escuro) => (clube) => {
-        const valor = chave === "jogos.casa" ? jogos[clube.equipe]?.casa ?? 0
-                    : chave === "jogos.fora" ? jogos[clube.equipe]?.fora ?? 0
-                    : valorDe(clube);
-        return degrade(valor, faixa, escuro);
-      };
+      const formato = (faixa, escuro) => (clube) =>
+        degrade(valorDe(clube), faixa, escuro);
 
       const alvos = [];
 
@@ -111,12 +107,13 @@ export function montarCartao(estado) {
         titulo: "quantidade de jogos", topo, alturaCabecalho, alturaLinha,
         clubes, destaque,
         colunas: [
-          { rotulo: "casa", largura: 56,
-            valor: (c) => String(jogos[c.equipe]?.casa ?? 0),
-            pintar: formato("jogos.casa", faixaJogos.casa, COR.azul) },
-          { rotulo: "fora", largura: 56,
-            valor: (c) => String(jogos[c.equipe]?.fora ?? 0),
-            pintar: formato("jogos.fora", faixaJogos.fora, COR.vermelho) },
+          { rotulo: "dif", largura: 60,
+            valor: (c) => comSinal(jogos[c.equipe]?.saldo ?? 0),
+            pintar: (c) => tomDoSaldo(jogos[c.equipe]?.saldo ?? 0, desequilibrio) },
+          { rotulo: "casa", largura: 52,
+            valor: (c) => String(jogos[c.equipe]?.casa ?? 0) },
+          { rotulo: "fora", largura: 52,
+            valor: (c) => String(jogos[c.equipe]?.fora ?? 0) },
         ],
       }));
 
@@ -129,7 +126,7 @@ export function montarCartao(estado) {
             rotulo: porAproveitamento ? "aprov" : "pts", largura: 72,
             valor: (c) => (porAproveitamento
               ? percentual(c.aproveitamento) : String(c.pts)),
-            pintar: formato("pontos", faixaPontos[lado],
+            pintar: formato(faixaPontos[lado],
                             lado === "casa" ? COR.azul : COR.vermelho),
           }],
         }));
@@ -172,6 +169,27 @@ const extremos = (valores) => ({
   minimo: Math.min(...valores),
   maximo: Math.max(...valores),
 });
+
+/** "+2", "−1", "0": o sinal é o assunto da coluna. */
+const comSinal = (v) => (v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : "0");
+
+/**
+ * A cor da diferença entre os dois mandos.
+ *
+ * Zero não ganha preenchimento: estar em dia é o estado normal de um
+ * campeonato de pontos corridos, e pintá-lo faria a coluna inteira parecer
+ * informação. Sobrou jogo em casa, azul; sobrou fora, vermelho — a mesma
+ * dupla de cores do resto do card.
+ */
+function tomDoSaldo(saldo, maior) {
+  if (saldo === 0 || !maior) return null;
+  const t = Math.min(1, Math.abs(saldo) / maior);
+  const escuro = saldo > 0 ? COR.azul : COR.vermelho;
+  return {
+    fundo: mistura(COR.fundo, escuro, 0.25 + t * 0.75),
+    tinta: t > 0.4 ? COR.branco : COR.azulEscuro,
+  };
+}
 
 function mistura(de, para, t) {
   const canal = (cor, i) => parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
@@ -247,12 +265,18 @@ async function desenharTabela(ctx, o) {
     }
 
     for (const coluna of posicoes) {
-      const tom = coluna.pintar(clube);
-      const alturaChip = Math.min(24, alturaLinha - 6);
-      caixa(ctx, coluna.x + 4, meio - alturaChip / 2, coluna.largura - 8,
-            alturaChip, tom.fundo, 5);
+      // Coluna sem `pintar`, ou com tom nulo, sai como número simples: é o que
+      // deixa o degradê significar alguma coisa onde ele existe.
+      const tom = coluna.pintar ? coluna.pintar(clube) : null;
+      if (tom) {
+        const alturaChip = Math.min(24, alturaLinha - 6);
+        caixa(ctx, coluna.x + 4, meio - alturaChip / 2, coluna.largura - 8,
+              alturaChip, tom.fundo, 5);
+      }
       texto(ctx, coluna.valor(clube), coluna.centro, meio + 5,
-            { tamanho: 12.5, peso: 800, alinha: "center", cor: tom.tinta });
+            { tamanho: 12.5, peso: tom ? 800 : 700, alinha: "center",
+              cor: marcado ? COR.marcaTexto
+                 : tom ? tom.tinta : COR.cinzaTexto });
     }
 
     alvos.push({
