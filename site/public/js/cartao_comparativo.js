@@ -266,8 +266,12 @@ function desenharLinhas(ctx, o) {
     }
   }
 
-  marcarMaiorDiferenca(ctx, comparacao, centro, escala,
-                       { topo, alturaPlot, x0, x1, porPosicao });
+  // Por posição a maior distância não diz nada: ela quase sempre cai nas
+  // primeiras rodadas, quando uma vitória joga o clube vinte lugares acima.
+  if (!porPosicao) {
+    marcarMaiorDiferenca(ctx, comparacao, centro, escala,
+                         { topo, alturaPlot, x0, x1, porPosicao });
+  }
 
   for (const s of series) {
     for (const ponto of s.campanha) {

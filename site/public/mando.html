@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Próximos jogos · Cards ECBahia Números</title>
+<title>Mando de campo · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Próximos jogos</h1>
-      <p class="subtitulo">Quem tem a tabela mais dura daqui para a frente.</p>
+      <h1>Mando de campo</h1>
+      <p class="subtitulo">Quem depende de jogar em casa, e quem não depende.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -41,7 +41,7 @@ try { document.documentElement.dataset.marca =
   <nav class="navegacao">
     <a href="/">Telas</a>
     <a href="/classificacao.html">Classificação</a>
-    <a href="/mando.html">Mando de campo</a>
+    <a href="/mando.html" aria-current="page">Mando de campo</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da campanha</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
@@ -49,7 +49,7 @@ try { document.documentElement.dataset.marca =
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
     <a href="/medias.html">Média por posição e rodada</a>
-    <a href="/proximos.html" aria-current="page">Próximos jogos</a>
+    <a href="/proximos.html">Próximos jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
   </nav>
 
@@ -59,29 +59,35 @@ try { document.documentElement.dataset.marca =
         <label id="rotulo-serie">Série</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
+      <div class="campo">
+        <label for="ano">Ano</label>
+        <select id="ano"></select>
+      </div>
+      <div class="campo campo-equipe">
+        <label for="destaque">Destacar equipe
+          <span class="dica-campo">opcional</span>
+        </label>
+        <select id="destaque"></select>
+      </div>
+      <div class="campo">
+        <label id="rotulo-criterio">Classificar por</label>
+        <div class="chaves" id="criterio" role="group" aria-labelledby="rotulo-criterio"></div>
+      </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="coluna-controles">
-      <div class="campo campo-posicoes">
-        <label id="rotulo-posicoes">Posições no card
-          <span class="dica-campo">entram os clubes que ocupam hoje estas posições</span>
-        </label>
-        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-        <p class="resumo-meta" id="resumo-faixa"></p>
-      </div>
-      <p class="dica-campo" id="rodape-edicao"></p>
-    </div>
-    <p class="nota-ordem"><b>Ordem cronológica, não a da rodada.</b> Os
-      jogos vêm na ordem do calendário de cada clube: quem tem jogo adiado
-      tem um compromisso a mais na lista, e é justamente essa diferença de
-      tabela que o card compara.</p>
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>As três tabelas são a mesma classificação.</b> A de
+      casa e a de fora usam o mesmo critério e os mesmos desempates da geral —
+      só olham menos jogos. As colunas <b>casa</b> e <b>fora</b> da tabela da
+      esquerda não são pontos: são quantos jogos o clube já fez de cada lado, e
+      o fundo mais forte marca quem está com o calendário desequilibrado.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de próximos jogos"></canvas>
+            aria-label="card de mando de campo"></canvas>
   </section>
 
   <footer class="rodape">
@@ -93,6 +99,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/proximos.js"></script>
+<script type="module" src="/js/mando.js"></script>
 </body>
 </html>
