@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evolução da pontuação · Cards ECBahia Números</title>
+<title>Classificação · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Evolução da pontuação</h1>
-      <p class="subtitulo">Uma campanha contra o ritmo de duas posições.</p>
+      <h1>Classificação</h1>
+      <p class="subtitulo">A tabela da edição, com as vagas pintadas.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -40,9 +40,9 @@ try { document.documentElement.dataset.marca =
 
   <nav class="navegacao">
     <a href="/">Telas</a>
-    <a href="/classificacao.html">Classificação</a>
+    <a href="/classificacao.html" aria-current="page">Classificação</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
-    <a href="/evolucao.html" aria-current="page">Evolução da pontuação</a>
+    <a href="/evolucao.html">Evolução da pontuação</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
@@ -55,38 +55,58 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
+        <label id="rotulo-criterio">Classificar por</label>
+        <div class="chaves" id="criterio" role="group" aria-labelledby="rotulo-criterio"></div>
       </div>
       <div class="campo">
-        <label for="ano">Ano</label>
-        <select id="ano"></select>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
-      <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
-        <select id="equipe"></select>
+      <div class="campo">
+        <label for="ano">Edição</label>
+        <select id="ano"></select>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posições de referência
-        <span class="dica-campo">arraste as bolinhas: a verde é a posição melhor,
-          a vermelha a pior</span>
+    <div class="campo">
+      <label id="rotulo-vagas">Vagas
+        <span class="dica-campo">até que posição vai cada faixa naquele regulamento</span>
       </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      <div class="vagas" id="vagas" aria-labelledby="rotulo-vagas"></div>
     </div>
-    <p class="nota-ordem"><b>Ordem cronológica, não a da rodada.</b> O
-      eixo é o n-ésimo jogo de cada clube, na ordem em que ele foi
-      disputado. Rodada não é tempo: um jogo adiado da 4ª disputado em
-      agosto poria o acumulado de agosto lá atrás. É a leitura certa quando
-      a pergunta é sobre a campanha.</p>
+
+    <div class="filtros-linha recorte">
+      <div class="campo">
+        <label for="rodada-de">Da rodada</label>
+        <input type="number" id="rodada-de" min="1" max="38" step="1" value="1">
+      </div>
+      <div class="campo">
+        <label for="rodada-ate">até a rodada</label>
+        <input type="number" id="rodada-ate" min="1" max="38" step="1" value="38">
+      </div>
+      <div class="campo">
+        <label for="data-de">De</label>
+        <input type="date" id="data-de">
+      </div>
+      <div class="campo">
+        <label for="data-ate">até</label>
+        <input type="date" id="data-ate">
+      </div>
+      <button type="button" class="chave" id="limpar" hidden>Limpar recorte</button>
+    </div>
+
+    <p class="resumo-meta" id="resumo-recorte"></p>
+    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> O recorte por
+      rodada pega os jogos que pertencem àquelas rodadas, e não os que foram
+      disputados naquele período — jogo adiado conta na rodada dele. Para cortar
+      por quando o jogo aconteceu, use o filtro de data.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de evolução da pontuação"></canvas>
+            aria-label="card de classificação"></canvas>
   </section>
 
   <footer class="rodape">
@@ -98,6 +118,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/evolucao.js"></script>
+<script type="module" src="/js/classificacao.js"></script>
 </body>
 </html>

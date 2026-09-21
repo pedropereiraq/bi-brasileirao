@@ -727,3 +727,31 @@ table.mini-classificacao {
 .tela h2 { font-size: 19px; margin-bottom: 6px; }
 .tela p { margin: 0; font-size: 13.5px; color: var(--cinza-texto); }
 .tela:hover { border-color: var(--azul); }
+
+/* ---------------------------------------------------------------- vagas */
+/* As fronteiras do regulamento, com mais e menos: o ajuste quase sempre é de
+   uma posição para cima ou para baixo, e um clique resolve. */
+.vagas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.vaga {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px 5px 10px;
+  background: var(--branco); border: 1px solid var(--linha);
+  border-radius: 999px;
+}
+.vaga-cor { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.vaga-nome { font-size: 12.5px; font-weight: 700; color: var(--azul-escuro); }
+.vaga output {
+  min-width: 22px; text-align: center;
+  font-size: 14px; font-weight: 800; color: var(--azul-escuro);
+  font-variant-numeric: tabular-nums;
+}
+.passo {
+  width: 22px; height: 22px; padding: 0; line-height: 1;
+  border: 1px solid var(--linha); border-radius: 50%;
+  background: var(--offwhite); color: var(--azul);
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.passo:hover { border-color: var(--azul); background: var(--azul-lavado); }
+
+.recorte input[type="number"] { width: 78px; }
+.recorte input[type="date"] { width: 150px; }
