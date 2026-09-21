@@ -27,10 +27,10 @@ const ordinal = (p) => `${p}º`;
 function coresDasZonas(faixa) {
   const zonas = zonasDaFaixa(faixa, POSICOES);
   if (zonas.length >= 3) {
-    return { acima: COR.verde, dentro: COR.cinzaEscuro, abaixo: COR.vermelho };
+    return { acima: COR.positivo, dentro: COR.cinzaEscuro, abaixo: COR.negativo };
   }
   if (zonas.length === 2) {
-    return { [zonas[0].nome]: COR.verde, [zonas[1].nome]: COR.vermelho };
+    return { [zonas[0].nome]: COR.positivo, [zonas[1].nome]: COR.negativo };
   }
   return { [zonas[0].nome]: COR.cinzaEscuro };
 }
@@ -249,8 +249,8 @@ function dicaDoRecorte(recorte, { cor, jogos }) {
       rotulo: variacao(recorte.variacao),
       texto: `aproveitamento ${pct(recorte.aproveitaAntes)} → `
            + `${pct(recorte.aproveitaDepois)}`,
-      cor: (recorte.variacao ?? 0) > 0 ? COR.azul
-         : (recorte.variacao ?? 0) < 0 ? COR.vermelho : COR.cinzaEscuro,
+      cor: (recorte.variacao ?? 0) > 0 ? COR.positivo
+         : (recorte.variacao ?? 0) < 0 ? COR.negativo : COR.cinzaEscuro,
     },
   };
 }

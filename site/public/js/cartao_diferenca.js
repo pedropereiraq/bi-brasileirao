@@ -79,8 +79,8 @@ export function montarCartao(estado) {
       const larguraRodada = (x1 - x0) / RODADAS;
       const centro = (r) => x0 + (r - 0.5) * larguraRodada;
 
-      const faixas = [{ lado: "a", ponto: a, cor: COR.azul },
-                      { lado: "b", ponto: b, cor: COR.vermelho }];
+      const faixas = [{ lado: "a", ponto: a, cor: COR.positivo },
+                      { lado: "b", ponto: b, cor: COR.negativo }];
       const alturaDaFaixa = (f) => (f.ponto.tipo === "equipe" ? 70 : 62);
       const somaFaixas = faixas.reduce((s, f) => s + alturaDaFaixa(f), 0);
 
@@ -133,13 +133,13 @@ async function legendaDasCores(ctx, { x, y, a, b, clubes, distancia }) {
 
   if (distancia) {
     await legenda(ctx, x, y, clubes, [
-      item(a, COR.azul), item(b, COR.vermelho),
+      item(a, COR.positivo), item(b, COR.negativo),
       { rotulo: "coluna = distância entre os dois", cor: COR.cinzaClaro },
     ]);
     return;
   }
   await legenda(ctx, x, y, clubes, [
-    item(a, COR.azul), item(b, COR.vermelho),
+    item(a, COR.positivo), item(b, COR.negativo),
     { rotulo: "quem está em cima está à frente", cor: COR.cinzaClaro },
   ]);
 }
@@ -187,8 +187,8 @@ function desenharGrafico(ctx, o) {
   for (const passo of serieDif) {
     const cx = centro(passo.rodada);
     const meia = meiaColuna(passo.dif);
-    const cor = passo.dif > 0 ? COR.azul
-              : passo.dif < 0 ? COR.vermelho : COR.cinzaEscuro;
+    const cor = passo.dif > 0 ? COR.positivo
+              : passo.dif < 0 ? COR.negativo : COR.cinzaEscuro;
 
     if (passo.dif === 0) {
       // Empate: não há coluna e não há dois números diferentes para mostrar.
@@ -205,11 +205,11 @@ function desenharGrafico(ctx, o) {
 
     // Em cima vai sempre quem tem mais pontos; a cor da tag diz quem é.
     const cima = passo.dif > 0
-      ? { valor: passo.a.pontos, cor: COR.azul }
-      : { valor: passo.b.pontos, cor: COR.vermelho };
+      ? { valor: passo.a.pontos, cor: COR.positivo }
+      : { valor: passo.b.pontos, cor: COR.negativo };
     const baixo = passo.dif > 0
-      ? { valor: passo.b.pontos, cor: COR.vermelho }
-      : { valor: passo.a.pontos, cor: COR.azul };
+      ? { valor: passo.b.pontos, cor: COR.negativo }
+      : { valor: passo.a.pontos, cor: COR.positivo };
 
     ocupados.push(tag(ctx, { cx, cy: eixo - meia - RESPIRO_TAG, ...cima }));
     ocupados.push(tag(ctx, { cx, cy: eixo + meia + RESPIRO_TAG, ...baixo }));
@@ -287,16 +287,16 @@ function blocoDoResumo(ctx, { resumo, distancia, x, eixo, a, b }) {
   const { atual, maior, menor, contagem, viradas, media, rodadas } = resumo;
   const largura = LARGURA_SELO;
   const linhas = distancia
-    ? [["maior distância", String(Math.abs(maior.dif)), COR.azul],
-       ["menor distância", String(Math.abs(menor.dif)), COR.azulEscuro],
+    ? [["maior distância", String(Math.abs(maior.dif)), COR.positivo],
+       ["menor distância", String(Math.abs(menor.dif)), COR.positivoEscuro],
        ["distância média", num(media), COR.cinzaTexto]]
-    : [[`${rotuloDoLado(a)} à frente`, String(contagem.frente), COR.azul],
-       [`${rotuloDoLado(b)} à frente`, String(contagem.atras), COR.vermelho],
+    : [[`${rotuloDoLado(a)} à frente`, String(contagem.frente), COR.positivo],
+       [`${rotuloDoLado(b)} à frente`, String(contagem.atras), COR.negativo],
        ["viradas", String(viradas), COR.cinzaTexto]];
 
   const altura = 96 + linhas.length * 24;
   const y = eixo - altura / 2;
-  const cor = atual.dif > 0 ? COR.azul : atual.dif < 0 ? COR.vermelho : COR.cinzaTexto;
+  const cor = atual.dif > 0 ? COR.positivo : atual.dif < 0 ? COR.negativo : COR.cinzaTexto;
 
   caixa(ctx, x - 4, y, largura, altura, COR.branco, 9);
   ctx.save();
@@ -363,7 +363,7 @@ async function faixaDeOcupantes(ctx, o) {
 
   caixa(ctx, x, y + 4, 6, 54, cor, 3);
   texto(ctx, `${ordinal(posicao)} colocado`, x + 12, y + 24,
-        { tamanho: 13, peso: 700, cor: COR.azulEscuro });
+        { tamanho: 13, peso: 700, cor: COR.positivoEscuro });
   texto(ctx, `${donos.length} ${donos.length === 1 ? "clube passou" : "clubes passaram"}`,
         x + 12, y + 42, { tamanho: 11.5, cor: COR.cinzaEscuro });
 
@@ -412,14 +412,14 @@ function geometriaDoHover(o) {
     n: p.rodada,
     x: centro(p.rodada),
     itens: [
-      { ...descrever(p.a, a), cor: COR.azul, pontos: p.a.pontos },
-      { ...descrever(p.b, b), cor: COR.vermelho, pontos: p.b.pontos },
+      { ...descrever(p.a, a), cor: COR.positivo, pontos: p.a.pontos },
+      { ...descrever(p.b, b), cor: COR.negativo, pontos: p.b.pontos },
     ],
     diferenca: {
       rotulo: sinalizado(p.dif),
       texto: p.dif === 0 ? "empatados"
         : `${rotuloDoLado(p.dif > 0 ? a : b)} à frente`,
-      cor: p.dif > 0 ? COR.azul : p.dif < 0 ? COR.vermelho : COR.cinzaTexto,
+      cor: p.dif > 0 ? COR.positivo : p.dif < 0 ? COR.negativo : COR.cinzaTexto,
     },
   }));
 

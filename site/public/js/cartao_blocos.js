@@ -28,7 +28,7 @@ const ordinal = (posicao) => `${posicao}º`;
 /** Azul acima da meta, cinza na meta, vermelho abaixo — como o resto do BI. */
 const corDoSaldo = (saldo) =>
   saldo === null ? COR.cinzaEscuro
-  : saldo > 0 ? COR.azul : saldo < 0 ? COR.vermelho : COR.cinzaEscuro;
+  : saldo > 0 ? COR.positivo : saldo < 0 ? COR.negativo : COR.cinzaEscuro;
 
 export function montarCartao(estado) {
   const { serie, edicao, jogos, clube, clubes, referencia, posicao } = estado;
@@ -491,9 +491,9 @@ function termometro(ctx, { resumo, metas, x, largura, y }) {
           { tamanho: 11, peso: 700, cor: COR.cinzaEscuro, alinha: "center" });
   }
   texto(ctx, "abaixo da meta", x, yEscala + 18,
-        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.vermelho });
+        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.negativo });
   texto(ctx, "acima da meta", x + largura, yEscala + 18,
-        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.azul,
+        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8, cor: COR.positivo,
           alinha: "right" });
   void metas;
 }

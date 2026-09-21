@@ -550,7 +550,10 @@ table.mini-classificacao {
 }
 .alca:focus-visible { outline: 3px solid var(--azul-claro); outline-offset: 2px; }
 .alca.arrastando { cursor: grabbing; transform: translate(-50%, -50%) scale(1.12); }
-.alca-pior { background: var(--vermelho); }
+/* A alça pior anda em par com a melhor: é um contraste positivo/negativo, e
+   não a cor de identidade — no Podcast45 o vermelho vira dourado, o verde ao
+   lado ficaria sem oposto. */
+.alca-pior { background: var(--negativo); }
 .alca-melhor { background: var(--verde); }
 .alca-meta { background: var(--azul); }
 
@@ -667,53 +670,52 @@ table.mini-classificacao {
 /* =====================================================================
  * A marca do Podcast45.
  *
- * O mesmo BI vestido de outra casa: fundo preto morno, marca dourada, e o
- * par positivo/negativo em verde e vermelho — no ECBahia o azul faz as duas
- * coisas, aqui o dourado fica com a identidade e o verde com o "lado bom".
- * Os nomes das variáveis continuam os do ECBahia porque é o papel delas que
- * importa, não a cor que as batizou.
+ * O mesmo BI vestido de outra casa. O fundo continua o offwhite; o que troca
+ * é o par da identidade: onde o ECBahia usa azul e vermelho, o 45 usa preto
+ * e dourado. Os nomes das variáveis continuam os do ECBahia porque o que
+ * importa é o papel delas, não a cor que as batizou.
+ *
+ * Verde não entra aqui: ele só aparece quando um card contrapõe positivo e
+ * negativo, e para isso existem `--positivo` e `--negativo`.
  * =================================================================== */
-:root[data-marca="podcast45"] {
-  --offwhite: #0E0C09;
-  --branco: #1A1611;
-
-  --azul: #D4B463;
-  --azul-escuro: #F1E7D4;
-  --azul-medio: #B99A4E;
-  --azul-claro: #6E5A22;
-  --azul-lavado: #221C12;
-
-  --verde: #6FBF52;
-  --verde-escuro: #A6DC8C;
-  --verde-lavado: #1B2517;
-
-  --vermelho: #E05A3C;
-  --vermelho-claro: #8C3C28;
-  --vermelho-lavado: #2B1811;
-
-  --cinza: #4E473B;
-  --cinza-escuro: #938974;
-  --cinza-texto: #BCB19B;
-  --cinza-claro: #241F18;
-  --linha: #322B22;
-
-  --sombra: 0 1px 2px rgba(0, 0, 0, .5), 0 4px 16px rgba(0, 0, 0, .35);
+:root {
+  --positivo: var(--azul);
+  --negativo: var(--vermelho);
 }
 
-/* A pinta que identifica o primeiro lado num filtro é a mesma cor que o card
-   usa para ele: dourada na página seria mentira, porque no card ele é verde. */
-:root[data-marca="podcast45"] .pinta.azul { background: var(--verde); }
+:root[data-marca="podcast45"] {
+  --azul: #1F1B16;
+  --azul-escuro: #14110D;
+  --azul-medio: #4A443B;
+  --azul-claro: #C7BFAF;
+  --azul-lavado: #EAE6DD;
+
+  /* O ouro do selo brilha sobre preto e some sobre offwhite: aqui ele
+     escurece para virar tinta. */
+  --vermelho: #B8912F;
+  --vermelho-claro: #DCC98C;
+  --vermelho-lavado: #F6EEDB;
+
+  --positivo: #58913F;
+  --negativo: #CC4125;
+
+  --sombra: 0 1px 2px rgba(31, 27, 22, .07), 0 4px 16px rgba(31, 27, 22, .06);
+}
 
 /* ------------------------------------------------------- chave da marca */
 .marca { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .chaves-marca .chave { padding: 3px 10px; font-size: 11px; }
 
-/* O selo do Podcast45 é redondo: com a largura do logotipo deitado ele viraria
-   uma bola enorme no cabeçalho. */
+/* O selo do Podcast45 é redondo: com a largura do logotipo deitado ele
+   viraria uma bola enorme no cabeçalho. */
 :root[data-marca="podcast45"] .marca img { width: 86px; }
 @media (max-width: 560px) {
   :root[data-marca="podcast45"] .marca img { width: 64px; }
 }
+
+/* A pinta que identifica um lado do card segue a cor que o card usa nele. */
+.pinta.positiva { background: var(--positivo); }
+.pinta.negativa { background: var(--negativo); }
 
 /* ------------------------------------------------------------- a capa */
 .telas {

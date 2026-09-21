@@ -11,10 +11,15 @@
  * Vocabulário e cores: **triunfo** (nunca "vitória"), azul para triunfo, cinza
  * para empate, vermelho para derrota, em todo elemento.
  *
- * Com a marca do Podcast45 a paleta inteira troca — fundo preto, marca
- * dourada — e o par positivo/negativo deixa de ser azul e vermelho para ser
- * verde e vermelho. Quem desenha continua pedindo `COR.azul` para "o lado
- * bom": a chave está na paleta, e não em cada card.
+ * Com a marca do Podcast45 o fundo continua o mesmo offwhite, e o que troca é
+ * o par da identidade: onde o ECBahia usa azul e vermelho, o 45 usa preto e
+ * dourado. O trio de resultado acompanha — azul, cinza e vermelho viram preto,
+ * cinza e dourado.
+ *
+ * Verde tem hora para aparecer: só quando o card contrapõe um positivo a um
+ * negativo. Por isso existem `positivo` e `negativo` além de `azul` e
+ * `vermelho` — uma linha azul que era só identidade continua sendo
+ * identidade, e vira preta, em vez de virar verde sem ter oposto nenhum.
  *
  * O que NÃO vem da skill é a regra do holofote no Bahia. Lá o card fala de um
  * clube; aqui é a tabela de um campeonato, e puxar o recorte para um clube
@@ -68,38 +73,44 @@ const PALETAS = {
     linha: "#DBD8D2",
     rampaBaixo: "#E7E4DE",
     rampaAlto: "#7EAFD8",
-    // Sobre o offwhite todo escudo se vê; num fundo preto, não.
-    discoDoEscudo: null,
+    // O par de um contraste positivo/negativo. No ECBahia ele é o próprio
+    // azul contra o vermelho: o azul já é o lado bom em toda a identidade.
+    positivo: "#0B5394",
+    negativo: "#CC4125",
   },
   podcast45: {
-    // Preto morno, e não preto puro: o selo do canal é dourado sobre um preto
-    // que puxa para o marrom, e o preto de verdade deixaria o dourado sujo.
-    fundo: "#0E0C09",
-    branco: "#1A1611",
-    marca: "#D4B463",
-    marcaTexto: "#14110C",
-    marcaSuave: "#6E5A22",
-    azul: "#6FBF52",
-    azulEscuro: "#F1E7D4",
-    azulMedio: "#9AD183",
-    azulClaro: "#25331D",
-    azulLavado: "#1B2517",
-    vermelho: "#EE6E4E",
-    vermelhoLavado: "#2B1811",
-    verde: "#6FBF52",
-    verdeEscuro: "#A6DC8C",
-    verdeLavado: "#1B2517",
-    cinza: "#4E473B",
-    cinzaEscuro: "#938974",
-    cinzaTexto: "#BCB19B",
-    cinzaClaro: "#241F18",
-    linha: "#322B22",
-    rampaBaixo: "#221D16",
-    rampaAlto: "#7A6226",
-    // Escudo preto some no fundo preto — Atlético, Botafogo, Corinthians,
-    // Vasco. Um disco quase invisível por baixo devolve a silhueta sem virar
-    // adesivo branco no meio do card.
-    discoDoEscudo: "rgba(255, 246, 228, .10)",
+    // O fundo é o mesmo do ECBahia: o que muda é o par da identidade.
+    fundo: "#F4F2ED",
+    branco: "#FFFFFF",
+    // Preto morno, e não preto puro: é o preto do selo do canal, e o preto
+    // de verdade deixaria o dourado ao lado dele parecendo sujo.
+    marca: "#1F1B16",
+    marcaTexto: "#F6F1E6",
+    marcaSuave: "#C7BFAF",
+    azul: "#1F1B16",
+    azulEscuro: "#14110D",
+    azulMedio: "#4A443B",
+    azulClaro: "#C7BFAF",
+    azulLavado: "#EAE6DD",
+    // O dourado escurece para virar tinta: o ouro do selo brilha sobre preto
+    // e some sobre offwhite.
+    vermelho: "#B8912F",
+    vermelhoLavado: "#F6EEDB",
+    verde: "#6AA84F",
+    verdeEscuro: "#38761D",
+    verdeLavado: "#E6EFE1",
+    cinza: "#CCCCCC",
+    cinzaEscuro: "#8A8A8A",
+    cinzaTexto: "#5C5C5C",
+    cinzaClaro: "#E4E1DB",
+    linha: "#DBD8D2",
+    rampaBaixo: "#EDE9DF",
+    rampaAlto: "#C9A94F",
+    // Aqui o preto é identidade, não elogio: o positivo precisa de cor
+    // própria. Verde um tom abaixo do da paleta, para o número branco em
+    // cima dele continuar legível.
+    positivo: "#58913F",
+    negativo: "#CC4125",
   },
 };
 
@@ -183,14 +194,6 @@ async function imagem(url) {
 
 function desenharEscudo(ctx, im, x, y, tamanho) {
   if (!im) return;
-  if (COR.discoDoEscudo) {
-    ctx.save();
-    ctx.fillStyle = COR.discoDoEscudo;
-    ctx.beginPath();
-    ctx.arc(x + tamanho / 2, y + tamanho / 2, tamanho / 2 + 1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
   const proporcao = im.naturalWidth / im.naturalHeight || 1;
   const l = proporcao >= 1 ? tamanho : tamanho * proporcao;
   const a = proporcao >= 1 ? tamanho / proporcao : tamanho;

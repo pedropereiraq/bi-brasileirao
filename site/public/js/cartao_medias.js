@@ -48,10 +48,10 @@ const comSinal = (v) => (v > 0 ? `+${num(v)}` : v < 0 ? `−${num(-v)}` : "0");
 function coresDasZonas(faixa) {
   const zonas = zonasDaFaixa(faixa, POSICOES);
   if (zonas.length >= 3) {
-    return { acima: COR.verde, dentro: null, abaixo: COR.vermelho };
+    return { acima: COR.positivo, dentro: null, abaixo: COR.negativo };
   }
   if (zonas.length === 2) {
-    return { [zonas[0].nome]: COR.verde, [zonas[1].nome]: COR.vermelho };
+    return { [zonas[0].nome]: COR.positivo, [zonas[1].nome]: COR.negativo };
   }
   return { [zonas[0].nome]: null };
 }
@@ -264,7 +264,7 @@ function dicaDaCelula(celula, { media }) {
     diferenca: media === null ? null : {
       rotulo: comSinal(celula.pontos - media),
       texto: `média do ${ordinal(celula.posicao)} nesta rodada: ${num(media)}`,
-      cor: celula.pontos >= media ? COR.azul : COR.vermelho,
+      cor: celula.pontos >= media ? COR.positivo : COR.negativo,
     },
   };
 }
@@ -322,7 +322,7 @@ function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes
     const alcance = acima ? maximo - media : media - minimo;
     const t = alcance <= 0 ? 1
       : Math.min(1, Math.abs(valor - media) / alcance);
-    return mistura(COR.cinzaTexto, acima ? COR.azul : COR.vermelho, t);
+    return mistura(COR.cinzaTexto, acima ? COR.positivo : COR.negativo, t);
   };
 
   // Duas listas: a da coluna do fim vai na frente, para o cursor sobre ela

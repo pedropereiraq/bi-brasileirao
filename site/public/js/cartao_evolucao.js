@@ -74,9 +74,9 @@ export function montarCartao(estado) {
       await legenda(ctx, MARGEM, y, clubes, [
         { clube, rotulo, cor: COR.azul },
         { rotulo: `ritmo do ${ordinal(melhor)} lugar · ${num(media.melhor)} pts`,
-          cor: COR.verde, pontilhada: true },
+          cor: COR.positivo, pontilhada: true },
         { rotulo: `ritmo do ${ordinal(pior)} lugar · ${num(media.pior)} pts`,
-          cor: COR.vermelho, pontilhada: true },
+          cor: COR.negativo, pontilhada: true },
       ]);
 
       desenharGrafico(ctx, { campanha, media, ritmo, centro, escala, topo,
@@ -114,9 +114,9 @@ function desenharGrafico(ctx, o) {
   // As réguas primeiro: a campanha é a linha que tem de ficar por cima.
   const reta = (total) => [[centro(1), escala(ritmo(total, 1))],
                            [centro(JOGOS), escala(total)]];
-  tracarLinha(ctx, reta(media.pior), COR.vermelho,
+  tracarLinha(ctx, reta(media.pior), COR.negativo,
               { pontilhada: true, espessura: 4 });
-  tracarLinha(ctx, reta(media.melhor), COR.verde,
+  tracarLinha(ctx, reta(media.melhor), COR.positivo,
               { pontilhada: true, espessura: 4 });
 
   tracarLinha(ctx, campanha.map((p) => [centro(p.n), escala(p.pts)]), COR.azul);
@@ -140,9 +140,9 @@ function desenharGrafico(ctx, o) {
       { alvo: escala(fim.pts), ancora: centro(fim.n), altura: 58,
         desenhar: (y) => seloDoClube(ctx, x1 + 14, y, fim, rotulo) },
       { alvo: escala(media.melhor), ancora: centro(JOGOS), altura: 34,
-        desenhar: (y) => pastilha(ctx, x1 + 14, y, melhor, media.melhor, COR.verde) },
+        desenhar: (y) => pastilha(ctx, x1 + 14, y, melhor, media.melhor, COR.positivo) },
       { alvo: escala(media.pior), ancora: centro(JOGOS), altura: 34,
-        desenhar: (y) => pastilha(ctx, x1 + 14, y, pior, media.pior, COR.vermelho) },
+        desenhar: (y) => pastilha(ctx, x1 + 14, y, pior, media.pior, COR.negativo) },
     ],
   });
 
@@ -254,8 +254,8 @@ function blocoDeRitmo(ctx, o) {
           cor: COR.cinzaEscuro });
 
   const linhas = [
-    { posicao: melhor, total: media.melhor, cor: COR.verde },
-    { posicao: pior, total: media.pior, cor: COR.vermelho },
+    { posicao: melhor, total: media.melhor, cor: COR.positivo },
+    { posicao: pior, total: media.pior, cor: COR.negativo },
   ];
   linhas.forEach((linha, i) => {
     const alvo = ritmo(linha.total, fim.n);
@@ -283,8 +283,8 @@ function geometriaDoHover(o) {
     const doClube = descreverJogo(passo);
     const itens = [{ rotulo, cor: COR.azul, ...doClube }];
 
-    for (const [posicao, total, cor] of [[melhor, media.melhor, COR.verde],
-                                         [pior, media.pior, COR.vermelho]]) {
+    for (const [posicao, total, cor] of [[melhor, media.melhor, COR.positivo],
+                                         [pior, media.pior, COR.negativo]]) {
       const alvo = ritmo(total, n);
       // Sem jogo disputado não há o que comparar: a régua aparece sozinha.
       const delta = passo.realizado ? passo.pts - alvo : null;

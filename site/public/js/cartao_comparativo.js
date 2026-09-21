@@ -125,7 +125,7 @@ function geometriaDoHover(o) {
         ? { valor: 0, texto: "empatadas" }
         : { valor: Math.abs(d),
             texto: `${d > 0 ? rotuloA : rotuloB} à frente`,
-            cor: d > 0 ? COR.azul : COR.vermelho };
+            cor: d > 0 ? COR.positivo : COR.negativo };
     }
     pontos.push({ n: i + 1, x: centro(i + 1), itens, diferenca });
   }

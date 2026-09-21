@@ -48,7 +48,7 @@ const ordinal = (p) => `${p}º`;
 // Vermelho no 1º, cinza no meio da tabela, verde no 20º.
 // A ponta verde e o meio cinza saem da paleta: o par vermelho–verde é o que
 // o card diz, e o cinza do meio precisa acompanhar o fundo da marca.
-const BADGE_VERDE = () => COR.verde;
+const BADGE_VERDE = () => COR.positivo;
 const BADGE_MEIO = () => COR.cinzaEscuro;
 
 /** Interpola duas cores hexadecimais. */
@@ -109,7 +109,7 @@ function cabeONomeInteiro(ctx, { nomes, nomesDoTopo, largura, cabe, lado }) {
 function corDaFracao(fracao) {
   const t = Math.min(1, Math.max(0, fracao));
   return t < 0.5
-    ? mistura(COR.vermelho, BADGE_MEIO(), t * 2)
+    ? mistura(COR.negativo, BADGE_MEIO(), t * 2)
     : mistura(BADGE_MEIO(), BADGE_VERDE(), (t - 0.5) * 2);
 }
 
