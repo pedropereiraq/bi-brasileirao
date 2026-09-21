@@ -278,10 +278,13 @@ function dicaDaCelula(celula, { media }) {
  * mínimo ao máximo e a pontuação fica dentro de uma bolinha, no lugar exato
  * que ela ocupa entre os dois.
  *
- * A cor da bolinha é a diferença para a média — cinza no zero, azul acima,
- * vermelho abaixo —, então posição e cor dizem a mesma coisa por dois
- * caminhos. A média e a diferença em número ficam ao lado, fora do gráfico:
- * dentro, virariam marcas disputando espaço com a bolinha.
+ * A cor da bolinha sai do mesmo intervalo do trilho: cinza na média, azul
+ * cheio na melhor pontuação que aquela posição já teve nesta rodada, vermelho
+ * cheio na pior. Posição e cor passam a dizer a mesma coisa por dois caminhos,
+ * e "azul forte" quer dizer recorde, não apenas "acima da média".
+ *
+ * A média e a diferença em número ficam ao lado, fora do gráfico: dentro,
+ * virariam marcas disputando espaço com a bolinha.
  */
 function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes,
                             faixa, cores, x, largura, y }) {
@@ -306,12 +309,19 @@ function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes
   rotulo("fim", xFim, "right");
   rotulo("dif", xDif, "right");
 
-  // A escala da cor é a da própria coluna: cinza no zero, e a cor cheia na
-  // maior diferença que aparecer, para os dois lados.
-  const maiorDif = Math.max(1, ...comparada.map((l) => Math.abs(l.diferenca ?? 0)));
-  const corDaDiferenca = (diferenca) => {
-    const t = Math.min(1, Math.abs(diferenca) / maiorDif);
-    return mistura(COR.cinzaTexto, diferenca >= 0 ? COR.azul : COR.vermelho, t);
+  /**
+   * A cor de um valor dentro do intervalo histórico daquela posição: cinza na
+   * média, azul cheio no máximo, vermelho cheio no mínimo.
+   *
+   * O ano em curso pode passar do recorde para os dois lados; aí a cor satura
+   * em vez de sair da escala.
+   */
+  const corNoIntervalo = (valor, { minimo, media, maximo }) => {
+    const acima = valor >= media;
+    const alcance = acima ? maximo - media : media - minimo;
+    const t = alcance <= 0 ? 1
+      : Math.min(1, Math.abs(valor - media) / alcance);
+    return mistura(COR.cinzaTexto, acima ? COR.azul : COR.vermelho, t);
   };
 
   // Duas listas: a da coluna do fim vai na frente, para o cursor sobre ela
@@ -400,7 +410,7 @@ function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes
     caixa(ctx, onde(minimo), meioDaLinha - 3,
           Math.max(2, onde(maximo) - onde(minimo)), 6, COR.cinzaClaro, 3);
 
-    const cor = corDaDiferenca(linha.diferenca);
+    const cor = corNoIntervalo(linha.pontos, estatistica);
     ctx.save();
     ctx.fillStyle = COR.fundo;
     ctx.beginPath();
