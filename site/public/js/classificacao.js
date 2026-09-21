@@ -7,6 +7,10 @@
  *
  * As fronteiras das vagas são campo com mais e menos em vez de lista: o ajuste
  * quase sempre é de uma posição para cima ou para baixo, e um clique resolve.
+ *
+ * E elas ficam salvas no servidor, não no navegador: não são preferência de
+ * quem está olhando, são o regulamento daquele ano. Quem mudar o limite muda
+ * para todo mundo que abrir o card depois.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
@@ -21,7 +25,7 @@ const COR_DA_FAIXA = {
 };
 
 const estado = {
-  edicoes: [], clubes: {},
+  edicoes: [], clubes: {}, vagasSalvas: {},
   serie: null, edicao: null, jogos: null, classificacao: [],
   criterio: "pontos",
   limites: {},
@@ -42,11 +46,14 @@ async function inicializar() {
   definirMensagemSemCard("escolha uma edição para desenhar o card");
   redesenhar = ligarPaginaDeCard(() => montarCartao(estado));
 
-  const [edicoes, clubes] = await Promise.all([
+  const [edicoes, clubes, vagas] = await Promise.all([
     fetch("/dados/edicoes.json").then((r) => r.json()),
     fetch("/dados/clubes.json").then((r) => r.json()),
+    // Sem a rota no ar — servidor estático de desenvolvimento, por exemplo —
+    // a tela abre nos padrões em vez de não abrir.
+    fetch("/api/vagas").then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
   ]);
-  Object.assign(estado, { edicoes: edicoes.edicoes, clubes });
+  Object.assign(estado, { edicoes: edicoes.edicoes, clubes, vagasSalvas: vagas });
 
   const url = daUrl();
   if (url.criterio) estado.criterio = url.criterio;
@@ -91,9 +98,10 @@ async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
   pintarChaves("serie", serie);
 
-  // Cada série tem faixas com nomes próprios: os limites recomeçam no padrão
-  // dela, e não no que sobrou da outra.
-  estado.limites = url.limites ?? limitesPadrao(serie);
+  // Cada série tem faixas com nomes próprios: os limites vêm do que está
+  // salvo para ela, e só então do padrão — nunca do que sobrou da outra.
+  estado.limites = limitesValidos(serie,
+    url.limites ?? estado.vagasSalvas?.[serie] ?? limitesPadrao(serie));
   montarVagas();
 
   const anos = estado.edicoes.filter((e) => e.serie === serie);
@@ -150,8 +158,30 @@ function montarVagas() {
       [botao.dataset.faixa]: atual[botao.dataset.faixa] + Number(botao.dataset.passo),
     });
     pintarVagas();
+    guardarVagas();
     aplicar();
   };
+}
+
+/**
+ * Guarda as fronteiras no servidor.
+ *
+ * Com um respiro: apertar o mais quatro vezes seguidas é um ajuste só, e
+ * quatro gravações seriam três a mais. Falha em silêncio — perder o registro
+ * de uma fronteira não pode derrubar o card que está na tela.
+ */
+let relogioDasVagas = null;
+function guardarVagas() {
+  clearTimeout(relogioDasVagas);
+  relogioDasVagas = setTimeout(() => {
+    const limites = limitesValidos(estado.serie, estado.limites);
+    estado.vagasSalvas = { ...estado.vagasSalvas, [estado.serie]: limites };
+    fetch("/api/vagas", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ [estado.serie]: limites }),
+    }).catch(() => { /* fica só nesta sessão */ });
+  }, 600);
 }
 
 function pintarVagas() {

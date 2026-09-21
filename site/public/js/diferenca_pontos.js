@@ -133,3 +133,21 @@ export function ocupantes(serie, lado) {
   }
   return saida;
 }
+
+/**
+ * A campanha de um clube lida por rodada: onde ele estava e com quantos pontos
+ * ao fim de cada uma.
+ *
+ * Mora aqui porque a fonte é a mesma grade, e ela é a única do BI que responde
+ * "em que posição ele estava na rodada 12" sem recalcular a edição inteira no
+ * navegador. Serve à evolução da campanha por posição.
+ */
+export function campanhaPorRodada(edicao, equipe) {
+  const saida = [];
+  for (let rodada = 1; rodada <= (edicao?.rodadas ?? 0); rodada++) {
+    const celula = ladoNaRodada(colunaDaRodada(edicao, rodada),
+                                { tipo: "equipe", equipe });
+    if (celula) saida.push({ rodada, ...celula });
+  }
+  return saida;
+}

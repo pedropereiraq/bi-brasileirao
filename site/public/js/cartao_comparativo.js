@@ -1,16 +1,21 @@
 /**
  * Card: comparativo de duas campanhas.
  *
- * Duas linhas — campanha 1 em azul, campanha 2 em vermelho — sobre os **jogos
- * em ordem cronológica**, não sobre a rodada. Dois motivos:
+ * Duas linhas — campanha 1 em azul, campanha 2 em vermelho — e duas leituras.
  *
- * 1. Rodada não é tempo. Um jogo adiado da rodada 4 disputado em agosto punha
- *    o acumulado de agosto lá atrás, e a linha dava um pico e voltava.
- * 2. Comparar campanhas de anos diferentes só faz sentido pelo n-ésimo jogo.
+ * **Por pontuação**, o eixo são os jogos em ordem cronológica, não a rodada.
+ * Rodada não é tempo: um jogo adiado da rodada 4 disputado em agosto punha o
+ * acumulado de agosto lá atrás, e a linha dava um pico e voltava. E comparar
+ * campanhas de anos diferentes só faz sentido pelo n-ésimo jogo.
  *
- * O eixo vai sempre até 38, mesmo com a edição em andamento — é o tamanho de
- * uma campanha, e encurtá-lo esconderia o quanto falta. A linha de cada equipe
- * termina no último jogo que ela disputou: quem jogou menos, para antes.
+ * **Por posição**, o eixo é a rodada, porque posição só existe quando todo
+ * mundo jogou o mesmo tanto. O eixo vertical inverte: quanto melhor a posição,
+ * mais alta a linha, como a tabela é lida.
+ *
+ * O eixo horizontal vai sempre até 38, mesmo com a edição em andamento — é o
+ * tamanho de uma campanha, e encurtá-lo esconderia o quanto falta. A linha de
+ * cada equipe termina no último jogo que ela disputou: quem jogou menos, para
+ * antes.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar,
@@ -20,17 +25,24 @@ import {
   CALHA, CALHA_DIR, JOGOS, campanhaCompleta, disputados, descreverJogo,
   faixaDeJogos, legenda, tracarLinha,
 } from "/js/grafico_campanha.js";
+import { campanhaPorRodada } from "/js/diferenca_pontos.js";
 
 export function montarCartao(estado) {
   const { serie, a, b, clubes } = estado;
   if (!a?.clube || !b?.clube || !a.jogos || !b.jogos) return null;
   if (a.clube === b.clube && a.edicao.ano === b.edicao.ano) return null;
 
-  const agendaA = campanhaCompleta(a.jogos, a.clube);
-  const agendaB = campanhaCompleta(b.jogos, b.clube);
-  const campanhaA = disputados(agendaA);
-  const campanhaB = disputados(agendaB);
+  const porPosicao = estado.modo === "posicao";
+  if (porPosicao && (!a.grade || !b.grade)) return null;
+
+  // Por posição o eixo é a rodada, e cada jogo vai para a casa da rodada dele.
+  const agendaA = ordenar(campanhaCompleta(a.jogos, a.clube), porPosicao);
+  const agendaB = ordenar(campanhaCompleta(b.jogos, b.clube), porPosicao);
+  const campanhaA = serieDaLeitura(a, agendaA, porPosicao);
+  const campanhaB = serieDaLeitura(b, agendaB, porPosicao);
   if (!campanhaA.length && !campanhaB.length) return null;
+
+  const total = porPosicao ? a.grade.clubes.length : 0;
 
   // Uma campanha está encerrada quando não sobrou jogo na agenda dela. Se uma
   // já acabou e a outra ainda corre, comparar os totais seria comparar 38 jogos
@@ -49,8 +61,9 @@ export function montarCartao(estado) {
                              : `${nomeBonito(b.clube)} ${b.edicao.ano}`;
 
   const spec = {
-    titulo: tituloDoCard({ serie, a, b, anosIguais }),
-    subtitulo: "Jogos em ordem cronológica",
+    titulo: tituloDoCard({ serie, a, b, anosIguais, porPosicao }),
+    subtitulo: porPosicao ? "Posição ao fim de cada rodada"
+                          : "Jogos em ordem cronológica",
     arquivo: `comparativo-${nomeCurto(a.clube)}-${a.edicao.ano}`
            + `-${nomeCurto(b.clube)}-${b.edicao.ano}`,
     numeros: [],   // sem faixa de números: o gráfico fica com a altura toda
@@ -64,9 +77,8 @@ export function montarCartao(estado) {
       const centro = (n) => x0 + (n - 0.5) * largura;
 
       const topo = y + 42, alturaPlot = 424;
-      const maximo = Math.max(campanhaA.at(-1)?.pts ?? 0,
-                              campanhaB.at(-1)?.pts ?? 0, 1);
-      const escala = (pts) => topo + alturaPlot - (pts / maximo) * alturaPlot;
+      const escala = escalaDaLeitura({ campanhaA, campanhaB, topo, alturaPlot,
+                                       porPosicao, total });
       const yEixo = topo + alturaPlot + 24;
       const yFaixaA = yEixo + 16;
       const yFaixaB = yFaixaA + 80;
@@ -75,9 +87,9 @@ export function montarCartao(estado) {
         { clube: a.clube, rotulo: rotuloA, cor: COR.azul },
         { clube: b.clube, rotulo: rotuloB, cor: COR.vermelho },
       ]);
-      desenharLinhas(ctx, { campanhaA, campanhaB, centro, topo, alturaPlot,
-                            x0, x1, rotuloA, rotuloB,
-                            encerradaA, encerradaB, corte });
+      desenharLinhas(ctx, { campanhaA, campanhaB, centro, escala, topo,
+                            alturaPlot, x0, x1, rotuloA, rotuloB,
+                            encerradaA, encerradaB, corte, porPosicao, total });
 
       for (let n = 1; n <= JOGOS; n++) {
         if (n !== 1 && n !== JOGOS && n % 2 === 0) continue;
@@ -95,74 +107,127 @@ export function montarCartao(estado) {
       // A geometria só existe na hora de desenhar; guardá-la no spec é o que
       // permite à página mapear o mouse de volta para um jogo. Fica fora do
       // PNG de propósito — é recurso de tela, não de card.
-      spec.hover = geometriaDoHover({ agendaA, agendaB, rotuloA, rotuloB,
-        centro, escala, topo, alturaPlot, x0, x1, largura });
+      spec.hover = geometriaDoHover({ agendaA, agendaB, campanhaA, campanhaB,
+        rotuloA, rotuloB, centro, topo, alturaPlot, x0, x1, largura,
+        porPosicao });
     },
   };
   return spec;
 }
 
+/**
+ * A agenda na ordem do eixo: por jogo, como veio; por rodada, com cada jogo na
+ * casa da rodada a que pertence.
+ */
+function ordenar(agenda, porPosicao) {
+  return porPosicao
+    ? agenda.map((passo) => ({ ...passo, n: passo.jogo.rodada }))
+    : agenda;
+}
+
+/**
+ * A série que a linha desenha: `valor` é o que vai no eixo vertical, e `pts`
+ * segue junto porque a dica do mouse fala de pontos nas duas leituras.
+ */
+function serieDaLeitura(lado, agenda, porPosicao) {
+  if (!porPosicao) {
+    return disputados(agenda).map((p) => ({ n: p.n, valor: p.pts, pts: p.pts }));
+  }
+  return campanhaPorRodada(lado.grade, lado.clube)
+    .map((p) => ({ n: p.rodada, valor: p.posicao, pts: p.pontos,
+                   posicao: p.posicao }));
+}
+
+/**
+ * Por pontos o zero fica embaixo; por posição o 1º fica em cima, e cada
+ * colocação ocupa uma faixa com o ponto no meio dela.
+ */
+function escalaDaLeitura({ campanhaA, campanhaB, topo, alturaPlot, porPosicao,
+                           total }) {
+  if (porPosicao) return (p) => topo + ((p - 0.5) / total) * alturaPlot;
+  const maximo = Math.max(campanhaA.at(-1)?.valor ?? 0,
+                          campanhaB.at(-1)?.valor ?? 0, 1);
+  return (v) => topo + alturaPlot - (v / maximo) * alturaPlot;
+}
+
+/** Quem está à frente: mais pontos, ou posição menor. */
+const vantagem = (va, vb, porPosicao) => (porPosicao ? vb - va : va - vb);
+
 /** Onde o mouse pode parar, e o que mostrar em cada parada. */
 function geometriaDoHover(o) {
-  const { agendaA, agendaB, rotuloA, rotuloB, centro, escala,
-          topo, alturaPlot, x0, x1, largura } = o;
-  const total = Math.max(agendaA.length, agendaB.length);
+  const { agendaA, agendaB, campanhaA, campanhaB, rotuloA, rotuloB, centro,
+          topo, alturaPlot, x0, x1, largura, porPosicao } = o;
+  const quantos = Math.max(agendaA.length, agendaB.length,
+                           campanhaA.length, campanhaB.length);
 
-  const descrever = (agenda, i) => descreverJogo(agenda[i]);
+  const achar = (serie, n) => serie.find((p) => p.n === n) ?? null;
+  const daAgenda = (agenda, n) =>
+    descreverJogo(agenda.find((passo) => passo.n === n));
 
   const pontos = [];
-  for (let i = 0; i < total; i++) {
+  for (let n = 1; n <= quantos; n++) {
+    const pa = achar(campanhaA, n), pb = achar(campanhaB, n);
     const itens = [
-      { rotulo: rotuloA, cor: COR.azul, ...(descrever(agendaA, i) ?? {}) },
-      { rotulo: rotuloB, cor: COR.vermelho, ...(descrever(agendaB, i) ?? {}) },
-    ].filter((it) => it.detalhe);
+      { rotulo: rotuloA, cor: COR.azul,
+        ...(daAgenda(agendaA, n) ?? {}),
+        ...(porPosicao && pa ? { pontos: pa.pts } : {}) },
+      { rotulo: rotuloB, cor: COR.vermelho,
+        ...(daAgenda(agendaB, n) ?? {}),
+        ...(porPosicao && pb ? { pontos: pb.pts } : {}) },
+    ].filter((item) => item.detalhe);
 
-    // A diferença só existe quando as duas já jogaram aquele jogo.
+    // A diferença só existe quando as duas já chegaram àquele ponto do eixo.
     let diferenca = null;
-    if (itens.length === 2 && itens.every((it) => it.realizado)) {
-      const d = itens[0].pontos - itens[1].pontos;
+    if (pa && pb) {
+      const d = vantagem(pa.valor, pb.valor, porPosicao);
+      const unidade = porPosicao
+        ? (Math.abs(d) === 1 ? "posição" : "posições")
+        : (Math.abs(d) === 1 ? "ponto" : "pontos");
       diferenca = d === 0
-        ? { valor: 0, texto: "empatadas" }
-        : { valor: Math.abs(d),
+        ? { valor: 0, texto: porPosicao ? "na mesma posição" : "empatadas" }
+        : { rotulo: `${Math.abs(d)} ${unidade}`,
             texto: `${d > 0 ? rotuloA : rotuloB} à frente`,
             cor: d > 0 ? COR.positivo : COR.negativo };
     }
-    pontos.push({ n: i + 1, x: centro(i + 1), itens, diferenca });
+    pontos.push({ n, x: centro(n), itens, diferenca });
   }
-  return { pontos, topo, alturaPlot, x0, x1, largura, unidade: "jogo" };
+  return { pontos, topo, alturaPlot, x0, x1, largura,
+           unidade: porPosicao ? "rodada" : "jogo" };
 }
 
 /**
  * O título diz a frase inteira, em português corrido. Três formas, conforme o
  * que muda entre as duas campanhas — o clube, o ano, ou os dois.
  */
-function tituloDoCard({ serie, a, b, anosIguais }) {
+function tituloDoCard({ serie, a, b, anosIguais, porPosicao }) {
   const nomeA = nomeBonito(a.clube), nomeB = nomeBonito(b.clube);
   const mesmoClube = a.clube === b.clube;
+  const assunto = porPosicao ? "Evolução da posição" : "Evolução da pontuação";
 
   if (mesmoClube) {
-    return `Evolução da pontuação ${artigo(a.clube)} ${nomeA} na Série ${serie}`
+    return `${assunto} ${artigo(a.clube)} ${nomeA} na Série ${serie}`
          + ` em ${a.edicao.ano} e ${b.edicao.ano}`;
   }
   if (anosIguais) {
-    return `Evolução da pontuação de ${nomeA} e ${nomeB}`
+    return `${assunto} de ${nomeA} e ${nomeB}`
          + ` na Série ${serie} ${a.edicao.ano}`;
   }
-  return `Evolução da pontuação ${artigo(a.clube)} ${nomeA} (${a.edicao.ano})`
+  return `${assunto} ${artigo(a.clube)} ${nomeA} (${a.edicao.ano})`
        + ` e ${nomeB} (${b.edicao.ano}) na Série ${serie}`;
 }
 
 /* --------------------------------------------------------------- linhas */
 function desenharLinhas(ctx, o) {
-  const { campanhaA, campanhaB, centro, topo, alturaPlot, x0, x1,
-          rotuloA, rotuloB, encerradaA, encerradaB, corte } = o;
-  const maximo = Math.max(campanhaA.at(-1)?.pts ?? 0, campanhaB.at(-1)?.pts ?? 0, 1);
-  const escala = (pts) => topo + alturaPlot - (pts / maximo) * alturaPlot;
+  const { campanhaA, campanhaB, centro, escala, topo, alturaPlot, x0, x1,
+          rotuloA, rotuloB, encerradaA, encerradaB, corte, porPosicao,
+          total } = o;
 
-  const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
-  for (let v = 0; v <= maximo; v += passo) {
+  const marcas = porPosicao
+    ? [...new Set([1, 5, 10, 15, total])]
+    : marcasDePontos(campanhaA, campanhaB);
+  for (const v of marcas) {
     linhaH(ctx, x0 - 10, x1, escala(v), COR.cinzaClaro);
-    texto(ctx, v, x0 - 18, escala(v) + 5,
+    texto(ctx, porPosicao ? `${v}º` : v, x0 - 18, escala(v) + 5,
           { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
   }
 
@@ -178,17 +243,19 @@ function desenharLinhas(ctx, o) {
       ...s,
       corte: cortada ? corte : null,
       fim: cortada ? s.campanha[corte - 1] : s.campanha.at(-1),
-      resto: cortada
+      // O que a encerrada fez depois do corte só se soma em pontos: por
+      // posição não há acumulado, e "subiu 3 lugares" não é a mesma conta.
+      resto: cortada && !porPosicao
         ? { pontos: s.campanha.at(-1).pts - s.campanha[corte - 1].pts,
             jogos: s.campanha.length - corte }
         : null,
     };
   });
 
-  const comparacao = compararCampanhas(campanhaA, campanhaB);
+  const comparacao = compararCampanhas(campanhaA, campanhaB, porPosicao);
   bandaEntreLinhas(ctx, comparacao, centro, escala);
 
-  const xy = (ponto) => [centro(ponto.n), escala(ponto.pts)];
+  const xy = (ponto) => [centro(ponto.n), escala(ponto.valor)];
   for (const s of series) {
     const ate = s.corte ?? s.campanha.length;
     tracarLinha(ctx, s.campanha.slice(0, ate).map(xy), s.cor);
@@ -199,7 +266,8 @@ function desenharLinhas(ctx, o) {
     }
   }
 
-  marcarMaiorDiferenca(ctx, comparacao, centro, escala, { topo, alturaPlot, x0, x1 });
+  marcarMaiorDiferenca(ctx, comparacao, centro, escala,
+                       { topo, alturaPlot, x0, x1, porPosicao });
 
   for (const s of series) {
     for (const ponto of s.campanha) {
@@ -207,36 +275,46 @@ function desenharLinhas(ctx, o) {
       if (s.corte && ponto.n > s.corte) ctx.globalAlpha = 0.5;
       ctx.fillStyle = COR.fundo;
       ctx.beginPath();
-      ctx.arc(centro(ponto.n), escala(ponto.pts), 5, 0, Math.PI * 2);
+      ctx.arc(centro(ponto.n), escala(ponto.valor), 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = s.cor;
       ctx.beginPath();
-      ctx.arc(centro(ponto.n), escala(ponto.pts), 3.2, 0, Math.PI * 2);
+      ctx.arc(centro(ponto.n), escala(ponto.valor), 3.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
 
   const alturaBloco = 76;
-  rotulosFinais(ctx, { series, centro, escala, x1, topo,
+  rotulosFinais(ctx, { series, centro, escala, x1, topo, porPosicao,
                        limiteBase: topo + alturaPlot - alturaBloco - 14 });
-  blocoDeDiferenca(ctx, { series, x: x1 + 18, corte,
+  blocoDeDiferenca(ctx, { series, x: x1 + 18, corte, porPosicao,
                           y: topo + alturaPlot - alturaBloco, altura: alturaBloco });
+}
+
+/** As linhas da grade, de cinco em cinco pontos e por aí acima. */
+function marcasDePontos(campanhaA, campanhaB) {
+  const maximo = Math.max(campanhaA.at(-1)?.valor ?? 0,
+                          campanhaB.at(-1)?.valor ?? 0, 1);
+  const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
+  const saida = [];
+  for (let v = 0; v <= maximo; v += passo) saida.push(v);
+  return saida;
 }
 
 /**
  * A diferença jogo a jogo, no trecho em que as duas já jogaram. Ir além disso
  * seria comparar campanha com ausência de campanha.
  */
-function compararCampanhas(campanhaA, campanhaB) {
+function compararCampanhas(campanhaA, campanhaB, porPosicao) {
   const comum = Math.min(campanhaA.length, campanhaB.length);
   const pontos = [];
   for (let i = 0; i < comum; i++) {
     pontos.push({
-      n: i + 1,
-      ptsA: campanhaA[i].pts,
-      ptsB: campanhaB[i].pts,
-      diferenca: campanhaA[i].pts - campanhaB[i].pts,
+      n: campanhaA[i].n,
+      ptsA: campanhaA[i].valor,
+      ptsB: campanhaB[i].valor,
+      diferenca: vantagem(campanhaA[i].valor, campanhaB[i].valor, porPosicao),
     });
   }
   const maior = pontos.reduce(
@@ -275,6 +353,7 @@ function bandaEntreLinhas(ctx, { pontos }, centro, escala) {
  * perto, não cabe.
  */
 function marcarMaiorDiferenca(ctx, { maior }, centro, escala, plot) {
+  const { porPosicao } = plot;
   if (!maior || maior.diferenca === 0) return;
   const x = centro(maior.n);
   const yA = escala(maior.ptsA), yB = escala(maior.ptsB);
@@ -291,7 +370,10 @@ function marcarMaiorDiferenca(ctx, { maior }, centro, escala, plot) {
   ctx.restore();
 
   const valor = Math.abs(maior.diferenca);
-  const frase = `${valor} ${valor === 1 ? "ponto" : "pontos"} · jogo ${maior.n}`;
+  const unidade = porPosicao ? (valor === 1 ? "posição" : "posições")
+                             : (valor === 1 ? "ponto" : "pontos");
+  const frase = `${valor} ${unidade} · `
+              + `${porPosicao ? "rodada" : "jogo"} ${maior.n}`;
   const titulo = "maior distância";
 
   ctx.save();
@@ -338,12 +420,12 @@ function marcarMaiorDiferenca(ctx, { maior }, centro, escala, plot) {
  * não competir com a linha que ele aponta.
  */
 function rotulosFinais(ctx, o) {
-  const { series, centro, escala, x1, topo, limiteBase } = o;
+  const { series, centro, escala, x1, topo, limiteBase, porPosicao } = o;
   const larguraSelo = 182, alturaBase = 58, alturaResto = 26, folga = 18;
   const alturaDe = (s) => alturaBase + (s.resto ? alturaResto : 0);
 
   const ordenadas = series
-    .map((s) => ({ ...s, alvo: escala(s.fim.pts) }))
+    .map((s) => ({ ...s, alvo: escala(s.fim.valor) }))
     .sort((p, q) => p.alvo - q.alvo);
 
   ordenadas.forEach((s, i) => {
@@ -377,12 +459,13 @@ function rotulosFinais(ctx, o) {
 
     const alto = alturaDe(s), topoSelo = s.y - alto / 2;
     caixa(ctx, x1 + 14, topoSelo, larguraSelo, alto, s.cor, 9);
-    texto(ctx, s.fim.pts, x1 + 28, topoSelo + 41,
+    const destaque = porPosicao ? `${s.fim.valor}º` : String(s.fim.valor);
+    texto(ctx, destaque, x1 + 28, topoSelo + 41,
           { tamanho: 34, peso: 800, cor: COR.branco });
 
     ctx.save();
     ctx.font = '800 34px "Assistant", sans-serif';
-    const larguraNumero = ctx.measureText(String(s.fim.pts)).width;
+    const larguraNumero = ctx.measureText(destaque).width;
     ctx.restore();
 
     const xTexto = x1 + 38 + larguraNumero;
@@ -391,7 +474,8 @@ function rotulosFinais(ctx, o) {
           { tamanho: 12.5, peso: 700, cor: COR.branco });
     // Dizer em quantos jogos é o que permite pôr lado a lado uma campanha
     // encerrada e uma em curso sem que o número maior engane.
-    texto(ctx, cortar(ctx, `pts em ${s.fim.n} jogos`, cabe, 10, 700),
+    texto(ctx, cortar(ctx, porPosicao ? `na rodada ${s.fim.n}`
+                                      : `pts em ${s.fim.n} jogos`, cabe, 10, 700),
           xTexto, topoSelo + 42,
           { tamanho: 10, peso: 700, cor: COR.branco, maiuscula: true, espaco: .8 });
 
@@ -412,16 +496,19 @@ function rotulosFinais(ctx, o) {
  * na própria imagem, dizendo 57 a 57 em cima e 1 de diferença embaixo.
  */
 function blocoDeDiferenca(ctx, o) {
-  const { series, x, y, altura, corte } = o;
+  const { series, x, y, altura, corte, porPosicao } = o;
   if (series.length < 2) return;
   const [primeira, segunda] = series;
-  const d = primeira.fim.pts - segunda.fim.pts;
+  const d = vantagem(primeira.fim.valor, segunda.fim.valor, porPosicao);
 
   const largura = 182;
-  const titulo = corte ? `diferença em ${corte} jogos` : "diferença agora";
+  const titulo = corte
+    ? `diferença em ${corte} ${porPosicao ? "rodadas" : "jogos"}`
+    : "diferença agora";
   const valor = String(Math.abs(d));
-  const detalhe = d === 0 ? "campanhas empatadas"
-                          : `${(d > 0 ? primeira : segunda).rotulo} à frente`;
+  const detalhe = d === 0
+    ? (porPosicao ? "na mesma posição" : "campanhas empatadas")
+    : `${(d > 0 ? primeira : segunda).rotulo} à frente`;
   const cor = d === 0 ? COR.cinzaEscuro : (d > 0 ? primeira.cor : segunda.cor);
 
   caixa(ctx, x, y, largura, altura, COR.branco, 8);

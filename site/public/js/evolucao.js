@@ -1,7 +1,12 @@
 /**
- * Página do card de evolução da pontuação.
+ * Página do card de evolução da campanha.
  *
- * Fora do card: a série, o ano, a equipe e a trilha de posições. A trilha não
+ * A primeira escolha é o que a linha mede: pontuação ou posição. Ela decide
+ * também a ordem do eixo — pontuação anda em ordem cronológica, porque rodada
+ * não é tempo; posição anda por rodada, porque posição só existe quando todo
+ * mundo jogou o mesmo tanto.
+ *
+ * Depois: a série, o ano, a equipe e a trilha de posições. A trilha não
  * escolhe clubes — escolhe dois objetivos, e é o que separa esta tela do
  * comparativo de campanhas.
  */
@@ -10,13 +15,15 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_evolucao.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
 import { nomeComUf } from "/js/nomes.js";
+import { edicaoDe } from "/js/diferenca_pontos.js";
 
 const PADRAO = { pior: 17, melhor: 4 };
 
 const estado = {
-  edicoes: [], clubes: {}, referencias: {},
+  edicoes: [], clubes: {}, referencias: {}, posicoes: null,
+  modo: "pontuacao",
   serie: null, apelido: null, edicao: null, jogos: null, clube: null,
-  referencia: null, ...PADRAO,
+  referencia: null, grade: null, ...PADRAO,
 };
 
 const el = (id) => document.getElementById(id);
@@ -32,16 +39,20 @@ async function inicializar() {
   definirMensagemSemCard("escolha uma equipe para desenhar o card");
   redesenhar = ligarPaginaDeCard(() => montarCartao(estado));
 
-  const [edicoes, clubes, referencias] = await Promise.all([
+  const [edicoes, clubes, referencias, posicoes] = await Promise.all([
     fetch("/dados/edicoes.json").then((r) => r.json()),
     fetch("/dados/clubes.json").then((r) => r.json()),
     fetch("/dados/referencias.json").then((r) => r.json()),
+    fetch("/dados/posicoes.json").then((r) => r.json()),
   ]);
   estado.edicoes = edicoes.edicoes;
   estado.clubes = clubes;
   estado.referencias = referencias;
+  estado.posicoes = posicoes;
 
   const url = daUrl();
+  if (url.modo === "posicao" || url.modo === "pontuacao") estado.modo = url.modo;
+  montarChavesDeModo();
   Object.assign(estado, {
     pior: url.pior ?? PADRAO.pior,
     melhor: url.melhor ?? PADRAO.melhor,
@@ -68,6 +79,45 @@ async function inicializar() {
   });
 
   await trocarSerie(url.serie ?? series[0], url);
+}
+
+/**
+ * A chave que decide o que a linha mede. Vem antes de tudo porque muda o eixo,
+ * as réguas e até o título do card.
+ */
+function montarChavesDeModo() {
+  const caixa = el("modo");
+  caixa.innerHTML = [
+    { valor: "pontuacao", rotulo: "Pontuação" },
+    { valor: "posicao", rotulo: "Posição" },
+  ].map((m) => `<button type="button" class="chave" data-valor="${m.valor}"
+                  aria-pressed="${m.valor === estado.modo}">${m.rotulo}</button>`)
+   .join("");
+  caixa.addEventListener("click", (evento) => {
+    const botao = evento.target.closest(".chave");
+    if (!botao) return;
+    estado.modo = botao.dataset.valor;
+    for (const outro of caixa.children) {
+      outro.setAttribute("aria-pressed", String(outro.dataset.valor === estado.modo));
+    }
+    aplicar();
+  });
+}
+
+/**
+ * A premissa da ordem muda com o modo, e ela é escrita fora do card.
+ */
+function explicarOrdem() {
+  const alvo = el("nota-ordem");
+  if (!alvo) return;
+  alvo.innerHTML = estado.modo === "posicao"
+    ? `<b>Ordem da rodada, não cronológica.</b> Posição só existe quando todo
+       mundo jogou o mesmo tanto, então o eixo é a rodada: jogo adiado conta na
+       rodada a que pertence, e é por isso que um clube pode aparecer atrás com
+       um jogo a menos.`
+    : `<b>Ordem cronológica, não a da rodada.</b> O eixo é o n-ésimo jogo do
+       clube, na ordem em que ele foi disputado. Rodada não é tempo: um jogo
+       adiado da 4ª disputado em agosto poria o acumulado de agosto lá atrás.`;
 }
 
 const anosDaSerie = (serie) => estado.edicoes.filter((e) => e.serie === serie);
@@ -126,6 +176,10 @@ async function trocarAno(apelido, clubeDesejado, { silencioso = false } = {}) {
 }
 
 function aplicar() {
+  estado.grade = estado.edicao
+    ? edicaoDe(estado.posicoes, { serie: estado.serie, ano: estado.edicao.ano })
+    : null;
+  explicarOrdem();
   atualizarUrl();
   redesenhar();
 }
@@ -137,11 +191,13 @@ function daUrl() {
     return Number.isInteger(v) && v > 0 ? v : null;
   };
   return { serie: p.get("serie"), ano: p.get("ano"), equipe: p.get("equipe"),
+           modo: p.get("modo"),
            pior: inteiro("pior"), melhor: inteiro("melhor") };
 }
 
 function atualizarUrl() {
   const p = new URLSearchParams();
+  p.set("modo", estado.modo);
   if (estado.serie) p.set("serie", estado.serie);
   if (estado.apelido) p.set("ano", estado.apelido);
   if (estado.clube) p.set("equipe", estado.clube);

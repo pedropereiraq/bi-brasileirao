@@ -1,19 +1,34 @@
 /**
- * Card: evolução da pontuação de um clube contra o ritmo de duas posições.
+ * Card: a evolução da campanha de um clube, em pontos ou em posição.
  *
  * A pergunta que este card responde não é "quem está na frente", e sim "o que
  * esta campanha está valendo". Comparar com outro clube diz uma coisa;
  * comparar com o que historicamente custa terminar em 4º e em 17º diz outra, e
  * é a que serve para falar de objetivo.
  *
- * As duas réguas são retas, e é de propósito. A média de quem termina naquela
- * posição dividida por 38 não é a campanha de ninguém — é o ritmo que aquela
- * posição costuma exigir. Uma reta diz isso; uma curva média de campanhas
- * sugeriria um roteiro ("começa devagar, acelera no returno") que a média não
- * autoriza a afirmar.
+ * As duas leituras não são a mesma linha em escalas diferentes:
+ *
+ * - **Por pontuação**, o eixo é o n-ésimo jogo, em ordem cronológica: rodada
+ *   não é tempo, e um jogo adiado da 4ª disputado em agosto poria o acumulado
+ *   de agosto lá atrás. As réguas são retas — a média de quem termina naquela
+ *   posição dividida por 38 é o ritmo que a posição exige, não a campanha de
+ *   ninguém, e uma curva sugeriria um roteiro que a média não autoriza.
+ * - **Por posição**, o eixo é a rodada, porque posição só existe quando todo
+ *   mundo jogou o mesmo tanto. As réguas viram retas horizontais e passam meia
+ *   posição abaixo do lugar que marcam: a linha do 4º desenhada em 4,5 deixa o
+ *   clube *dentro* da faixa enquanto ele estiver em 4º ou melhor.
+ *
+ * Quanto melhor a posição, mais alta a linha — o eixo é invertido, como a
+ * tabela é lida.
  *
  * Verde é sempre a posição melhor e vermelho a pior, as duas pontilhadas: a
- * linha cheia é a única campanha de verdade no card.
+ * linha cheia é a única campanha de verdade no card. O verde aqui é literal, e
+ * não o "positivo" da paleta — as duas réguas formam uma escala de objetivo, e
+ * trocar o verde pelo azul da identidade tiraria o par de cores que se lê sem
+ * consultar legenda.
+ *
+ * Só a linha do clube ganha rótulo em cada ponto; as réguas não têm o que
+ * rotular, porque não variam.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar,
@@ -21,8 +36,9 @@ import {
 import { nomeBonito, nomeCurto, artigo } from "/js/nomes.js";
 import {
   CALHA, CALHA_DIR, JOGOS, campanhaCompleta, disputados, descreverJogo,
-  faixaDeJogos, legenda, tracarLinha,
+  faixaDeJogos, legenda, rotularPontos, tracarLinha,
 } from "/js/grafico_campanha.js";
+import { campanhaPorRodada } from "/js/diferenca_pontos.js";
 import { empilhar } from "/js/empilhar.js";
 
 /** Uma casa decimal e vírgula: a média não é inteira e arredondar mentiria. */
@@ -30,6 +46,12 @@ const num = (v) => v.toFixed(1).replace(".", ",");
 const ordinal = (posicao) => `${posicao}º`;
 
 export function montarCartao(estado) {
+  return estado.modo === "posicao"
+    ? cartaoPorPosicao(estado) : cartaoPorPontuacao(estado);
+}
+
+/* ===================================================== por pontuação */
+function cartaoPorPontuacao(estado) {
   const { serie, edicao, jogos, clube, clubes, referencia, pior, melhor } = estado;
   if (!clube || !jogos || !referencia) return null;
 
@@ -59,106 +81,210 @@ export function montarCartao(estado) {
         + `(${referencia.ano_primeiro}–${referencia.ano_ultimo}), dividida por `
         + `${JOGOS} jogos.`,
     corpo: async (ctx, y) => {
-      const x0 = MARGEM + CALHA;
-      const x1 = CARD.largura - MARGEM - CALHA_DIR;
-      const largura = (x1 - x0) / JOGOS;
-      const centro = (n) => x0 + (n - 0.5) * largura;
-
-      // Uma faixa de jogos só, em vez das duas do comparativo: sobra altura
-      // para o gráfico, que é o que o card tem a dizer.
-      const topo = y + 42, alturaPlot = 500;
+      const { x0, x1, largura, centro, topo, alturaPlot, yEixo } = montarEixo(y);
       const maximo = Math.max(fim.pts, media.melhor, media.pior, 1);
       const escala = (pts) => topo + alturaPlot - (pts / maximo) * alturaPlot;
-      const yEixo = topo + alturaPlot + 24;
 
       await legenda(ctx, MARGEM, y, clubes, [
         { clube, rotulo, cor: COR.azul },
         { rotulo: `ritmo do ${ordinal(melhor)} lugar · ${num(media.melhor)} pts`,
-          cor: COR.positivo, pontilhada: true },
+          cor: COR.verde, pontilhada: true },
         { rotulo: `ritmo do ${ordinal(pior)} lugar · ${num(media.pior)} pts`,
           cor: COR.negativo, pontilhada: true },
       ]);
 
-      desenharGrafico(ctx, { campanha, media, ritmo, centro, escala, topo,
-                             alturaPlot, x0, x1, rotulo, melhor, pior, fim });
-
-      for (let n = 1; n <= JOGOS; n++) {
-        if (n !== 1 && n !== JOGOS && n % 2 === 0) continue;
-        texto(ctx, n, centro(n), yEixo,
-              { tamanho: 11, cor: COR.cinzaEscuro, alinha: "center" });
+      const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
+      for (let v = 0; v <= maximo; v += passo) {
+        linhaH(ctx, x0 - 10, x1, escala(v), COR.cinzaClaro);
+        texto(ctx, v, x0 - 18, escala(v) + 5,
+              { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
       }
 
+      const reta = (total) => [[centro(1), escala(ritmo(total, 1))],
+                               [centro(JOGOS), escala(total)]];
+      const linhaMelhor = reta(media.melhor);
+      const linhaPior = reta(media.pior);
+      tracarLinha(ctx, linhaPior, COR.negativo, { pontilhada: true, espessura: 4 });
+      tracarLinha(ctx, linhaMelhor, COR.verde, { pontilhada: true, espessura: 4 });
+
+      const pontos = campanha.map((p) => [centro(p.n), escala(p.pts)]);
+      tracarLinha(ctx, pontos, COR.azul);
+      bolinhas(ctx, pontos, COR.azul);
+      rotularPontos(ctx, {
+        pontos: campanha.map((p, i) => ({ x: pontos[i][0], y: pontos[i][1],
+                                          texto: p.pts, i })),
+        linhas: [linhaMelhor, linhaPior], propria: pontos,
+        cor: COR.azulEscuro, topo, base: topo + alturaPlot,
+      });
+
+      reguasNaCalha(ctx, {
+        x: x1 + 14, topo, limiteBase: topo + alturaPlot - 132,
+        itens: [
+          { alvo: escala(media.melhor), ancora: centro(JOGOS),
+            desenhar: (yy) => pastilha(ctx, x1 + 14, yy, melhor,
+                                       `${num(media.melhor)} pts`, COR.verde) },
+          { alvo: escala(media.pior), ancora: centro(JOGOS),
+            desenhar: (yy) => pastilha(ctx, x1 + 14, yy, pior,
+                                       `${num(media.pior)} pts`, COR.negativo) },
+        ],
+      });
+
+      blocoDeRitmo(ctx, {
+        x: x1 + 18, y: topo + alturaPlot - 108, altura: 108,
+        fim, media, ritmo, melhor, pior,
+      });
+
+      numerosDoEixo(ctx, { centro, yEixo });
       await faixaDeJogos(ctx, { agenda, clube, rotulo, cor: COR.azul, clubes,
                                 centro, largura, x: MARGEM, y: yEixo + 16 });
 
-      spec.hover = geometriaDoHover({ agenda, rotulo, clube, media, ritmo,
+      spec.hover = hoverDaPontuacao({ agenda, rotulo, clube, media, ritmo,
         centro, topo, alturaPlot, x0, x1, largura, melhor, pior });
     },
   };
   return spec;
 }
 
-/* -------------------------------------------------------------- desenho */
-function desenharGrafico(ctx, o) {
-  const { campanha, media, ritmo, centro, escala, topo, alturaPlot, x0, x1,
-          rotulo, melhor, pior, fim } = o;
-  const maximo = Math.max(fim.pts, media.melhor, media.pior, 1);
+/* ======================================================= por posição */
+function cartaoPorPosicao(estado) {
+  const { serie, edicao, grade, jogos, clube, clubes, pior, melhor } = estado;
+  if (!clube || !grade || !jogos) return null;
 
-  const passo = Math.max(5, Math.ceil(maximo / 5 / 5) * 5);
-  for (let v = 0; v <= maximo; v += passo) {
-    linhaH(ctx, x0 - 10, x1, escala(v), COR.cinzaClaro);
-    texto(ctx, v, x0 - 18, escala(v) + 5,
-          { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
+  const campanha = campanhaPorRodada(grade, clube);
+  if (!campanha.length) return null;
+
+  const total = grade.clubes.length;
+  const rotulo = `${nomeBonito(clube)} ${edicao.ano}`;
+  // O eixo aqui é a rodada: cada jogo vai para a casa da rodada dele, e não
+  // para a ordem em que foi disputado.
+  const agenda = campanhaCompleta(jogos, clube)
+    .map((passo) => ({ ...passo, n: passo.jogo.rodada }));
+
+  const dentro = campanha.filter((p) => p.posicao <= melhor).length;
+  const fora = campanha.filter((p) => p.posicao > pior).length;
+
+  const spec = {
+    titulo: `Evolução da posição ${artigo(clube)} ${nomeBonito(clube)}`
+          + ` na Série ${serie} ${edicao.ano}`,
+    subtitulo: "Posição ao fim de cada rodada",
+    arquivo: `posicao-${nomeCurto(clube)}-${edicao.ano}-${melhor}-${pior}`,
+    numeros: [],
+    nota: "",
+    corpo: async (ctx, y) => {
+      const { x0, x1, largura, centro, topo, alturaPlot, yEixo } = montarEixo(y);
+
+      // Eixo invertido: o 1º lugar em cima, como a tabela se lê. Cada posição
+      // ocupa uma faixa, e o ponto fica no meio dela.
+      const escala = (p) => topo + ((p - 0.5) / total) * alturaPlot;
+      // A régua passa na fronteira, meia posição abaixo do lugar que marca.
+      const fronteira = (p) => topo + (p / total) * alturaPlot;
+
+      await legenda(ctx, MARGEM, y, clubes, [
+        { clube, rotulo, cor: COR.azul },
+        { rotulo: `${ordinal(melhor)} lugar ou melhor`, cor: COR.verde,
+          pontilhada: true },
+        { rotulo: `pior que o ${ordinal(pior)} lugar`, cor: COR.negativo,
+          pontilhada: true },
+      ]);
+
+      for (const p of [...new Set([1, 5, 10, 15, total])]) {
+        linhaH(ctx, x0 - 10, x1, escala(p), COR.cinzaClaro);
+        texto(ctx, ordinal(p), x0 - 18, escala(p) + 5,
+              { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
+      }
+
+      const linhaMelhor = [[x0, fronteira(melhor)], [x1, fronteira(melhor)]];
+      const linhaPior = [[x0, fronteira(pior)], [x1, fronteira(pior)]];
+      tracarLinha(ctx, linhaPior, COR.negativo, { pontilhada: true, espessura: 4 });
+      tracarLinha(ctx, linhaMelhor, COR.verde, { pontilhada: true, espessura: 4 });
+
+      const pontos = campanha.map((p) => [centro(p.rodada), escala(p.posicao)]);
+      tracarLinha(ctx, pontos, COR.azul);
+      bolinhas(ctx, pontos, COR.azul);
+      rotularPontos(ctx, {
+        pontos: campanha.map((p, i) => ({ x: pontos[i][0], y: pontos[i][1],
+                                          texto: p.posicao, i })),
+        linhas: [linhaMelhor, linhaPior], propria: pontos,
+        cor: COR.azulEscuro, topo, base: topo + alturaPlot,
+      });
+
+      reguasNaCalha(ctx, {
+        x: x1 + 14, topo, limiteBase: topo + alturaPlot - 150,
+        itens: [
+          { alvo: fronteira(melhor), ancora: x1,
+            desenhar: (yy) => pastilha(ctx, x1 + 14, yy, melhor, "ou melhor",
+                                       COR.verde) },
+          { alvo: fronteira(pior), ancora: x1,
+            desenhar: (yy) => pastilha(ctx, x1 + 14, yy, pior, "ou melhor",
+                                       COR.negativo) },
+        ],
+      });
+
+      blocoDasFronteiras(ctx, {
+        x: x1 + 18, y: topo + alturaPlot - 126, altura: 126,
+        rodadas: campanha.length, dentro, fora, melhor, pior,
+        atual: campanha.at(-1),
+      });
+
+      numerosDoEixo(ctx, { centro, yEixo });
+      await faixaDeJogos(ctx, { agenda, clube, rotulo, cor: COR.azul, clubes,
+                                centro, largura, x: MARGEM, y: yEixo + 16 });
+
+      spec.hover = hoverDaPosicao({ campanha, rotulo, centro, topo,
+                                    alturaPlot, x0, x1, largura, melhor, pior });
+    },
+  };
+  return spec;
+}
+
+/* ------------------------------------------------------------- comuns */
+/**
+ * O eixo x é o mesmo nas duas leituras: 38 casas, uma por jogo ou por rodada.
+ * Manter a mesma régua é o que deixa um card ser comparado com o outro.
+ */
+function montarEixo(y) {
+  const x0 = MARGEM + CALHA;
+  const x1 = CARD.largura - MARGEM - CALHA_DIR;
+  const largura = (x1 - x0) / JOGOS;
+  const topo = y + 42;
+  const alturaPlot = 500;
+  return {
+    x0, x1, largura, topo, alturaPlot,
+    centro: (n) => x0 + (n - 0.5) * largura,
+    yEixo: topo + alturaPlot + 24,
+  };
+}
+
+function numerosDoEixo(ctx, { centro, yEixo }) {
+  for (let n = 1; n <= JOGOS; n++) {
+    if (n !== 1 && n !== JOGOS && n % 2 === 0) continue;
+    texto(ctx, n, centro(n), yEixo,
+          { tamanho: 11, cor: COR.cinzaEscuro, alinha: "center" });
   }
+}
 
-  // As réguas primeiro: a campanha é a linha que tem de ficar por cima.
-  const reta = (total) => [[centro(1), escala(ritmo(total, 1))],
-                           [centro(JOGOS), escala(total)]];
-  tracarLinha(ctx, reta(media.pior), COR.negativo,
-              { pontilhada: true, espessura: 4 });
-  tracarLinha(ctx, reta(media.melhor), COR.positivo,
-              { pontilhada: true, espessura: 4 });
-
-  tracarLinha(ctx, campanha.map((p) => [centro(p.n), escala(p.pts)]), COR.azul);
-  for (const p of campanha) {
+function bolinhas(ctx, pontos, cor) {
+  for (const [x, y] of pontos) {
     ctx.save();
     ctx.fillStyle = COR.fundo;
     ctx.beginPath();
-    ctx.arc(centro(p.n), escala(p.pts), 5, 0, Math.PI * 2);
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = COR.azul;
+    ctx.fillStyle = cor;
     ctx.beginPath();
-    ctx.arc(centro(p.n), escala(p.pts), 3.2, 0, Math.PI * 2);
+    ctx.arc(x, y, 3.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-
-  const alturaBloco = 108;
-  rotulosNaCalha(ctx, {
-    x: x1 + 14, topo, limiteBase: topo + alturaPlot - alturaBloco - 16,
-    itens: [
-      { alvo: escala(fim.pts), ancora: centro(fim.n), altura: 58,
-        desenhar: (y) => seloDoClube(ctx, x1 + 14, y, fim, rotulo) },
-      { alvo: escala(media.melhor), ancora: centro(JOGOS), altura: 34,
-        desenhar: (y) => pastilha(ctx, x1 + 14, y, melhor, media.melhor, COR.positivo) },
-      { alvo: escala(media.pior), ancora: centro(JOGOS), altura: 34,
-        desenhar: (y) => pastilha(ctx, x1 + 14, y, pior, media.pior, COR.negativo) },
-    ],
-  });
-
-  blocoDeRitmo(ctx, {
-    x: x1 + 18, y: topo + alturaPlot - alturaBloco, altura: alturaBloco,
-    fim, media, ritmo, melhor, pior,
-  });
 }
 
-function rotulosNaCalha(ctx, o) {
+function reguasNaCalha(ctx, o) {
   const { itens, x, topo, limiteBase } = o;
-  const ordenados = empilhar(itens, { limiteTopo: topo + 2, limiteBase });
+  const ordenados = empilhar(itens.map((item) => ({ ...item, altura: 34 })),
+                             { limiteTopo: topo + 2, limiteBase });
 
   for (const item of ordenados) {
     // Traço cinza discreto da linha até o rótulo: é chamada, não continuação.
-    // Com as caixas fora da altura das suas linhas, é ele que diz qual é qual.
     ctx.save();
     ctx.strokeStyle = COR.cinza;
     ctx.lineWidth = 1.5;
@@ -168,7 +294,6 @@ function rotulosNaCalha(ctx, o) {
     ctx.lineTo(x, item.y);
     ctx.stroke();
     ctx.restore();
-
     item.desenhar(item.y);
   }
 }
@@ -195,66 +320,46 @@ function cortarEspacado(ctx, conteudo, limite, tamanho, peso, espaco) {
   return saida === inteiro ? inteiro : saida.trimEnd() + "…";
 }
 
-function seloDoClube(ctx, x, y, fim, rotulo) {
-  const altura = 58, topoSelo = y - altura / 2;
-  caixa(ctx, x, topoSelo, LARGURA_SELO, altura, COR.azul, 9);
-  texto(ctx, fim.pts, x + 14, topoSelo + 41,
-        { tamanho: 34, peso: 800, cor: COR.branco });
-
-  ctx.save();
-  ctx.font = '800 34px "Assistant", sans-serif';
-  const larguraNumero = ctx.measureText(String(fim.pts)).width;
-  ctx.restore();
-
-  const xTexto = x + 24 + larguraNumero;
-  const cabe = LARGURA_SELO - larguraNumero - 24 - PADDING;
-  texto(ctx, cortar(ctx, rotulo, cabe, 12.5, 700), xTexto, topoSelo + 26,
-        { tamanho: 12.5, peso: 700, cor: COR.branco });
-  texto(ctx, cortarEspacado(ctx, `pts em ${fim.n} jogos`, cabe, 10, 700, .8),
-        xTexto, topoSelo + 42,
-        { tamanho: 10, peso: 700, cor: COR.branco, espaco: .8 });
-}
-
-/** O valor em que cada régua termina, na ponta dela. */
-function pastilha(ctx, x, y, posicao, total, cor) {
+/** A ponta de uma régua: a posição em número grande e o que ela vale ao lado. */
+function pastilha(ctx, x, y, posicao, detalhe, cor) {
   const altura = 34, topoP = y - altura / 2;
   caixa(ctx, x, topoP, LARGURA_SELO, altura, cor, 7);
-  texto(ctx, num(total), x + 12, topoP + 24,
+  texto(ctx, ordinal(posicao), x + 12, topoP + 24,
         { tamanho: 19, peso: 800, cor: COR.branco });
 
   ctx.save();
   ctx.font = '800 19px "Assistant", sans-serif';
-  const largo = ctx.measureText(num(total)).width;
+  const largo = ctx.measureText(ordinal(posicao)).width;
   ctx.restore();
 
-  // Só "ritmo do 17º": o valor ao lado já é o total dos 38 jogos, e a legenda
-  // no alto do card diz isso por extenso.
   const cabe = LARGURA_SELO - largo - 20 - PADDING;
-  texto(ctx, cortarEspacado(ctx, `ritmo do ${ordinal(posicao)}`, cabe, 10, 700, .7),
+  texto(ctx, cortarEspacado(ctx, detalhe, cabe, 10, 700, .7),
         x + 20 + largo, topoP + 22,
         { tamanho: 10, peso: 700, cor: COR.branco, espaco: .7 });
+}
+
+function molduraDoBloco(ctx, { x, y, altura }) {
+  caixa(ctx, x - 4, y, LARGURA_SELO, altura, COR.branco, 8);
+  ctx.save();
+  ctx.strokeStyle = COR.linha;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x - 3.5, y + .5, LARGURA_SELO - 1, altura - 1, 8);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Onde a campanha está hoje em relação às duas réguas. */
 function blocoDeRitmo(ctx, o) {
   const { x, y, altura, fim, media, ritmo, melhor, pior } = o;
-  const largura = LARGURA_SELO;
-
-  caixa(ctx, x - 4, y, largura, altura, COR.branco, 8);
-  ctx.save();
-  ctx.strokeStyle = COR.linha;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(x - 3.5, y + .5, largura - 1, altura - 1, 8);
-  ctx.stroke();
-  ctx.restore();
+  molduraDoBloco(ctx, { x, y, altura });
 
   texto(ctx, `em ${fim.n} jogos`, x + 10, y + 20,
         { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
 
   const linhas = [
-    { posicao: melhor, total: media.melhor, cor: COR.positivo },
+    { posicao: melhor, total: media.melhor, cor: COR.verde },
     { posicao: pior, total: media.pior, cor: COR.negativo },
   ];
   linhas.forEach((linha, i) => {
@@ -264,7 +369,7 @@ function blocoDeRitmo(ctx, o) {
 
     texto(ctx, `ritmo do ${ordinal(linha.posicao)}`, x + 10, yLinha,
           { tamanho: 11.5, cor: COR.cinzaEscuro });
-    texto(ctx, num(alvo), x + largura - 14, yLinha,
+    texto(ctx, num(alvo), x + LARGURA_SELO - 14, yLinha,
           { tamanho: 14, peso: 800, cor: linha.cor, alinha: "right" });
     texto(ctx, `${num(Math.abs(delta))} ${delta >= 0 ? "acima" : "abaixo"}`,
           x + 10, yLinha + 15,
@@ -272,18 +377,50 @@ function blocoDeRitmo(ctx, o) {
   });
 }
 
+/**
+ * Quantas rodadas a campanha passou de cada lado das duas réguas.
+ *
+ * As três contas somam o total: é o que transforma "esteve no G4" numa medida
+ * — três rodadas em vinte e oito é outra história que vinte e três.
+ */
+function blocoDasFronteiras(ctx, o) {
+  const { x, y, altura, rodadas, dentro, fora, melhor, pior, atual } = o;
+  molduraDoBloco(ctx, { x, y, altura });
+
+  texto(ctx, `em ${rodadas} rodadas`, x + 10, y + 20,
+        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
+          cor: COR.cinzaEscuro });
+  texto(ctx, ordinal(atual.posicao), x + 10, y + 54,
+        { tamanho: 28, peso: 800, cor: COR.azul });
+  texto(ctx, "na última rodada", x + 10, y + 70,
+        { tamanho: 10.5, peso: 700, cor: COR.cinzaEscuro });
+
+  const linhas = [
+    [`${ordinal(melhor)} ou melhor`, dentro, COR.verde],
+    [`entre ${ordinal(melhor + 1)} e ${ordinal(pior)}`,
+     rodadas - dentro - fora, COR.cinzaTexto],
+    [`pior que ${ordinal(pior)}`, fora, COR.negativo],
+  ];
+  linhas.forEach(([rotulo, valor, cor], i) => {
+    const yLinha = y + 92 + i * 17;
+    texto(ctx, cortar(ctx, rotulo, LARGURA_SELO - 56, 11), x + 10, yLinha,
+          { tamanho: 11, cor: COR.cinzaEscuro });
+    texto(ctx, valor, x + LARGURA_SELO - 14, yLinha,
+          { tamanho: 13, peso: 800, cor, alinha: "right" });
+  });
+}
+
 /* ----------------------------------------------------------------- hover */
-function geometriaDoHover(o) {
+function hoverDaPontuacao(o) {
   const { agenda, rotulo, clube, media, ritmo, centro, topo, alturaPlot,
           x0, x1, largura, melhor, pior } = o;
   const nome = nomeBonito(clube);
 
   const pontos = agenda.map((passo, i) => {
     const n = i + 1;
-    const doClube = descreverJogo(passo);
-    const itens = [{ rotulo, cor: COR.azul, ...doClube }];
+    const itens = [{ rotulo, cor: COR.azul, ...descreverJogo(passo) }];
 
-    for (const [posicao, total, cor] of [[melhor, media.melhor, COR.positivo],
+    for (const [posicao, total, cor] of [[melhor, media.melhor, COR.verde],
                                          [pior, media.pior, COR.negativo]]) {
       const alvo = ritmo(total, n);
       // Sem jogo disputado não há o que comparar: a régua aparece sozinha.
@@ -300,4 +437,26 @@ function geometriaDoHover(o) {
   });
 
   return { pontos, topo, alturaPlot, x0, x1, largura, unidade: "jogo" };
+}
+
+function hoverDaPosicao(o) {
+  const { campanha, rotulo, centro, topo, alturaPlot, x0, x1, largura,
+          melhor, pior } = o;
+
+  const pontos = campanha.map((p) => ({
+    n: p.rodada,
+    x: centro(p.rodada),
+    itens: [{ rotulo, cor: COR.azul, pontos: p.pontos,
+              detalhe: `${ordinal(p.posicao)} lugar` }],
+    diferenca: {
+      rotulo: ordinal(p.posicao),
+      texto: p.posicao <= melhor ? `${ordinal(melhor)} ou melhor`
+           : p.posicao > pior ? `pior que ${ordinal(pior)}`
+           : `entre ${ordinal(melhor + 1)} e ${ordinal(pior)}`,
+      cor: p.posicao <= melhor ? COR.verde
+         : p.posicao > pior ? COR.negativo : COR.cinzaTexto,
+    },
+  }));
+
+  return { pontos, topo, alturaPlot, x0, x1, largura, unidade: "rodada" };
 }

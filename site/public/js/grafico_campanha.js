@@ -232,3 +232,80 @@ export function descreverJogo(passo) {
     realizado: passo.realizado,
   };
 }
+
+/* ------------------------------------------------------------- rótulos */
+const cruzam = (a, b) => a.x < b.x + b.l && b.x < a.x + a.l
+                      && a.y < b.y + b.a && b.y < a.y + a.a;
+
+/** Se a caixa do rótulo é atravessada por algum trecho daquela linha. */
+function cortaLinha(caixa, linha, pular = -1) {
+  for (let i = 0; i < linha.length - 1; i++) {
+    if (i === pular || i === pular - 1) continue;
+    const [x1, y1] = linha[i], [x2, y2] = linha[i + 1];
+    const de = Math.max(caixa.x, Math.min(x1, x2));
+    const ate = Math.min(caixa.x + caixa.l, Math.max(x1, x2));
+    if (de > ate) continue;
+    const yEm = (x) => (x2 === x1 ? y1 : y1 + ((y2 - y1) * (x - x1)) / (x2 - x1));
+    const ya = yEm(de), yb = yEm(ate);
+    if (Math.max(ya, yb) >= caixa.y && Math.min(ya, yb) <= caixa.y + caixa.a) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * O valor de cada ponto escrito ao lado dele.
+ *
+ * Com 38 pontos, um rótulo por ponto só funciona se ele souber desviar: tenta
+ * acima, tenta abaixo, e vai afastando até achar lugar que não encoste em
+ * outro rótulo nem nas linhas que o card já desenhou. A própria linha do clube
+ * entra na conta, menos os dois trechos que saem do ponto — esses passam pelo
+ * ponto por definição, e fugir deles empurraria todo rótulo para longe.
+ *
+ * Quando nada cabe, o rótulo fica na primeira tentativa: encavalar é ruim,
+ * sumir é pior — o número é o assunto.
+ */
+export function rotularPontos(ctx, o) {
+  const { pontos, linhas = [], propria = null, cor, tamanho = 11,
+          topo, base } = o;
+  const postos = [];
+  const desvios = [-14, 14, -25, 25, -36, 36];
+
+  for (const ponto of pontos) {
+    const conteudo = String(ponto.texto);
+    ctx.save();
+    ctx.font = `800 ${tamanho}px "Assistant", sans-serif`;
+    const largura = ctx.measureText(conteudo).width + 5;
+    ctx.restore();
+    const altura = tamanho + 3;
+
+    let escolhido = desvios[0];
+    for (const desvio of desvios) {
+      const cy = ponto.y + desvio;
+      if (cy - altura / 2 < topo + 2 || cy + altura / 2 > base - 2) continue;
+      const alvo = { x: ponto.x - largura / 2, y: cy - altura / 2,
+                     l: largura, a: altura };
+      if (postos.some((outro) => cruzam(alvo, outro))) continue;
+      if (linhas.some((linha) => cortaLinha(alvo, linha))) continue;
+      if (propria && cortaLinha(alvo, propria, ponto.i)) continue;
+      escolhido = desvio;
+      postos.push(alvo);
+      break;
+    }
+
+    // Um respiro da cor do fundo por baixo: onde o rótulo não teve para onde
+    // fugir, ele ainda se lê.
+    ctx.save();
+    ctx.fillStyle = COR.fundo;
+    ctx.globalAlpha = .8;
+    ctx.beginPath();
+    ctx.roundRect(ponto.x - largura / 2, ponto.y + escolhido - altura / 2,
+                  largura, altura, 3);
+    ctx.fill();
+    ctx.restore();
+
+    texto(ctx, conteudo, ponto.x, ponto.y + escolhido + tamanho / 3,
+          { tamanho, peso: 800, alinha: "center", cor: cor ?? COR.azulEscuro });
+  }
+}
