@@ -3,8 +3,9 @@
  *
  * Paleta, tipografia e a régua azul/vermelho/cinza vêm da skill dos cards.
  * Regras herdadas e inegociáveis: fundo offwhite (nunca branco puro), nunca
- * preto — o tom mais escuro é o azul-escuro —, e resultado sempre azul para
- * triunfo, cinza para empate, vermelho para derrota.
+ * preto — o tom mais escuro é o azul-escuro — e o resultado num par
+ * positivo/negativo com o empate no meio: azul, cinza e vermelho no ECBahia,
+ * verde, cinza e vermelho no Podcast45.
  *
  * O que NÃO vem dos cards é o viés: lá o holofote é do Bahia, aqui é uma
  * tabela de campeonato e todo clube é tratado igual.
@@ -206,9 +207,9 @@ tr.faixa-z4 td.pos { box-shadow: inset 4px 0 0 var(--vermelho); }
   width: 17px; height: 17px; border-radius: 3px; font-size: 10px; font-weight: 800;
   color: var(--branco); display: grid; place-items: center; flex: none;
 }
-.chip.T { background: var(--azul); }        /* triunfo  */
+.chip.T { background: var(--positivo); }    /* triunfo / vitória */
 .chip.E { background: var(--cinza-escuro); } /* empate   */
-.chip.D { background: var(--vermelho); }     /* derrota  */
+.chip.D { background: var(--negativo); }    /* derrota  */
 
 /* --------------------------------------------------------- painel clube */
 .painel-clube { margin-top: 20px; padding: 0; overflow: hidden; }
@@ -242,9 +243,9 @@ tr.faixa-z4 td.pos { box-shadow: inset 4px 0 0 var(--vermelho); }
 .mando-nome { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--cinza-escuro); }
 .barra-empilhada { display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: var(--cinza-claro); }
 .barra-empilhada i { display: block; height: 100%; }
-.barra-empilhada i.T { background: var(--azul); }
+.barra-empilhada i.T { background: var(--positivo); }
 .barra-empilhada i.E { background: var(--cinza-escuro); }
-.barra-empilhada i.D { background: var(--vermelho); }
+.barra-empilhada i.D { background: var(--negativo); }
 .mando-valor { font-size: 13px; font-weight: 700; color: var(--azul-escuro); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .grafico { width: 100%; height: auto; display: block; }

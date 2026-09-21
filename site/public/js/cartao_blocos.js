@@ -172,8 +172,8 @@ async function linhaDeJogo(ctx, { passo, clubes, x, largura, y }) {
   }
 }
 
-const corDoResultado = (resultado) => resultado === "T" ? COR.azul
-  : resultado === "E" ? COR.cinzaEscuro : COR.vermelho;
+const corDoResultado = (resultado) => resultado === "T" ? COR.positivo
+  : resultado === "E" ? COR.cinzaEscuro : COR.negativo;
 
 function rodapeDoPainel(ctx, { bloco, x, y, largura }) {
   const yBase = y - 56;

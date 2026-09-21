@@ -7,9 +7,13 @@
  * cabeçalho, vale para a página e para o card que sai dela, e fica lembrada no
  * navegador: quem produz para um canal não quer trocar a marca a cada tela.
  *
- * Aqui mora só o que a marca *é*. A paleta de cada uma está em `cartao.js`
- * (para o canvas) e em `bi.css` (para a página), cada uma na língua do seu
- * meio.
+ * Aqui mora só o que a marca *é*, inclusive a palavra: o ECBahia escreve
+ * **triunfo** e nunca "vitória"; o Podcast45 escreve **vitória** e nunca
+ * "triunfo". Quem monta uma frase de card pega em `marcaAtual().triunfo` em
+ * vez de escrever a palavra direto.
+ *
+ * A paleta de cada uma está em `cartao.js` (para o canvas) e em `bi.css`
+ * (para a página), cada uma na língua do seu meio.
  *
  * Módulo sem dependência nenhuma de propósito: `cartao.js` o importa, e uma
  * dependência de volta faria um ciclo.
@@ -24,6 +28,8 @@ export const MARCAS = {
     topoNoCard: 40,
     assinatura: "@ECBahiaNumeros",
     rodape: "<b>ecbahia</b>numeros",
+    triunfo: "triunfo",
+    triunfos: "triunfos",
   },
   podcast45: {
     nome: "Podcast45",
@@ -35,6 +41,8 @@ export const MARCAS = {
     topoNoCard: 22,
     assinatura: "Podcast45 · 45 minutos",
     rodape: "<b>podcast</b>45",
+    triunfo: "vitória",
+    triunfos: "vitórias",
   },
 };
 

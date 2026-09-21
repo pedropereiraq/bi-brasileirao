@@ -8,8 +8,11 @@
  * superior direito com 250px na régua de 1600; rodapé com a nota de
  * metodologia à esquerda e a assinatura à direita.
  *
- * Vocabulário e cores: **triunfo** (nunca "vitória"), azul para triunfo, cinza
- * para empate, vermelho para derrota, em todo elemento.
+ * Vocabulário e cores mudam com a marca. No ECBahia é **triunfo** (nunca
+ * "vitória"), azul para triunfo, cinza para empate, vermelho para derrota. No
+ * Podcast45 é **vitória** (nunca "triunfo"), e o trio é verde, cinza e
+ * vermelho — a palavra certa está em `marcaAtual().triunfo`, e as cores saem
+ * de `COR.positivo` e `COR.negativo`.
  *
  * Com a marca do Podcast45 o fundo continua o mesmo offwhite, e o que troca é
  * o par da identidade: onde o ECBahia usa azul e vermelho, o 45 usa preto e
@@ -302,7 +305,7 @@ const hoje = () => new Intl.DateTimeFormat("pt-BR", {
 /** Barra empilhada de triunfos, empates e derrotas. */
 export function barraTED(ctx, x, y, largura, altura, { t, e, d, j }) {
   if (!j) { caixa(ctx, x, y, largura, altura, COR.cinzaClaro, 4); return; }
-  const pedacos = [[t, COR.azul], [e, COR.cinzaEscuro], [d, COR.vermelho]];
+  const pedacos = [[t, COR.positivo], [e, COR.cinzaEscuro], [d, COR.negativo]];
   let cx = x;
   ctx.save();
   ctx.beginPath(); ctx.roundRect(x, y, largura, altura, 4); ctx.clip();

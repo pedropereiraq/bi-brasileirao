@@ -208,8 +208,15 @@ export async function faixaDeJogos(ctx, o) {
   }
 }
 
-export const corDoResultado = (resultado) => resultado === "T" ? COR.azul
-  : resultado === "E" ? COR.cinzaEscuro : COR.vermelho;
+/**
+ * Triunfo, empate, derrota — ou vitória, empate, derrota, conforme a marca.
+ *
+ * É um par positivo/negativo com o empate no meio, e não a cor da identidade:
+ * no ECBahia dá o azul e o vermelho de sempre; no Podcast45 dá verde e
+ * vermelho, e não o preto e o dourado da marca.
+ */
+export const corDoResultado = (resultado) => resultado === "T" ? COR.positivo
+  : resultado === "E" ? COR.cinzaEscuro : COR.negativo;
 
 /** Descreve um jogo da agenda para a dica do mouse. */
 export function descreverJogo(passo) {
