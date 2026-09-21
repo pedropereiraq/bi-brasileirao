@@ -10,6 +10,12 @@
  * A posição do adversário vai numa etiqueta de cor, do vermelho (líder, jogo
  * duro) ao verde (lanterna, jogo fácil). É a cor que faz a coluna ser lida de
  * relance; o número está ali para quem quiser conferir.
+ *
+ * Com muitos clubes na faixa a coluna estreita, e a linha de jogo cede peça
+ * por peça em vez de amassar tudo: sai a sigla, depois a etiqueta de posição,
+ * depois a pílula de mando. O escudo fica até o fim — é o que identifica o
+ * adversário sem depender de largura. Quando a etiqueta sai, a cor dela passa
+ * para uma tira na borda da linha, que não custa espaço nenhum.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, cortar, imagem, desenharEscudo,
@@ -22,7 +28,7 @@ import {
 
 const POSICOES = 20;
 const VAO = 12;
-const TETO_DE_JOGOS = 10;
+const ALTURA_MINIMA_DO_JOGO = 21;
 
 const num = (v) => v.toFixed(1).replace(".", ",");
 const ordinal = (p) => `${p}º`;
@@ -37,6 +43,21 @@ function mistura(de, para, t) {
   const canal = (cor, i) => parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
   const valor = (i) => Math.round(canal(de, i) + (canal(para, i) - canal(de, i)) * t);
   return `rgb(${valor(0)}, ${valor(1)}, ${valor(2)})`;
+}
+
+/**
+ * O que cabe numa coluna daquela largura.
+ *
+ * Os limites são a soma das peças mais os respiros: 138px é a linha inteira,
+ * e cada corte devolve a largura de uma peça. Em vez de contar clubes, mede o
+ * que de fato aperta.
+ */
+function oQueCabe(largura) {
+  return {
+    sigla: largura >= 138,
+    posicao: largura >= 104,
+    mando: largura >= 72,
+  };
 }
 
 /** A dificuldade daquele adversário virando cor. */
@@ -59,8 +80,6 @@ export function montarCartao(estado) {
     const agenda = campanhaCompleta(jogos, clube.equipe);
     return { clube, agenda, proximos: proximosJogos(agenda) };
   });
-  const quantos = tamanhoDaLista(colunas.map((c) => c.agenda),
-                                 { teto: TETO_DE_JOGOS });
 
   const spec = {
     titulo: `Próximos jogos do ${ordinal(faixa.melhor)} ao `
@@ -75,7 +94,7 @@ export function montarCartao(estado) {
         return;
       }
       spec.hover = await colunasDosClubes(ctx, {
-        colunas, quantos, posicaoDe, naTabela, clubes, y: y + 12,
+        colunas, posicaoDe, naTabela, clubes, y: y + 12,
       });
     },
   };
@@ -91,7 +110,7 @@ function semClubes(ctx, { y, faixa }) {
 }
 
 /* ------------------------------------------------------------- colunas */
-async function colunasDosClubes(ctx, { colunas, quantos, posicaoDe, naTabela,
+async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
                                       clubes, y }) {
   const largura =
     (CARD.largura - MARGEM * 2 - VAO * (colunas.length - 1)) / colunas.length;
@@ -100,17 +119,32 @@ async function colunasDosClubes(ctx, { colunas, quantos, posicaoDe, naTabela,
   const alturaTopo = 104;
   const alturaRodape = 60;
   const disponivel = CARD.altura - 96 - y - alturaTopo - alturaRodape - 16;
+
+  // O teto sai da altura, e não de um número redondo. Com teto fixo em 10, o
+  // clube que tem um jogo adiado — e portanto um a mais pela frente — perdia
+  // justamente esse jogo, que é o que explica a diferença de calendário.
+  const quantos = tamanhoDaLista(colunas.map((c) => c.agenda),
+    { teto: Math.floor(disponivel / ALTURA_MINIMA_DO_JOGO) });
+
   // A lista ocupa a altura que sobrou: com dez jogos pela frente as linhas
   // ficam justas, com três elas crescem e o card não termina no meio.
   const alturaJogo = quantos
-    ? Math.min(48, Math.max(20, disponivel / quantos)) : 0;
+    ? Math.min(48, Math.max(ALTURA_MINIMA_DO_JOGO, disponivel / quantos)) : 0;
   const alvos = [];
+
+  const cabe = oQueCabe(largura);
+  const yLista = y + alturaTopo;
+  const yRodape = yLista + quantos * alturaJogo + 14;
+
+  // O título do rodapé é o mesmo para todas as colunas: uma vez, à esquerda.
+  texto(ctx, "posição média dos adversários", MARGEM, yRodape + 10,
+        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
+          cor: COR.cinzaEscuro });
 
   for (const [i, coluna] of colunas.entries()) {
     const x = xDaColuna(i);
     await cabecalhoDoClube(ctx, { coluna, clubes, x, largura, y });
 
-    const yLista = y + alturaTopo;
     for (let k = 0; k < quantos; k++) {
       const passo = coluna.proximos[k];
       const yJogo = yLista + k * alturaJogo;
@@ -119,7 +153,7 @@ async function colunasDosClubes(ctx, { colunas, quantos, posicaoDe, naTabela,
       if (!passo) continue;
 
       await linhaDeJogo(ctx, {
-        passo, posicao: posicaoDe(passo.jogo.adversario), clubes,
+        passo, posicao: posicaoDe(passo.jogo.adversario), clubes, cabe,
         x, largura, y: yJogo, altura: alturaJogo - 2,
       });
 
@@ -133,7 +167,7 @@ async function colunasDosClubes(ctx, { colunas, quantos, posicaoDe, naTabela,
     rodapeDaColuna(ctx, {
       media: mediaDosAdversarios(coluna.proximos, posicaoDe),
       restantes: coluna.proximos.length,
-      x, largura, y: yLista + quantos * alturaJogo + 14,
+      x, largura, y: yRodape,
     });
   }
 
@@ -174,41 +208,61 @@ async function cabecalhoDoClube(ctx, { coluna, clubes, x, largura, y }) {
         { tamanho: 11, peso: 700, alinha: "center", cor: COR.cinzaEscuro });
 }
 
-async function linhaDeJogo(ctx, { passo, posicao, clubes, x, largura, y, altura }) {
+async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, x, largura, y,
+                                  altura }) {
   const meio = y + altura / 2;
   const emCasa = passo.jogo.mando === "casa";
+  const cor = typeof posicao === "number" ? corDaPosicao(posicao) : null;
 
-  // A pílula de mando fica na mesma largura nos dois casos: casa e fora
-  // alternam linha a linha, e larguras diferentes fariam a coluna serrilhar.
-  const larguraPilula = 34;
-  caixa(ctx, x + 6, meio - 7, larguraPilula, 14,
-        emCasa ? COR.azulLavado : COR.cinzaClaro, 4);
-  texto(ctx, emCasa ? "casa" : "fora", x + 6 + larguraPilula / 2, meio + 4,
-        { tamanho: 9, peso: 800, alinha: "center", maiuscula: true, espaco: .4,
-          cor: emCasa ? COR.azul : COR.cinzaEscuro });
+  // Sem etiqueta de posição, a cor dela vira uma tira na borda: a dificuldade
+  // do jogo é o assunto da coluna e não pode sair junto com o número.
+  if (!cabe.posicao && cor) caixa(ctx, x, y, 4, altura, cor, 2);
+
+  let cursor = x + (cabe.posicao || !cor ? 6 : 12);
+
+  if (cabe.mando) {
+    // A pílula tem a mesma largura nos dois casos: casa e fora alternam linha
+    // a linha, e larguras diferentes fariam a coluna serrilhar.
+    const larguraPilula = 34;
+    caixa(ctx, cursor, meio - 7, larguraPilula, 14,
+          emCasa ? COR.azulLavado : COR.cinzaClaro, 4);
+    texto(ctx, emCasa ? "casa" : "fora", cursor + larguraPilula / 2, meio + 4,
+          { tamanho: 9, peso: 800, alinha: "center", maiuscula: true, espaco: .4,
+            cor: emCasa ? COR.azul : COR.cinzaEscuro });
+    cursor += larguraPilula + 6;
+  } else {
+    // Sem a pílula, o mando vira um ponto: azul em casa, vazado fora.
+    ctx.save();
+    ctx.fillStyle = emCasa ? COR.azul : COR.fundo;
+    ctx.strokeStyle = COR.cinza;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cursor + 3, meio, 3, 0, Math.PI * 2);
+    if (emCasa) ctx.fill(); else ctx.stroke();
+    ctx.restore();
+    cursor += 12;
+  }
 
   const lado = Math.min(20, altura - 6);
   const escudo = await imagem(clubes[passo.jogo.adversario]?.escudo);
-  desenharEscudo(ctx, escudo, x + 46, meio - lado / 2, lado);
+  desenharEscudo(ctx, escudo, cursor, meio - lado / 2, lado);
+  cursor += lado + 6;
 
-  const sigla = clubes[passo.jogo.adversario]?.sigla
-    ?? nomeBonito(passo.jogo.adversario).slice(0, 3).toUpperCase();
-  texto(ctx, sigla, x + 72, meio + 4,
-        { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+  if (cabe.sigla) {
+    const sigla = clubes[passo.jogo.adversario]?.sigla
+      ?? nomeBonito(passo.jogo.adversario).slice(0, 3).toUpperCase();
+    texto(ctx, sigla, cursor, meio + 4,
+          { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+  }
 
-  if (typeof posicao !== "number") return;
+  if (!cabe.posicao || !cor) return;
   const larguraBadge = 26;
-  caixa(ctx, x + largura - 6 - larguraBadge, meio - 8, larguraBadge, 16,
-        corDaPosicao(posicao), 4);
+  caixa(ctx, x + largura - 6 - larguraBadge, meio - 8, larguraBadge, 16, cor, 4);
   texto(ctx, posicao, x + largura - 6 - larguraBadge / 2, meio + 4,
         { tamanho: 11, peso: 800, alinha: "center", cor: COR.branco });
 }
 
 function rodapeDaColuna(ctx, { media, restantes, x, largura, y }) {
-  texto(ctx, "posição média dos adversários", x + largura / 2, y + 10,
-        { tamanho: 8.5, peso: 700, alinha: "center", maiuscula: true,
-          espaco: .6, cor: COR.cinzaEscuro });
-
   if (media === null) {
     texto(ctx, "sem jogos", x + largura / 2, y + 36,
           { tamanho: 15, peso: 700, alinha: "center", cor: COR.cinza });
