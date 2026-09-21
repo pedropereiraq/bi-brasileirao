@@ -3,10 +3,15 @@
  *
  * O gráfico é de **diferença**, e não de duas linhas de pontuação. Duas linhas
  * subindo juntas obrigam o olho a medir o vão entre elas a cada rodada — e o
- * vão é justamente a pergunta. Aqui a diferença é a própria linha, o zero é
- * uma referência fixa no eixo, e a área pintada entre a linha e o zero diz de
- * quem é a vantagem sem precisar de rótulo: azul quando o primeiro lado está à
- * frente, vermelho quando está atrás. Onde a linha cruza o zero, a cor troca.
+ * vão é justamente a pergunta.
+ *
+ * Cada rodada é uma coluna fina centrada num eixo horizontal que nunca sai do
+ * lugar: o comprimento dela é a diferença, metade para cima e metade para
+ * baixo. Nas duas pontas vai uma tag com a pontuação de cada lado, azul no
+ * primeiro e vermelha no segundo — quando a tag azul está em cima, o primeiro
+ * lado está à frente, e a troca de lado se lê sem procurar número nenhum. O
+ * valor da diferença fica escrito acima da coluna; empate não ganha rótulo,
+ * porque a coluna some e os dois lados dividem uma tag só.
  *
  * O eixo é a **rodada**, e vai sempre até a 38ª, como na evolução da
  * pontuação: a diferença só existe se os dois lados forem lidos no mesmo
@@ -19,9 +24,9 @@
  * deixar de ser abstrata.
  */
 import {
-  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
+  CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
 } from "/js/cartao.js";
-import { nomeBonito, nomeCurto, artigo, artigoDefinido } from "/js/nomes.js";
+import { nomeBonito, nomeCurto, artigoDefinido } from "/js/nomes.js";
 import {
   CALHA, CALHA_DIR, campanhaCompleta, faixaDeJogos, legenda,
 } from "/js/grafico_campanha.js";
@@ -46,11 +51,6 @@ const comArtigo = (lado) => lado.tipo === "equipe"
   ? `${artigoDefinido(lado.equipe)} ${nomeBonito(lado.equipe)}`
   : `o ${ordinal(lado.posicao)} colocado`;
 
-/** "do Bahia", "do 5º colocado": a forma que entra depois de um substantivo. */
-const comDe = (lado) => lado.tipo === "equipe"
-  ? `${artigo(lado.equipe)} ${nomeBonito(lado.equipe)}`
-  : `do ${ordinal(lado.posicao)} colocado`;
-
 const chaveDoLado = (lado) => lado.tipo === "equipe"
   ? nomeCurto(lado.equipe) : `${lado.posicao}o`;
 
@@ -66,13 +66,13 @@ export function montarCartao(estado) {
   const spec = {
     titulo: `Diferença de pontos entre ${comArtigo(a)} e ${comArtigo(b)}`
           + ` na Série ${serie} ${edicao.ano}`,
-    subtitulo: "Pontos acumulados ao fim de cada rodada",
+    subtitulo: "",
     arquivo: `diferenca-${serie}-${edicao.ano}`
            + `-${chaveDoLado(a)}-${chaveDoLado(b)}`,
-    numeros: faixaDeNumeros({ resumo, edicao, distancia, a, b }),
-    nota: `Diferença = pontos ${comDe(a)} menos pontos ${comDe(b)} ao `
-        + `fim de cada rodada, na grade de ${grade.rodadas} rodadas já `
-        + `disputadas desta edição.`,
+    // Sem faixa de números e sem nota: a premissa da ordem das rodadas está
+    // escrita na página, fora do card, e o gráfico fica com a altura toda.
+    numeros: [],
+    nota: "",
     corpo: async (ctx, y) => {
       const x0 = MARGEM + CALHA;
       const x1 = CARD.largura - MARGEM - CALHA_DIR;
@@ -88,12 +88,10 @@ export function montarCartao(estado) {
       const alturaPlot = (CARD.altura - 86) - somaFaixas - 34 - topo;
       const yEixo = topo + alturaPlot + 20;
 
-      await legendaDasCores(ctx, { x: MARGEM, y, serieDif, a, b, clubes,
-                                   distancia });
+      await legendaDasCores(ctx, { x: MARGEM, y, a, b, clubes, distancia });
 
-      const escala = desenharGrafico(ctx, {
-        serieDif, resumo, centro, topo, alturaPlot, x0, x1, larguraRodada,
-        distancia, edicao,
+      desenharGrafico(ctx, {
+        serieDif, resumo, centro, topo, alturaPlot, x0, x1, distancia, a, b,
       });
 
       for (let r = 1; r <= RODADAS; r++) {
@@ -112,277 +110,219 @@ export function montarCartao(estado) {
       }
 
       spec.hover = geometriaDoHover({ serieDif, a, b, centro, topo, alturaPlot,
-                                      x0, x1, largura: larguraRodada, escala });
+                                      x0, x1, largura: larguraRodada });
     },
   };
   return spec;
 }
 
-/* ------------------------------------------------------------- números */
-function faixaDeNumeros({ resumo, edicao, distancia, a, b }) {
-  const { atual, maior, menor, media, contagem, rodadas } = resumo;
-  const quando = (p) => `${ordinal(p.rodada)} rodada`;
-
-  // Com os dois lados sempre do mesmo lado do zero, "vantagem" não descreve
-  // nada: o que varia é a distância. É o caso de posição contra posição, em
-  // que a melhor colocada nunca tem menos pontos que a pior.
-  const extremo = (p, maisAlto) => distancia
-    ? { valor: String(Math.abs(p.dif)),
-        nome: `${maisAlto ? "maior" : "menor"} distância · ${quando(p)}` }
-    : { valor: sinalizado(p.dif),
-        nome: `${p.dif >= 0 ? (maisAlto ? "maior vantagem" : "menor vantagem")
-                            : (maisAlto ? "menor desvantagem" : "maior desvantagem")}`
-            + ` · ${quando(p)}`,
-        destaque: p.dif < 0 ? "vermelho" : undefined };
-
-  const fechamento = edicao.encerrada
-    ? "no fim do campeonato" : `na ${ordinal(atual.rodada)} rodada`;
-
-  return [
-    { valor: distancia ? String(Math.abs(atual.dif)) : sinalizado(atual.dif),
-      nome: `${distancia ? "distância" : "diferença"} ${fechamento}`,
-      destaque: "azul" },
-    extremo(maior, true),
-    extremo(menor, false),
-    distancia
-      ? { valor: num(media), nome: "distância média nas rodadas" }
-      : { valor: `${contagem.frente} de ${rodadas}`,
-          nome: `rodadas à frente ${
-            b.tipo === "equipe" ? `do ${nomeCurto(b.equipe)}` : `do ${ordinal(b.posicao)}`}` },
-  ];
-}
-
 /* -------------------------------------------------------------- legenda */
 /**
- * A legenda só anuncia a cor que aparece.
+ * A legenda diz de quem é cada cor — é ela que faz as tags das pontas serem
+ * lidas sem esforço.
  *
- * Numa comparação entre duas posições o vermelho nunca acontece — o 4º nunca
- * tem menos pontos que o 17º —, e anunciar uma cor ausente faria o leitor
- * procurá-la no gráfico.
+ * Numa comparação entre duas posições a melhor colocada está sempre em cima,
+ * por definição, e a legenda vira uma frase só: o que a coluna mede ali é
+ * distância, não vantagem.
  */
-async function legendaDasCores(ctx, { x, y, serieDif, a, b, clubes, distancia }) {
-  // Entre duas posições não há "à frente": a melhor colocada está sempre na
-  // frente, por definição. O que a linha mede ali é distância, e a legenda diz
-  // isso numa linha só.
+async function legendaDasCores(ctx, { x, y, a, b, clubes, distancia }) {
+  const item = (lado, cor) => ({
+    cor, rotulo: rotuloDoLado(lado),
+    clube: lado.tipo === "equipe" ? lado.equipe : undefined,
+  });
+
   if (distancia) {
-    await legenda(ctx, x, y, clubes, [{
-      cor: COR.azul,
-      rotulo: `distância ${comDe(a)} sobre ${comArtigo(b)}`,
-    }]);
+    await legenda(ctx, x, y, clubes, [
+      item(a, COR.azul), item(b, COR.vermelho),
+      { rotulo: "coluna = distância entre os dois", cor: COR.cinzaClaro },
+    ]);
     return;
   }
-
-  const itens = [];
-  if (serieDif.some((p) => p.dif > 0)) {
-    itens.push({ rotulo: `${rotuloDoLado(a)} à frente`, cor: COR.azul,
-                 clube: a.tipo === "equipe" ? a.equipe : undefined });
-  }
-  if (serieDif.some((p) => p.dif < 0)) {
-    itens.push({ rotulo: `${rotuloDoLado(b)} à frente`, cor: COR.vermelho,
-                 clube: b.tipo === "equipe" ? b.equipe : undefined });
-  }
-  if (serieDif.some((p) => p.dif === 0)) {
-    itens.push({ rotulo: "empatados", cor: COR.cinzaEscuro });
-  }
-  await legenda(ctx, x, y, clubes, itens);
+  await legenda(ctx, x, y, clubes, [
+    item(a, COR.azul), item(b, COR.vermelho),
+    { rotulo: "quem está em cima está à frente", cor: COR.cinzaClaro },
+  ]);
 }
 
 /* -------------------------------------------------------------- gráfico */
+const LARGURA_COLUNA = 8;
+const ALTURA_TAG = 16;
+const RESPIRO_TAG = 9;      // da ponta da coluna até o centro da tag
+const NIVEL = 15;           // degrau do rótulo quando ele precisa subir
+
+/**
+ * Desenha as colunas e devolve o y do eixo central, que a dica do mouse usa
+ * para ancorar a guia vertical.
+ */
 function desenharGrafico(ctx, o) {
-  const { serieDif, resumo, centro, topo, alturaPlot, x0, x1, larguraRodada,
-          distancia } = o;
+  const { serieDif, resumo, centro, topo, alturaPlot, x0, x1, distancia,
+          a, b } = o;
 
-  // A escala sempre inclui o zero: é dele que a leitura parte, e uma escala
-  // que começasse no menor valor da série esconderia de que lado está a
-  // vantagem.
-  const maxV = Math.max(resumo.maior.dif, 0);
-  const minV = Math.min(resumo.menor.dif, 0);
-  const folga = Math.max(1, (maxV - minV) * 0.12);
-  const teto = maxV + folga, piso = minV - folga;
-  const escala = (v) => topo + alturaPlot - ((v - piso) / (teto - piso)) * alturaPlot;
-  const yZero = escala(0);
+  const eixo = topo + alturaPlot / 2;
+  const maiorDif = Math.max(...serieDif.map((p) => Math.abs(p.dif)), 1);
 
-  const passo = Math.max(1, Math.ceil((teto - piso) / 6 / 2) * 2);
-  for (let v = Math.ceil(piso / passo) * passo; v <= teto; v += passo) {
-    if (v === 0) continue;
-    linhaH(ctx, x0 - 10, x1, escala(v), COR.cinzaClaro);
-    texto(ctx, distancia ? Math.abs(v) : sinalizado(v), x0 - 18, escala(v) + 5,
-          { tamanho: 13, cor: COR.cinzaEscuro, alinha: "right" });
-  }
+  // A reserva é o que fica acima da coluna mais comprida: a tag da ponta, o
+  // rótulo da diferença e os degraus que ele pode subir para não encavalar.
+  const reserva = RESPIRO_TAG + ALTURA_TAG + 18 + NIVEL * 2;
+  const meiaAltura = Math.max(24, alturaPlot / 2 - reserva);
+  const porPonto = (2 * meiaAltura) / maiorDif;
+  const meiaColuna = (dif) => (Math.abs(dif) * porPonto) / 2;
 
-  const pontos = serieDif.map((p) => [centro(p.rodada), escala(p.dif)]);
-  const borda = { de: x0 - larguraRodada / 2, ate: x1 };
-
-  // A área e a linha são pintadas duas vezes, cada vez recortada a uma metade
-  // do gráfico. É o que faz a cor virar exatamente onde a linha cruza o zero,
-  // sem ter de calcular o ponto de cruzamento.
-  pintarMetade(ctx, { pontos, yZero, borda, cor: COR.azul,
-                      de: topo, ate: yZero });
-  pintarMetade(ctx, { pontos, yZero, borda, cor: COR.vermelho,
-                      de: yZero, ate: topo + alturaPlot });
-
-  // O zero por cima da área: é a única linha do gráfico que não é dado.
-  ctx.save();
-  ctx.strokeStyle = COR.cinzaEscuro;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x0 - 10, yZero);
-  ctx.lineTo(x1, yZero);
-  ctx.stroke();
-  ctx.restore();
-  texto(ctx, "0", x0 - 18, yZero + 5,
-        { tamanho: 14, peso: 800, cor: COR.cinzaTexto, alinha: "right" });
-  texto(ctx, "empate", x0 - 18, yZero + 21,
-        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8,
-          cor: COR.cinzaEscuro, alinha: "right" });
-
-  for (const p of serieDif) {
-    const cor = p.dif > 0 ? COR.azul : p.dif < 0 ? COR.vermelho : COR.cinzaTexto;
-    ctx.save();
-    ctx.fillStyle = COR.fundo;
-    ctx.beginPath();
-    ctx.arc(centro(p.rodada), escala(p.dif), 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = cor;
-    ctx.beginPath();
-    ctx.arc(centro(p.rodada), escala(p.dif), 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  marcarExtremos(ctx, { resumo, centro, escala, topo, alturaPlot, distancia });
-  seloDoAtual(ctx, { resumo, centro, escala, x: x1 + 14, topo, alturaPlot,
-                     distancia });
-  blocoDoPlacar(ctx, { resumo, x: x1 + 18, y: topo + alturaPlot - 104,
-                       altura: 104, distancia });
-
-  return escala;
-}
-
-function pintarMetade(ctx, { pontos, yZero, borda, cor, de, ate }) {
-  if (ate - de <= 0) return;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(borda.de, de, borda.ate - borda.de, ate - de);
-  ctx.clip();
-
-  ctx.globalAlpha = .2;
-  ctx.fillStyle = cor;
-  ctx.beginPath();
-  ctx.moveTo(pontos[0][0], yZero);
-  for (const [px, py] of pontos) ctx.lineTo(px, py);
-  ctx.lineTo(pontos.at(-1)[0], yZero);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = cor;
-  ctx.lineWidth = 3.5;
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  pontos.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
-  ctx.stroke();
-  ctx.restore();
-}
-
-/** O pico e o vale, onde eles aconteceram. */
-function marcarExtremos(ctx, { resumo, centro, escala, topo, alturaPlot, distancia }) {
-  const alvos = [
-    { passo: resumo.maior, acima: true },
-    { passo: resumo.menor, acima: false },
-  ];
-  // Série que não varia tem pico e vale no mesmo ponto: uma etiqueta basta.
-  if (resumo.maior.dif === resumo.menor.dif) alvos.pop();
-
-  for (const { passo, acima } of alvos) {
-    const cor = passo.dif > 0 ? COR.azul : passo.dif < 0 ? COR.vermelho : COR.cinzaTexto;
-    const rotulo = distancia ? String(Math.abs(passo.dif)) : sinalizado(passo.dif);
-    const texto1 = `${rotulo} · ${ordinal(passo.rodada)}`;
-
-    ctx.save();
-    ctx.font = '800 13px "Assistant", sans-serif';
-    const largura = ctx.measureText(texto1).width + 18;
-    ctx.restore();
-
-    const x = Math.min(Math.max(centro(passo.rodada) - largura / 2, centro(1) - 6),
-                       centro(RODADAS) - largura + 6);
-    const yPonto = escala(passo.dif);
-    const y = acima ? Math.max(topo + 2, yPonto - 30)
-                    : Math.min(topo + alturaPlot - 24, yPonto + 10);
-    caixa(ctx, x, y, largura, 22, cor, 6);
-    texto(ctx, texto1, x + largura / 2, y + 16,
-          { tamanho: 13, peso: 800, alinha: "center", cor: COR.branco });
-  }
-}
-
-/** Onde a diferença está agora, na calha da direita. */
-function seloDoAtual(ctx, { resumo, centro, escala, x, topo, alturaPlot,
-                            distancia }) {
-  const { atual } = resumo;
-  // Entre duas posições o sinal não diz nada: a melhor está sempre na frente.
-  const rotulo = distancia ? String(Math.abs(atual.dif)) : sinalizado(atual.dif);
-  const altura = 58;
-  const alvo = escala(atual.dif);
-  const y = Math.min(Math.max(alvo, topo + altura / 2 + 2),
-                     topo + alturaPlot - 130);
-  const cor = atual.dif > 0 ? COR.azul : atual.dif < 0 ? COR.vermelho : COR.cinzaTexto;
-
+  // O eixo por baixo das colunas: é referência, não dado.
   ctx.save();
   ctx.strokeStyle = COR.cinza;
   ctx.lineWidth = 1.5;
-  ctx.setLineDash([2, 5]);
   ctx.beginPath();
-  ctx.moveTo(centro(atual.rodada), alvo);
-  ctx.lineTo(x, y);
+  ctx.moveTo(x0 - 16, eixo);
+  ctx.lineTo(x1 + 4, eixo);
   ctx.stroke();
   ctx.restore();
+  texto(ctx, "empate", x0 - 22, eixo + 4,
+        { tamanho: 10, peso: 700, maiuscula: true, espaco: .8,
+          cor: COR.cinzaEscuro, alinha: "right" });
 
-  const topoSelo = y - altura / 2;
-  caixa(ctx, x, topoSelo, LARGURA_SELO, altura, cor, 9);
-  texto(ctx, rotulo, x + 14, topoSelo + 41,
-        { tamanho: 34, peso: 800, cor: COR.branco });
+  const ocupados = [];
+  const rotulos = [];
 
-  ctx.save();
-  ctx.font = '800 34px "Assistant", sans-serif';
-  const largo = ctx.measureText(rotulo).width;
-  ctx.restore();
+  for (const passo of serieDif) {
+    const cx = centro(passo.rodada);
+    const meia = meiaColuna(passo.dif);
+    const cor = passo.dif > 0 ? COR.azul
+              : passo.dif < 0 ? COR.vermelho : COR.cinzaEscuro;
 
-  texto(ctx, "pontos", x + 24 + largo, topoSelo + 26,
-        { tamanho: 12.5, peso: 700, cor: COR.branco });
-  texto(ctx, `${ordinal(atual.rodada)} rodada`, x + 24 + largo, topoSelo + 42,
-        { tamanho: 10, peso: 700, cor: COR.branco, espaco: .8 });
+    if (passo.dif === 0) {
+      // Empate: não há coluna e não há dois números diferentes para mostrar.
+      // Uma tag cinza no eixo diz tudo, e o rótulo da diferença seria "0".
+      caixa(ctx, cx - LARGURA_COLUNA / 2, eixo - 2, LARGURA_COLUNA, 4,
+            COR.cinza, 2);
+      ocupados.push(tag(ctx, { cx, cy: eixo, valor: passo.a.pontos,
+                               cor: COR.cinzaEscuro }));
+      continue;
+    }
+
+    caixa(ctx, cx - LARGURA_COLUNA / 2, eixo - meia, LARGURA_COLUNA, meia * 2,
+          cor, LARGURA_COLUNA / 2);
+
+    // Em cima vai sempre quem tem mais pontos; a cor da tag diz quem é.
+    const cima = passo.dif > 0
+      ? { valor: passo.a.pontos, cor: COR.azul }
+      : { valor: passo.b.pontos, cor: COR.vermelho };
+    const baixo = passo.dif > 0
+      ? { valor: passo.b.pontos, cor: COR.vermelho }
+      : { valor: passo.a.pontos, cor: COR.azul };
+
+    ocupados.push(tag(ctx, { cx, cy: eixo - meia - RESPIRO_TAG, ...cima }));
+    ocupados.push(tag(ctx, { cx, cy: eixo + meia + RESPIRO_TAG, ...baixo }));
+
+    rotulos.push({
+      cx, cor,
+      texto: distancia ? String(Math.abs(passo.dif)) : sinalizado(passo.dif),
+      base: eixo - meia - RESPIRO_TAG - ALTURA_TAG / 2 - 6,
+    });
+  }
+
+  desenharRotulos(ctx, rotulos, ocupados, topo);
+  blocoDoResumo(ctx, { resumo, distancia, x: x1 + 18, eixo, a, b });
+  return eixo;
 }
 
-/** Quantas rodadas cada lado passou na frente. */
-function blocoDoPlacar(ctx, { resumo, x, y, altura, distancia }) {
+/**
+ * A tag de pontuação numa ponta da coluna. Devolve o retângulo que ela ocupa,
+ * para o rótulo da diferença saber por onde não passar.
+ */
+function tag(ctx, { cx, cy, valor, cor }) {
+  ctx.save();
+  ctx.font = '800 11px "Assistant", sans-serif';
+  const largura = Math.max(24, ctx.measureText(String(valor)).width + 12);
+  ctx.restore();
+
+  const x = cx - largura / 2, y = cy - ALTURA_TAG / 2;
+  caixa(ctx, x, y, largura, ALTURA_TAG, cor, 5);
+  texto(ctx, valor, cx, cy + 4,
+        { tamanho: 11, peso: 800, alinha: "center", cor: COR.branco });
+  return { x, y, l: largura, a: ALTURA_TAG };
+}
+
+const cruza = (r, s) => r.x < s.x + s.l && s.x < r.x + r.l
+                     && r.y < s.y + s.a && s.y < r.y + r.a;
+
+/**
+ * O rótulo da diferença, acima da coluna.
+ *
+ * Ele sobe de degrau em degrau até achar lugar livre. Com 38 rodadas na régua
+ * os vizinhos raramente se tocam, mas a coluna estreita quando a tela é de uma
+ * série com mais clubes, e aí o encavalamento aparece — é a diferença que não
+ * pode sumir, porque é o assunto do card.
+ */
+function desenharRotulos(ctx, rotulos, ocupados, topo) {
+  const postos = [];
+
+  for (const r of rotulos) {
+    ctx.save();
+    ctx.font = '800 14px "Assistant", sans-serif';
+    const largura = ctx.measureText(r.texto).width + 6;
+    ctx.restore();
+
+    let base = r.base;
+    for (let nivel = 0; nivel < 4; nivel++) {
+      const caixaR = { x: r.cx - largura / 2, y: base - 12, l: largura, a: 16 };
+      const bate = [...ocupados, ...postos].some((outro) => cruza(caixaR, outro));
+      if (!bate || base - NIVEL < topo + 12) { postos.push(caixaR); break; }
+      base -= NIVEL;
+    }
+
+    texto(ctx, r.texto, r.cx, base,
+          { tamanho: 14, peso: 800, alinha: "center", cor: r.cor });
+  }
+}
+
+/**
+ * O resumo da série, na calha da direita.
+ *
+ * Com a faixa de números fora do card, é aqui que fica o que a coluna sozinha
+ * não conta: onde a diferença está hoje e quantas rodadas cada lado passou na
+ * frente.
+ */
+function blocoDoResumo(ctx, { resumo, distancia, x, eixo, a, b }) {
+  const { atual, maior, menor, contagem, viradas, media, rodadas } = resumo;
   const largura = LARGURA_SELO;
-  caixa(ctx, x - 4, y, largura, altura, COR.branco, 8);
+  const linhas = distancia
+    ? [["maior distância", String(Math.abs(maior.dif)), COR.azul],
+       ["menor distância", String(Math.abs(menor.dif)), COR.azulEscuro],
+       ["distância média", num(media), COR.cinzaTexto]]
+    : [[`${rotuloDoLado(a)} à frente`, String(contagem.frente), COR.azul],
+       [`${rotuloDoLado(b)} à frente`, String(contagem.atras), COR.vermelho],
+       ["viradas", String(viradas), COR.cinzaTexto]];
+
+  const altura = 96 + linhas.length * 24;
+  const y = eixo - altura / 2;
+  const cor = atual.dif > 0 ? COR.azul : atual.dif < 0 ? COR.vermelho : COR.cinzaTexto;
+
+  caixa(ctx, x - 4, y, largura, altura, COR.branco, 9);
   ctx.save();
   ctx.strokeStyle = COR.linha;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(x - 3.5, y + .5, largura - 1, altura - 1, 8);
+  ctx.roundRect(x - 3.5, y + .5, largura - 1, altura - 1, 9);
   ctx.stroke();
   ctx.restore();
 
-  texto(ctx, `em ${resumo.rodadas} rodadas`, x + 10, y + 20,
+  texto(ctx, `em ${rodadas} rodadas`, x + 10, y + 22,
         { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
+  texto(ctx, distancia ? String(Math.abs(atual.dif)) : sinalizado(atual.dif),
+        x + 10, y + 62, { tamanho: 34, peso: 800, cor });
+  texto(ctx, `${distancia ? "distância" : "diferença"} na `
+           + `${ordinal(atual.rodada)} rodada`,
+        x + 10, y + 82, { tamanho: 11, peso: 700, cor: COR.cinzaEscuro });
 
-  const linhas = distancia
-    ? [{ rotulo: "distância média", valor: num(resumo.media), cor: COR.azulEscuro },
-       { rotulo: "maior distância", valor: String(Math.abs(resumo.maior.dif)),
-         cor: COR.azul }]
-    : [{ rotulo: "à frente", valor: String(resumo.contagem.frente), cor: COR.azul },
-       { rotulo: "atrás", valor: String(resumo.contagem.atras), cor: COR.vermelho },
-       { rotulo: "viradas", valor: String(resumo.viradas), cor: COR.cinzaTexto }];
-
-  const passo = linhas.length > 2 ? 22 : 30;
-  linhas.forEach((linha, i) => {
-    const yLinha = y + 44 + i * passo;
-    texto(ctx, linha.rotulo, x + 10, yLinha, { tamanho: 12, cor: COR.cinzaEscuro });
-    texto(ctx, linha.valor, x + largura - 14, yLinha,
-          { tamanho: 15, peso: 800, cor: linha.cor, alinha: "right" });
+  linhas.forEach(([rotulo, valor, tinta], i) => {
+    const yLinha = y + 108 + i * 24;
+    linhaH(ctx, x + 10, x + largura - 14, yLinha - 16, COR.cinzaClaro);
+    texto(ctx, cortar(ctx, rotulo, largura - 62, 11.5), x + 10, yLinha,
+          { tamanho: 11.5, cor: COR.cinzaEscuro });
+    texto(ctx, valor, x + largura - 14, yLinha,
+          { tamanho: 15, peso: 800, cor: tinta, alinha: "right" });
   });
 }
 
@@ -431,7 +371,7 @@ async function faixaDeOcupantes(ctx, o) {
   let anterior = null;
   for (const passo of serieDif) {
     const cx = centro(passo.rodada);
-    const { equipe, pontos } = passo[lado];
+    const { equipe } = passo[lado];
 
     if (anterior && anterior !== equipe) {
       // Divisória na troca de dono: o degrau de pontos ali não é campanha de
@@ -450,8 +390,12 @@ async function faixaDeOcupantes(ctx, o) {
 
     const escudo = await imagem(clubes[equipe]?.escudo);
     desenharEscudo(ctx, escudo, cx - ladoEscudo / 2, y + 2, ladoEscudo);
-    texto(ctx, pontos, cx, y + ladoEscudo + 20,
-          { tamanho: 12, peso: 800, alinha: "center", cor: COR.azulEscuro });
+    // A sigla, e não os pontos: a pontuação já está na tag da ponta da coluna,
+    // e o que falta aqui é desfazer a dúvida entre dois escudos parecidos.
+    const sigla = clubes[equipe]?.sigla
+      ?? nomeBonito(equipe).slice(0, 3).toUpperCase();
+    texto(ctx, sigla, cx, y + ladoEscudo + 18,
+          { tamanho: 10.5, peso: 700, alinha: "center", cor: COR.cinzaTexto });
   }
 }
 
