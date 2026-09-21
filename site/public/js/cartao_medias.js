@@ -30,7 +30,7 @@ import {
 } from "/js/media_posicao.js";
 import { zonaDaPosicao, zonasDaFaixa } from "/js/similares.js";
 
-const ALTURA_LINHA = 30;
+const ALTURA_LINHA = 32;
 const VAO_COLUNA = 2;
 
 // A rampa da grade: cinza claro quente na menor pontuação do ano, azul médio
@@ -83,23 +83,24 @@ export function montarCartao(estado) {
     numeros: [],
     nota: "",
     corpo: async (ctx, y) => {
-      legenda(ctx, { colunas, estatisticas, y: y + 10 });
-
+      // Sem legenda sob o título: a grade sobe e ganha a altura dela, que vira
+      // linha mais alta para os vinte quadrados de cada coluna.
+      const yGrade = y + 16;
       const larguraGrade = 986;
       const alvos = desenharGrade(ctx, {
         colunas, estatisticas, faixa, cores, escolhida,
-        x: MARGEM, largura: larguraGrade, y: y + 44,
+        x: MARGEM, largura: larguraGrade, y: yGrade,
       });
 
       const xPainel = MARGEM + larguraGrade + 20;
       const doPainel = painelDoAno(ctx, {
         comparada, estatisticas, desfecho, escolhida, clubes, faixa, cores,
-        x: xPainel, largura: CARD.largura - MARGEM - xPainel, y: y + 44,
+        x: xPainel, largura: CARD.largura - MARGEM - xPainel, y: yGrade,
       });
 
       spec.hover = {
         pontos: [...alvos, ...doPainel], eixo: "caixa", unidade: "",
-        topo: y + 44, alturaPlot: POSICOES * ALTURA_LINHA + 30,
+        topo: yGrade, alturaPlot: POSICOES * ALTURA_LINHA + 30,
         x0: MARGEM, x1: MARGEM + larguraGrade,
         // Só o cabeçalho troca o ano. Clicar num número é o gesto de quem
         // quer ler aquele número, não de quem quer trocar o painel.
@@ -110,14 +111,6 @@ export function montarCartao(estado) {
     },
   };
   return spec;
-}
-
-function legenda(ctx, { colunas, estatisticas, y }) {
-  const n = estatisticas.find((e) => e.n)?.n ?? 0;
-  texto(ctx, `${colunas.length} edições na grade · a média, o mínimo e o máximo `
-           + `saem das ${n} já encerradas · clique no ano para trocá-lo no painel `
-           + `da direita`,
-        MARGEM, y, { tamanho: 12.5, cor: COR.cinzaEscuro });
 }
 
 /* --------------------------------------------------------------- grade */
