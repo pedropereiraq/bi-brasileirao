@@ -6,10 +6,15 @@
  * daquela posição. É assim que se lê de relance se a briga pelo título está
  * mais dura que o normal ou se o meio da tabela está mais embolado.
  *
- * A cor é divergente e não sequencial: uma rampa de claro a escuro diria
- * "pouco a muito", que já está escrito no número. O que o número não diz é se
- * aquilo é muito **para aquela posição** — 20 pontos na rodada 10 é campanha
- * de líder num ano e de quinto colocado em outro.
+ * A cor varia dentro de cada ano: a maior pontuação da coluna é o azul cheio e
+ * a menor é o cinza, com todo o resto no meio do caminho. Como a pontuação cai
+ * de cima para baixo na tabela, cada coluna vira um degradê — e o que se
+ * compara de um ano para o outro é o **formato** dele. Ano com líder disparado
+ * tem um salto no alto; campeonato embolado tem uma rampa mansa.
+ *
+ * Os quadrados de um mesmo ano se encostam, sem vão nem canto arredondado: é o
+ * que faz a coluna se ler como uma faixa contínua em vez de vinte pastilhas.
+ * O vão fica só entre um ano e outro, que é a divisão que importa.
  */
 import { CARD, COR, MARGEM, texto, caixa, cortar } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
@@ -66,17 +71,17 @@ export function montarCartao(estado) {
     corpo: async (ctx, y) => {
       legenda(ctx, { colunas, estatisticas, y: y + 10 });
 
-      const larguraGrade = 1012;
+      const larguraGrade = 1076;
       const alvos = desenharGrade(ctx, {
         colunas, estatisticas, faixa, cores, escolhida,
         x: MARGEM, largura: larguraGrade, y: y + 44,
       });
 
-      const xPainel = MARGEM + larguraGrade + 20;
-      painelDasEstatisticas(ctx, { estatisticas, x: xPainel, largura: 162, y: y + 44 });
+      const xPainel = MARGEM + larguraGrade + 18;
+      painelDasEstatisticas(ctx, { estatisticas, x: xPainel, largura: 156, y: y + 44 });
       painelDaClassificacao(ctx, {
         comparada, escolhida, clubes, faixa, cores,
-        x: xPainel + 176, largura: CARD.largura - MARGEM - (xPainel + 176),
+        x: xPainel + 170, largura: CARD.largura - MARGEM - (xPainel + 170),
         y: y + 44,
       });
 
@@ -84,7 +89,11 @@ export function montarCartao(estado) {
         pontos: alvos, eixo: "caixa", unidade: "",
         topo: y + 44, alturaPlot: POSICOES * ALTURA_LINHA + 30,
         x0: MARGEM, x1: MARGEM + larguraGrade,
-        aoClicar: (alvo) => estado.aoEscolherAno?.(alvo.ano),
+        // Só o cabeçalho troca o ano. Clicar num número é o gesto de quem
+        // quer ler aquele número, não de quem quer trocar o painel.
+        aoClicar: (alvo) => {
+          if (alvo.cabecalho) estado.aoEscolherAno?.(alvo.ano);
+        },
       };
     },
   };
@@ -94,8 +103,8 @@ export function montarCartao(estado) {
 function legenda(ctx, { colunas, estatisticas, y }) {
   const n = estatisticas.find((e) => e.n)?.n ?? 0;
   texto(ctx, `${colunas.length} edições na grade · a média, o mínimo e o máximo `
-           + `saem das ${n} já encerradas · clique numa coluna para trocar o ano `
-           + `do painel da direita`,
+           + `saem das ${n} já encerradas · clique no ano para trocá-lo no painel `
+           + `da direita`,
         MARGEM, y, { tamanho: 12.5, cor: COR.cinzaEscuro });
 }
 
@@ -112,43 +121,52 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
           alinha: "right", cor: COR.cinzaEscuro });
 
+  const alvos = [];
+
   for (const [i, coluna] of colunas.entries()) {
     const selecionada = coluna.ano === escolhida?.ano;
     if (selecionada) {
-      caixa(ctx, xDaColuna(i) - 2, y, larguraAno + 4,
-            26 + POSICOES * ALTURA_LINHA + 4, COR.azulLavado, 5);
+      caixa(ctx, xDaColuna(i) - 3, y, larguraAno + 6, 24, COR.azul, 4);
     }
     texto(ctx, coluna.ano, xDaColuna(i) + larguraAno / 2, y + 16,
           { tamanho: 11.5, peso: selecionada ? 800 : 700, alinha: "center",
-            cor: selecionada ? COR.azul
-               : coluna.encerrada ? COR.azulEscuro : COR.azul });
+            cor: selecionada ? COR.branco : COR.azulEscuro });
+
+    alvos.push({
+      n: coluna.ano, ano: coluna.ano, cabecalho: true,
+      x: xDaColuna(i) - 3, y, l: larguraAno + 6, a: 24,
+      itens: [{
+        rotulo: `Série de ${coluna.ano}`,
+        cor: COR.azul,
+        pontos: null,
+        detalhe: coluna.encerrada ? "edição encerrada" : "edição em andamento",
+      }],
+      diferenca: {
+        rotulo: selecionada ? "no painel" : "clique",
+        texto: selecionada ? "é esta edição que a direita mostra"
+                           : "para ver esta edição no painel da direita",
+        cor: COR.azul,
+      },
+    });
   }
 
-  const alvos = [];
+  for (const [i, coluna] of colunas.entries()) {
+    const pontos = coluna.celulas.map((c) => c.pontos);
+    const alto = Math.max(...pontos), baixo = Math.min(...pontos);
+    // A escala é do próprio ano: o maior da coluna vai a azul cheio e o menor
+    // a cinza. Campeonato com pontuações apertadas gera um degradê manso, e é
+    // essa diferença de formato que se compara de um ano para o outro.
+    const forca = (valor) => (alto === baixo ? 1 : (valor - baixo) / (alto - baixo));
 
-  for (let pos = 1; pos <= POSICOES; pos++) {
-    const yLinha = yDaLinha(pos);
-    texto(ctx, pos, x + larguraPos - 8, yLinha + ALTURA_LINHA / 2 + 4,
-          { tamanho: 12, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
+    const xc = xDaColuna(i);
+    for (const celula of coluna.celulas) {
+      const yLinha = yDaLinha(celula.posicao);
+      const t = forca(celula.pontos);
 
-    const { media, minimo, maximo } = estatisticas[pos - 1];
-    // A escala de cor é por posição: o que é muito para o 1º é pouco para o
-    // 20º, e uma escala única pintaria a linha de baixo inteira de vermelho.
-    const alcance = media === null
-      ? 0 : Math.max(maximo - media, media - minimo, 1);
-
-    for (const [i, coluna] of colunas.entries()) {
-      const celula = coluna.celulas[pos - 1];
-      if (!celula) continue;
-
-      const t = media === null ? 0
-        : Math.max(-1, Math.min(1, (celula.pontos - media) / alcance));
-      const fundo = t >= 0
-        ? mistura(COR.fundo, COR.azul, t * 0.92)
-        : mistura(COR.fundo, COR.vermelho, -t * 0.82);
-
-      const xc = xDaColuna(i);
-      caixa(ctx, xc, yLinha, larguraAno, ALTURA_LINHA - 3, fundo, 4);
+      ctx.save();
+      ctx.fillStyle = mistura(COR.cinza, COR.azul, t);
+      ctx.fillRect(xc, yLinha, larguraAno, ALTURA_LINHA);
+      ctx.restore();
 
       // A borda marca onde aquele clube **terminou**, e não como ele estava
       // nesta rodada: é a informação que a grade sozinha não tem.
@@ -158,25 +176,27 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
         ctx.save();
         ctx.strokeStyle = cor;
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(xc + 1, yLinha + 1, larguraAno - 2, ALTURA_LINHA - 5, 4);
-        ctx.stroke();
+        ctx.strokeRect(xc + 1, yLinha + 1, larguraAno - 2, ALTURA_LINHA - 2);
         ctx.restore();
       }
 
-      texto(ctx, celula.pontos, xc + larguraAno / 2, yLinha + ALTURA_LINHA / 2 + 2,
+      texto(ctx, celula.pontos, xc + larguraAno / 2, yLinha + ALTURA_LINHA / 2 + 4,
             { tamanho: 12.5, peso: 800, alinha: "center",
-              cor: Math.abs(t) > 0.55 ? COR.branco : COR.azulEscuro });
+              cor: t > 0.48 ? COR.branco : COR.azulEscuro });
 
       alvos.push({
-        n: `${coluna.ano} · ${ordinal(pos)}`,
+        n: `${coluna.ano} · ${ordinal(celula.posicao)}`,
         ano: coluna.ano,
-        x: xc, y: yLinha, l: larguraAno, a: ALTURA_LINHA - 3,
-        ...dicaDaCelula(celula, { media }),
+        x: xc, y: yLinha, l: larguraAno, a: ALTURA_LINHA,
+        ...dicaDaCelula(celula, { media: estatisticas[celula.posicao - 1].media }),
       });
     }
   }
 
+  for (let pos = 1; pos <= POSICOES; pos++) {
+    texto(ctx, pos, x + larguraPos - 8, yDaLinha(pos) + ALTURA_LINHA / 2 + 4,
+          { tamanho: 12, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
+  }
   return alvos;
 }
 
@@ -232,50 +252,61 @@ function painelDasEstatisticas(ctx, { estatisticas, x, largura, y }) {
 }
 
 function painelDaClassificacao(ctx, { comparada, escolhida, clubes, faixa, cores,
-                                      x, largura, y }) {
-  const xTime = x + 30, xPts = x + 128, xMed = x + 178, xDif = x + largura - 6;
+                                     x, largura, y }) {
+  // A sigla vai centralizada numa coluna de largura fixa: alinhada à
+  // esquerda, "SPA" e "RBB" ocupam larguras diferentes e a coluna fica torta.
+  const larguraTime = 52, xTime = x + 24;
+  const centroTime = xTime + larguraTime / 2;
+  const xPts = x + 100, xMed = x + 142;
+  const xDif = x + largura - 4, larguraDif = 58;
 
-  texto(ctx, `${escolhida?.ano ?? ""}`, x + 14, y + 16,
+  texto(ctx, `${escolhida?.ano ?? ""}`, x + 11, y + 16,
         { tamanho: 11.5, peso: 800, alinha: "center", cor: COR.azul });
-  for (const [rotulo, xr] of [["time", xTime], ["pts", xPts],
-                              ["méd", xMed], ["dif", xDif]]) {
-    texto(ctx, rotulo, rotulo === "time" ? xr : xr, y + 16,
+  for (const [rotulo, xr, alinha] of [["time", centroTime, "center"],
+                                      ["pts", xPts, "right"],
+                                      ["méd", xMed, "right"],
+                                      ["dif", xDif, "right"]]) {
+    texto(ctx, rotulo, xr, y + 16,
           { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
-            alinha: rotulo === "time" ? "left" : "right", cor: COR.cinzaEscuro });
+            alinha, cor: COR.cinzaEscuro });
   }
+
+  // A escala da diferença é a da própria coluna: cinza no zero, azul quanto
+  // mais acima da média, vermelho quanto mais abaixo.
+  const maiorDif = Math.max(1,
+    ...comparada.map((l) => Math.abs(l.diferenca ?? 0)));
 
   for (const [i, linha] of comparada.entries()) {
     const yLinha = y + 26 + i * ALTURA_LINHA;
-    const meio = yLinha + ALTURA_LINHA / 2 + 2;
-    caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 3,
-          i % 2 ? COR.fundo : COR.branco, 4);
+    const meio = yLinha + ALTURA_LINHA / 2 + 3;
+    caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 2,
+          i % 2 ? COR.fundo : COR.branco, 3);
 
     const cor = linha.posFim === null
       ? null : cores[zonaDaPosicao(linha.posFim, faixa)];
-    texto(ctx, linha.posicao, x + 14, meio,
+    texto(ctx, linha.posicao, x + 11, meio,
           { tamanho: 12, peso: 800, alinha: "center",
             cor: cor ?? COR.cinzaEscuro });
 
     const sigla = clubes?.[linha.equipe]?.sigla
       ?? nomeBonito(linha.equipe).slice(0, 3).toUpperCase();
-    texto(ctx, cortar(ctx, sigla, 90, 12.5, 700), xTime, meio,
-          { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+    texto(ctx, cortar(ctx, sigla, larguraTime, 12.5, 700), centroTime, meio,
+          { tamanho: 12.5, peso: 700, alinha: "center", cor: COR.azulEscuro });
 
     texto(ctx, linha.pontos, xPts, meio,
           { tamanho: 12.5, peso: 800, alinha: "right", cor: COR.azulEscuro });
     texto(ctx, linha.media === null ? "—" : num(linha.media), xMed, meio,
-          { tamanho: 12.5, alinha: "right", cor: COR.cinzaTexto });
+          { tamanho: 12, alinha: "right", cor: COR.cinzaTexto });
 
     if (linha.diferenca === null) continue;
-    const forte = linha.diferenca > 0 ? COR.azul
-                : linha.diferenca < 0 ? COR.vermelho : COR.cinzaEscuro;
-    const etiqueta = comSinal(linha.diferenca);
-    ctx.save();
-    ctx.font = '800 12px "Assistant", sans-serif';
-    const largo = ctx.measureText(etiqueta).width + 16;
-    ctx.restore();
-    caixa(ctx, xDif - largo, yLinha + 4, largo, ALTURA_LINHA - 11, forte, 4);
-    texto(ctx, etiqueta, xDif - largo / 2, meio,
-          { tamanho: 12, peso: 800, alinha: "center", cor: COR.branco });
+    const t = Math.min(1, Math.abs(linha.diferenca) / maiorDif);
+    const fundo = linha.diferenca >= 0
+      ? mistura(COR.cinza, COR.azul, t)
+      : mistura(COR.cinza, COR.vermelho, t);
+    caixa(ctx, xDif - larguraDif, yLinha + 3, larguraDif, ALTURA_LINHA - 8,
+          fundo, 4);
+    texto(ctx, comSinal(linha.diferenca), xDif - larguraDif / 2, meio,
+          { tamanho: 12, peso: 800, alinha: "center",
+            cor: t > 0.48 ? COR.branco : COR.azulEscuro });
   }
 }
