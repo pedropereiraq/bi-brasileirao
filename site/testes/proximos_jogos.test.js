@@ -13,7 +13,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  clubesNaFaixa, mediaDosAdversarios, proximosJogos, tamanhoDaLista,
+  clubesNaFaixa, escalaDeDificuldade, mediaDosAdversarios, proximosJogos,
+  tamanhoDaLista,
 } from "../public/js/proximos_jogos.js";
 
 const passo = (n, adversario, realizado) =>
@@ -77,4 +78,18 @@ test("sem jogo pela frente, a média é nula e não zero", () => {
   // Adversário fora da classificação não entra na conta nem vira zero.
   const jogos = proximosJogos(agenda(37, ["FANTASMA (XX)"]));
   assert.equal(mediaDosAdversarios(jogos, () => undefined), null);
+});
+
+test("a dificuldade é medida contra as outras colunas da tela", () => {
+  const escala = escalaDeDificuldade([9.1, 12.1, 8.3, null]);
+  assert.equal(escala(8.3), 0, "a menor média é a tabela mais dura");
+  assert.equal(escala(12.1), 1, "a maior média é a mais leve");
+  assert.ok(escala(9.1) > 0 && escala(9.1) < 1, "o meio fica no meio");
+  assert.equal(escala(null), .5, "sem média não há dificuldade");
+});
+
+test("sem nada para comparar, a dificuldade fica no meio", () => {
+  assert.equal(escalaDeDificuldade([9.1])(9.1), .5, "uma coluna só");
+  assert.equal(escalaDeDificuldade([7, 7])(7), .5, "empate geral");
+  assert.equal(escalaDeDificuldade([])(3), .5, "lista vazia não estoura");
 });

@@ -11,11 +11,17 @@
  * duro) ao verde (lanterna, jogo fácil). É a cor que faz a coluna ser lida de
  * relance; o número está ali para quem quiser conferir.
  *
+ * No rodapé a escala é outra: a média de posição de cada coluna é comparada
+ * com a das outras da tela, vermelho na tabela mais dura e verde na mais leve.
+ * Entre concorrentes diretos a pergunta nunca é "9,1 é duro?", e sim "quem
+ * pegou a pior parte?" — e a cor absoluta deixava oito colunas quase iguais.
+ *
  * Com muitos clubes na faixa a coluna estreita, e a linha de jogo cede peça
- * por peça em vez de amassar tudo: sai a sigla, depois a etiqueta de posição,
- * depois a pílula de mando. O escudo fica até o fim — é o que identifica o
- * adversário sem depender de largura. Quando a etiqueta sai, a cor dela passa
- * para uma tira na borda da linha, que não custa espaço nenhum.
+ * por peça em vez de amassar tudo: o nome inteiro vira sigla, a sigla sai, sai
+ * a etiqueta de posição, sai a pílula de mando. O escudo fica até o fim — é o
+ * que identifica o adversário sem depender de largura. Quando a etiqueta sai,
+ * a cor dela passa para uma tira na borda da linha, que não custa espaço
+ * nenhum.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, cortar, imagem, desenharEscudo,
@@ -23,12 +29,18 @@ import {
 import { nomeBonito } from "/js/nomes.js";
 import { campanhaCompleta } from "/js/grafico_campanha.js";
 import {
-  clubesNaFaixa, mediaDosAdversarios, proximosJogos, tamanhoDaLista,
+  clubesNaFaixa, escalaDeDificuldade, mediaDosAdversarios, proximosJogos,
+  tamanhoDaLista,
 } from "/js/proximos_jogos.js";
 
 const POSICOES = 20;
 const VAO = 12;
 const ALTURA_MINIMA_DO_JOGO = 21;
+
+// As peças da linha de jogo, em largura útil (já com o respiro à direita).
+const PECA = { mando: 40, escudo: 26, rotulo: 40, badge: 40 };
+const LARGURA_BADGE = 34;
+const TAMANHO_DO_ROTULO = 14.5;
 
 const num = (v) => v.toFixed(1).replace(".", ",");
 const ordinal = (p) => `${p}º`;
@@ -48,24 +60,61 @@ function mistura(de, para, t) {
 /**
  * O que cabe numa coluna daquela largura.
  *
- * Os limites são a soma das peças mais os respiros: 138px é a linha inteira,
- * e cada corte devolve a largura de uma peça. Em vez de contar clubes, mede o
- * que de fato aperta.
+ * Os limites são a soma das peças mais os respiros, e cada corte devolve a
+ * largura de uma delas. Em vez de contar clubes, mede o que de fato aperta.
  */
 function oQueCabe(largura) {
+  const cheia = 6 + PECA.mando + PECA.escudo + PECA.rotulo + PECA.badge;
   return {
-    sigla: largura >= 138,
-    posicao: largura >= 104,
-    mando: largura >= 72,
+    sigla: largura >= cheia,
+    posicao: largura >= cheia - PECA.rotulo,
+    mando: largura >= cheia - PECA.rotulo - PECA.badge,
   };
+}
+
+/** O vão entre o escudo e a etiqueta, onde o nome do adversário é escrito. */
+function vaoDoRotulo({ largura, cabe, lado, temBadge }) {
+  const de = (cabe.posicao ? 6 : 12) + (cabe.mando ? PECA.mando : 12) + lado + 6;
+  const ate = largura - 6 - (cabe.posicao && temBadge ? LARGURA_BADGE + 6 : 0);
+  return { de, ate };
+}
+
+/**
+ * O nome inteiro ou as três letras.
+ *
+ * Com poucos clubes na tela a coluna é larga e o nome cabe — e nome inteiro se
+ * lê sem decodificar sigla. A escolha vale para o card todo: metade das
+ * colunas com nome e metade com sigla ficaria remendado. E mede o maior nome
+ * em jogo em vez de contar clubes, porque "Red Bull Bragantino" e "Vasco" não
+ * ocupam o mesmo espaço.
+ */
+function cabeONomeInteiro(ctx, { nomes, nomesDoTopo, largura, cabe, lado }) {
+  if (!cabe.sigla || !nomes.length) return false;
+  const vao = vaoDoRotulo({ largura, cabe, lado, temBadge: true });
+  const maior = (lista, fonte) => {
+    ctx.save();
+    ctx.font = fonte;
+    const l = Math.max(0, ...lista.map((n) => ctx.measureText(n).width));
+    ctx.restore();
+    return l;
+  };
+  return maior(nomes, `800 ${TAMANHO_DO_ROTULO}px "Assistant", sans-serif`)
+           <= vao.ate - vao.de - 6
+      && maior(nomesDoTopo, '800 17px "Assistant", sans-serif')
+           <= largura - 16;
+}
+
+/** A rampa da dificuldade: 0 é o jogo mais duro, 1 o mais fácil. */
+function corDaFracao(fracao) {
+  const t = Math.min(1, Math.max(0, fracao));
+  return t < 0.5
+    ? mistura(COR.vermelho, BADGE_MEIO, t * 2)
+    : mistura(BADGE_MEIO, BADGE_VERDE, (t - 0.5) * 2);
 }
 
 /** A dificuldade daquele adversário virando cor. */
 function corDaPosicao(posicao) {
-  const t = Math.min(1, Math.max(0, (posicao - 1) / (POSICOES - 1)));
-  return t < 0.5
-    ? mistura(COR.vermelho, BADGE_MEIO, t * 2)
-    : mistura(BADGE_MEIO, BADGE_VERDE, (t - 0.5) * 2);
+  return corDaFracao((posicao - 1) / (POSICOES - 1));
 }
 
 export function montarCartao(estado) {
@@ -133,6 +182,19 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
   const alvos = [];
 
   const cabe = oQueCabe(largura);
+  const lado = Math.min(20, alturaJogo - 8);
+  cabe.nome = cabeONomeInteiro(ctx, {
+    nomes: colunas.flatMap((c) => c.proximos.slice(0, quantos)
+      .map((passo) => nomeBonito(passo.jogo.adversario))),
+    nomesDoTopo: colunas.map((c) => nomeBonito(c.clube.equipe)),
+    largura, cabe, lado,
+  });
+
+  // A dificuldade de cada coluna é lida contra as outras da tela.
+  const medias = colunas.map(
+    (c) => mediaDosAdversarios(c.proximos, posicaoDe));
+  const escala = escalaDeDificuldade(medias);
+
   const yLista = y + alturaTopo;
   const yRodape = yLista + quantos * alturaJogo + 14;
 
@@ -143,7 +205,7 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
 
   for (const [i, coluna] of colunas.entries()) {
     const x = xDaColuna(i);
-    await cabecalhoDoClube(ctx, { coluna, clubes, x, largura, y });
+    await cabecalhoDoClube(ctx, { coluna, clubes, cabe, x, largura, y });
 
     for (let k = 0; k < quantos; k++) {
       const passo = coluna.proximos[k];
@@ -165,7 +227,7 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
     }
 
     rodapeDaColuna(ctx, {
-      media: mediaDosAdversarios(coluna.proximos, posicaoDe),
+      media: medias[i], cor: corDaFracao(escala(medias[i])),
       restantes: coluna.proximos.length,
       x, largura, y: yRodape,
     });
@@ -178,7 +240,8 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
   };
 }
 
-async function cabecalhoDoClube(ctx, { coluna, clubes, x, largura, y }) {
+async function cabecalhoDoClube(ctx, { coluna, clubes, cabe, x, largura,
+                                      y }) {
   const { clube } = coluna;
   const centro = x + largura / 2;
 
@@ -200,9 +263,10 @@ async function cabecalhoDoClube(ctx, { coluna, clubes, x, largura, y }) {
   const escudo = await imagem(clubes[clube.equipe]?.escudo);
   desenharEscudo(ctx, escudo, centro - 15, y + 26, 30);
 
-  const sigla = clubes[clube.equipe]?.sigla
-    ?? nomeBonito(clube.equipe).slice(0, 3).toUpperCase();
-  texto(ctx, cortar(ctx, sigla, largura - 12, 17, 800), centro, y + 76,
+  const rotulo = cabe.nome ? nomeBonito(clube.equipe)
+    : (clubes[clube.equipe]?.sigla
+       ?? nomeBonito(clube.equipe).slice(0, 3).toUpperCase());
+  texto(ctx, cortar(ctx, rotulo, largura - 12, 17, 800), centro, y + 76,
         { tamanho: 17, peso: 800, alinha: "center", cor: COR.azulEscuro });
   texto(ctx, `${clube.pts} pts`, centro, y + 91,
         { tamanho: 11, peso: 700, alinha: "center", cor: COR.cinzaEscuro });
@@ -218,18 +282,19 @@ async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, x, largura, y,
   // do jogo é o assunto da coluna e não pode sair junto com o número.
   if (!cabe.posicao && cor) caixa(ctx, x, y, 4, altura, cor, 2);
 
+  const temBadge = cabe.posicao && cor !== null;
   let cursor = x + (cabe.posicao || !cor ? 6 : 12);
 
   if (cabe.mando) {
     // A pílula tem a mesma largura nos dois casos: casa e fora alternam linha
     // a linha, e larguras diferentes fariam a coluna serrilhar.
-    const larguraPilula = 34;
+    const larguraPilula = PECA.mando - 6;
     caixa(ctx, cursor, meio - 7, larguraPilula, 14,
           emCasa ? COR.azulLavado : COR.cinzaClaro, 4);
     texto(ctx, emCasa ? "casa" : "fora", cursor + larguraPilula / 2, meio + 4,
           { tamanho: 9, peso: 800, alinha: "center", maiuscula: true, espaco: .4,
             cor: emCasa ? COR.azul : COR.cinzaEscuro });
-    cursor += larguraPilula + 6;
+    cursor += PECA.mando;
   } else {
     // Sem a pílula, o mando vira um ponto: azul em casa, vazado fora.
     ctx.save();
@@ -249,26 +314,36 @@ async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, x, largura, y,
   cursor += lado + 6;
 
   if (cabe.sigla) {
-    const sigla = clubes[passo.jogo.adversario]?.sigla
-      ?? nomeBonito(passo.jogo.adversario).slice(0, 3).toUpperCase();
-    texto(ctx, sigla, cursor, meio + 4,
-          { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+    // Centralizado no vão que sobrou: encostado no escudo, rótulos de
+    // tamanhos diferentes deixavam a coluna toda desalinhada.
+    const rotulo = cabe.nome ? nomeBonito(passo.jogo.adversario)
+      : (clubes[passo.jogo.adversario]?.sigla
+         ?? nomeBonito(passo.jogo.adversario).slice(0, 3).toUpperCase());
+    const ate = x + largura - 6 - (temBadge ? LARGURA_BADGE + 6 : 0);
+    texto(ctx, cortar(ctx, rotulo, ate - cursor, TAMANHO_DO_ROTULO, 800),
+          (cursor + ate) / 2, meio + 5,
+          { tamanho: TAMANHO_DO_ROTULO, peso: 800, alinha: "center",
+            cor: COR.azulEscuro });
   }
 
-  if (!cabe.posicao || !cor) return;
-  const larguraBadge = 26;
-  caixa(ctx, x + largura - 6 - larguraBadge, meio - 8, larguraBadge, 16, cor, 4);
-  texto(ctx, posicao, x + largura - 6 - larguraBadge / 2, meio + 4,
-        { tamanho: 11, peso: 800, alinha: "center", cor: COR.branco });
+  if (!temBadge) return;
+  // A etiqueta cresce até onde a linha deixa: é o número que responde se o
+  // jogo é duro, e não pode ser o menor tipo do card.
+  const alturaBadge = Math.min(22, altura - 4);
+  const tamanho = Math.min(14, alturaBadge - 6);
+  caixa(ctx, x + largura - 6 - LARGURA_BADGE, meio - alturaBadge / 2,
+        LARGURA_BADGE, alturaBadge, cor, 5);
+  texto(ctx, posicao, x + largura - 6 - LARGURA_BADGE / 2, meio + tamanho / 2 + 1,
+        { tamanho, peso: 800, alinha: "center", cor: COR.branco });
 }
 
-function rodapeDaColuna(ctx, { media, restantes, x, largura, y }) {
+function rodapeDaColuna(ctx, { media, cor, restantes, x, largura, y }) {
   if (media === null) {
     texto(ctx, "sem jogos", x + largura / 2, y + 36,
           { tamanho: 15, peso: 700, alinha: "center", cor: COR.cinza });
     return;
   }
-  caixa(ctx, x, y + 16, largura, 30, corDaPosicao(media), 6);
+  caixa(ctx, x, y + 16, largura, 30, cor, 6);
   texto(ctx, num(media), x + largura / 2, y + 37,
         { tamanho: 17, peso: 800, alinha: "center", cor: COR.branco });
   texto(ctx, `em ${restantes} ${restantes === 1 ? "jogo" : "jogos"}`,

@@ -54,3 +54,22 @@ export function tamanhoDaLista(agendas, { teto = 10 } = {}) {
   const restantes = agendas.map((agenda) => proximosJogos(agenda).length);
   return Math.min(teto, Math.max(0, ...restantes));
 }
+
+/**
+ * A dificuldade de cada calendário em relação aos outros que estão na tela.
+ *
+ * A média de posição sozinha diz pouco: 9,1 é dura ou fácil? A resposta só
+ * aparece ao lado das concorrentes, e é por isso que a escala é relativa ao
+ * grupo — 0 para a tabela mais dura da tela, 1 para a mais leve. Com uma
+ * coluna só, ou com todas empatadas, não há o que comparar e tudo fica no
+ * meio.
+ */
+export function escalaDeDificuldade(medias) {
+  const validas = medias.filter((m) => typeof m === "number");
+  const menor = Math.min(...validas);
+  const maior = Math.max(...validas);
+  return (media) => {
+    if (typeof media !== "number" || !validas.length || maior === menor) return .5;
+    return (media - menor) / (maior - menor);
+  };
+}
