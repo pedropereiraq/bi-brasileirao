@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evolução da pontuação · Cards ECBahia Números</title>
+<title>Próximos jogos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -15,8 +15,8 @@
 
   <header class="topo">
     <div>
-      <h1>Evolução da pontuação</h1>
-      <p class="subtitulo">Uma campanha contra o ritmo de duas posições.</p>
+      <h1>Próximos jogos</h1>
+      <p class="subtitulo">Quem tem a tabela mais dura daqui para a frente.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -27,12 +27,12 @@
 
   <nav class="navegacao">
     <a href="/comparativo.html">Comparativo de campanhas</a>
-    <a href="/evolucao.html" aria-current="page">Evolução da pontuação</a>
+    <a href="/evolucao.html">Evolução da pontuação</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
     <a href="/medias.html">Média por posição e rodada</a>
-    <a href="/proximos.html">Próximos jogos</a>
+    <a href="/proximos.html" aria-current="page">Próximos jogos</a>
     <a href="/">Classificação</a>
     <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
@@ -41,33 +41,28 @@
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
-      </div>
-      <div class="campo">
-        <label for="ano">Ano</label>
-        <select id="ano"></select>
-      </div>
-      <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
-        <select id="equipe"></select>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posições de referência
-        <span class="dica-campo">arraste as bolinhas: a verde é a posição melhor,
-          a vermelha a pior</span>
-      </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+    <div class="coluna-controles">
+      <div class="campo campo-posicoes">
+        <label id="rotulo-posicoes">Posições no card
+          <span class="dica-campo">entram os clubes que ocupam hoje estas posições</span>
+        </label>
+        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+        <p class="resumo-meta" id="resumo-faixa"></p>
+      </div>
+      <p class="dica-campo" id="rodape-edicao"></p>
     </div>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de evolução da pontuação"></canvas>
+            aria-label="card de próximos jogos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -78,6 +73,6 @@
 
 </main>
 
-<script type="module" src="/js/evolucao.js"></script>
+<script type="module" src="/js/proximos.js"></script>
 </body>
 </html>
