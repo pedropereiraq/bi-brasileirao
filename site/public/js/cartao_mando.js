@@ -39,7 +39,7 @@ const percentual = (v) =>
   v === null ? "—" : `${(v * 100).toFixed(1).replace(".", ",")}%`;
 const inteiroPorCento = (v) => (v === null ? "—" : `${Math.round(v * 100)}%`);
 
-const LARGURA = { geral: 244, casa: 238, fora: 238 };
+const LARGURA = { geral: 268, casa: 238, fora: 238 };
 const VAO = 14;
 const VAO_GRAFICO = 40;
 
@@ -209,6 +209,12 @@ async function desenharTabela(ctx, o) {
   for (const coluna of [...colunas].reverse()) {
     cursor -= coluna.largura;
     posicoes.unshift({ ...coluna, x: cursor, centro: cursor + coluna.largura / 2 });
+  }
+  // Cada coluna diz o que é: sem isto, "14 14" é um par de números soltos.
+  for (const coluna of posicoes) {
+    texto(ctx, coluna.rotulo, coluna.centro, topo + 12,
+          { tamanho: 9.5, peso: 700, alinha: "center", maiuscula: true,
+            espaco: .8, cor: COR.cinzaEscuro });
   }
   linhaH(ctx, x, direita, topo + alturaCabecalho - 3, COR.linha);
 
