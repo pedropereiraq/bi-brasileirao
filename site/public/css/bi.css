@@ -10,6 +10,10 @@
  * tabela de campeonato e todo clube é tratado igual.
  */
 
+/* Um filtro escondido tem de sumir mesmo: `.campo` e `.chaves` declaram
+   display, e display ganha do atributo `hidden` na cascata. */
+[hidden] { display: none !important; }
+
 :root {
   --offwhite: #F4F2ED;
   --branco: #FFFFFF;
@@ -642,3 +646,20 @@ table.mini-classificacao {
 
 /* Card em que dá para clicar: a mão avisa antes de o usuário tentar. */
 .palco-card.clicavel canvas { cursor: pointer; }
+
+/* ---------------------------------------------------------------------
+ * A premissa da ordem do eixo.
+ *
+ * Rodada e ordem cronológica dão números diferentes para a mesma campanha,
+ * e qual das duas vale é a primeira dúvida de quem lê o card. A explicação
+ * fica aqui, fora da imagem: dentro dela tomaria espaço do gráfico em todo
+ * card salvo, e o card é publicado sozinho.
+ * ------------------------------------------------------------------- */
+.nota-ordem {
+  margin: 16px 14px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--cinza-claro);
+  max-width: 96ch;
+  font-size: 13px; line-height: 1.5; color: var(--cinza-texto);
+}
+.nota-ordem b { color: var(--azul-escuro); }
