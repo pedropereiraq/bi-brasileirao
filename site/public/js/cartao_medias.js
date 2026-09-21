@@ -30,7 +30,7 @@ import {
 } from "/js/media_posicao.js";
 import { zonaDaPosicao, zonasDaFaixa } from "/js/similares.js";
 
-const ALTURA_LINHA = 32;
+const ALTURA_LINHA = 31;
 const VAO_COLUNA = 2;
 
 // A rampa da grade: cinza claro quente na menor pontuação do ano, azul médio
@@ -70,6 +70,7 @@ export function montarCartao(estado) {
   if (!colunas.length) return null;
 
   const estatisticas = estatisticasPorPosicao(colunas);
+  const zonas = zonasDaFaixa(faixa, POSICOES);
   const cores = coresDasZonas(faixa);
   const escolhida = colunas.find((c) => c.ano === anoEscolhido) ?? colunas.at(-1);
   const comparada = comparacaoComAMedia(escolhida, estatisticas);
@@ -83,9 +84,8 @@ export function montarCartao(estado) {
     numeros: [],
     nota: "",
     corpo: async (ctx, y) => {
-      // Sem legenda sob o título: a grade sobe e ganha a altura dela, que vira
-      // linha mais alta para os vinte quadrados de cada coluna.
-      const yGrade = y + 16;
+      const yGrade = y + 34;
+      legendaDosPontos(ctx, { zonas, cores, y: y + 14 });
       const larguraGrade = 986;
       const alvos = desenharGrade(ctx, {
         colunas, estatisticas, faixa, cores, escolhida,
@@ -111,6 +111,37 @@ export function montarCartao(estado) {
     },
   };
   return spec;
+}
+
+/**
+ * O que o pontinho no canto do quadrado quer dizer.
+ *
+ * Ele marca onde o clube foi terminar, e não como estava naquela rodada — a
+ * única informação do card que não está escrita em número nenhum. Alinhada à
+ * direita para não disputar a linha com o título.
+ */
+function legendaDosPontos(ctx, { zonas, cores, y }) {
+  const itens = zonas
+    .filter((zona) => cores[zona.nome])
+    .map((zona) => ({
+      cor: cores[zona.nome],
+      texto: zona.de === zona.ate
+        ? `terminou em ${ordinal(zona.de)}`
+        : `terminou de ${ordinal(zona.de)} a ${ordinal(zona.ate)}`,
+    }));
+  if (!itens.length) return;
+
+  ctx.save();
+  ctx.font = '400 11px "Assistant", sans-serif';
+  const larguras = itens.map((item) => ctx.measureText(item.texto).width + 34);
+  ctx.restore();
+
+  let x = CARD.largura - MARGEM - larguras.reduce((soma, v) => soma + v, 0);
+  itens.forEach((item, i) => {
+    marcaDeDestino(ctx, x + 6, y - 4, item.cor);
+    texto(ctx, item.texto, x + 17, y, { tamanho: 11, cor: COR.cinzaEscuro });
+    x += larguras[i];
+  });
 }
 
 /* --------------------------------------------------------------- grade */
@@ -292,10 +323,21 @@ function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes
   for (const [i, linha] of comparada.entries()) {
     const yLinha = y + 26 + i * ALTURA_LINHA;
     const meio = yLinha + ALTURA_LINHA / 2 + 3;
-    const centro = yLinha + ALTURA_LINHA / 2 - 1;
+    const meioDaLinha = yLinha + ALTURA_LINHA / 2 - 1;
     const estatistica = estatisticas[i];
     caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 2,
           i % 2 ? COR.fundo : COR.branco, 3);
+
+    // A marca da média: no centro do trilho, atrás do trilho e da bolinha.
+    // Vem depois do fundo da faixa porque ele a cobriria.
+    ctx.save();
+    ctx.strokeStyle = COR.cinza;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo((trilho.de + trilho.ate) / 2, yLinha + 1);
+    ctx.lineTo((trilho.de + trilho.ate) / 2, yLinha + ALTURA_LINHA - 3);
+    ctx.stroke();
+    ctx.restore();
 
     const corFim = linha.posFim === null
       ? null : cores[zonaDaPosicao(linha.posFim, faixa)];
@@ -339,36 +381,37 @@ function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes
       continue;
     }
 
-    const { minimo, maximo } = estatistica;
-    // A escala abre para caber o ano escolhido quando ele passa do recorde: o
-    // mínimo e o máximo vêm das encerradas, e a em curso pode estar fora dos
-    // dois. O trilho continua sendo só o intervalo mínimo–máximo.
-    const piso = Math.min(minimo, linha.pontos);
-    const teto = Math.max(maximo, linha.pontos);
-    const util = { de: trilho.de + raio, ate: trilho.ate - raio };
-    const onde = (v) => (teto === piso ? (util.de + util.ate) / 2
-      : util.de + ((v - piso) / (teto - piso)) * (util.ate - util.de));
+    const { minimo, maximo, media } = estatistica;
+    // A média fica sempre no centro do trilho. É o que transforma a posição da
+    // bolinha em resposta: à esquerda do meio, abaixo da média; à direita,
+    // acima. Com a escala esticada entre mínimo e máximo, o centro caía num
+    // valor diferente em cada linha e a comparação entre elas se perdia.
+    const centro = (trilho.de + trilho.ate) / 2;
+    const meia = (trilho.ate - trilho.de) / 2 - raio;
+    const alcance = Math.max(media - minimo, maximo - media,
+                             Math.abs(linha.pontos - media), 1);
+    const onde = (v) => centro + ((v - media) / alcance) * meia;
 
     texto(ctx, minimo, xMin, meio,
           { tamanho: 11, alinha: "right", cor: COR.cinzaEscuro });
     texto(ctx, maximo, xMax, meio,
           { tamanho: 11, alinha: "left", cor: COR.cinzaEscuro });
 
-    caixa(ctx, onde(minimo), centro - 3, Math.max(2, onde(maximo) - onde(minimo)),
-          6, COR.cinzaClaro, 3);
+    caixa(ctx, onde(minimo), meioDaLinha - 3,
+          Math.max(2, onde(maximo) - onde(minimo)), 6, COR.cinzaClaro, 3);
 
     const cor = corDaDiferenca(linha.diferenca);
     ctx.save();
     ctx.fillStyle = COR.fundo;
     ctx.beginPath();
-    ctx.arc(onde(linha.pontos), centro, raio + 1.5, 0, Math.PI * 2);
+    ctx.arc(onde(linha.pontos), meioDaLinha, raio + 1.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = cor;
     ctx.beginPath();
-    ctx.arc(onde(linha.pontos), centro, raio, 0, Math.PI * 2);
+    ctx.arc(onde(linha.pontos), meioDaLinha, raio, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    texto(ctx, linha.pontos, onde(linha.pontos), centro + 5,
+    texto(ctx, linha.pontos, onde(linha.pontos), meioDaLinha + 5,
           { tamanho: 13.5, peso: 800, alinha: "center", cor: COR.branco });
 
     texto(ctx, num(estatistica.media), xMed, meio,
