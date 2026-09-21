@@ -54,3 +54,15 @@ export const artigo = (equipe) => (feminino(equipe) ? "da" : "do");
  * formas vêm da mesma função.
  */
 export const artigoDefinido = (equipe) => (feminino(equipe) ? "a" : "o");
+
+/**
+ * O nome com o estado atrás: "Athletico (PR)".
+ *
+ * É o que vai nas listas de equipe. Sem o estado, "Atlético", "América" e
+ * "Botafogo" aparecem repetidos na mesma lista e não há como escolher — o
+ * nome bonito sozinho serve ao card, onde só existe um clube por vez.
+ */
+export const nomeComUf = (equipe) => {
+  const estado = uf(equipe);
+  return estado ? `${nomeBonito(equipe)} (${estado})` : nomeBonito(equipe);
+};

@@ -9,7 +9,7 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_evolucao.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 const PADRAO = { pior: 17, melhor: 4 };
 
@@ -111,7 +111,7 @@ async function trocarAno(apelido, clubeDesejado, { silencioso = false } = {}) {
   const clubes = clubesDaEdicao(jogos);
 
   el("equipe").innerHTML = clubes
-    .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+    .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
 
   // Mantém o clube quando ele jogou naquele ano; senão propõe o líder, que é a
   // campanha que alguém abriria primeiro.

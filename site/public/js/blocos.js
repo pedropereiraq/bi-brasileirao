@@ -9,7 +9,7 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_blocos.js";
 import { ligarSeletorDePosicao } from "/js/seletor_posicoes.js";
 import { metasDaPosicao } from "/js/metas.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 // 17º é a primeira posição fora do rebaixamento: a meta que mais se cobra.
 const PADRAO = 17;
@@ -101,7 +101,7 @@ async function trocarAno(apelido, clubeDesejado, { silencioso = false } = {}) {
   const clubes = clubesDaEdicao(jogos);
 
   el("equipe").innerHTML = clubes
-    .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+    .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
 
   const atual = clubeDesejado ?? estado.clube;
   const escolhido = clubes.includes(atual)

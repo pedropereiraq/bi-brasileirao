@@ -17,7 +17,7 @@ import { MODOS, colunaDaRodada, edicaoDe } from "/js/diferenca_pontos.js";
 import {
   ligarSeletorDePosicao, ligarSeletorDePosicoes,
 } from "/js/seletor_posicoes.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeBonito, nomeComUf } from "/js/nomes.js";
 
 const BAHIA = "BAHIA (BA)";
 const PADRAO_FAIXA = { melhor: 4, pior: 17 };
@@ -134,7 +134,7 @@ async function trocarAno(apelido, url = {}) {
   const doEdital = grade?.clubes ?? [];
   for (const id of ["equipe-a", "equipe-b"]) {
     el(id).innerHTML = doEdital
-      .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+      .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
   }
 
   const tabela = colunaDaRodada(grade, grade?.rodadas ?? 0) ?? [];

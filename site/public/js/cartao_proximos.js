@@ -45,10 +45,11 @@ const TAMANHO_DO_ROTULO = 14.5;
 const num = (v) => v.toFixed(1).replace(".", ",");
 const ordinal = (p) => `${p}º`;
 
-// Vermelho no 1º, cinza no meio da tabela, verde no 20º. O verde é o do badge,
-// um tom abaixo do verde da identidade, para o número branco continuar legível.
-const BADGE_VERDE = "#58913F";
-const BADGE_MEIO = "#8A8A8A";
+// Vermelho no 1º, cinza no meio da tabela, verde no 20º.
+// A ponta verde e o meio cinza saem da paleta: o par vermelho–verde é o que
+// o card diz, e o cinza do meio precisa acompanhar o fundo da marca.
+const BADGE_VERDE = () => COR.verde;
+const BADGE_MEIO = () => COR.cinzaEscuro;
 
 /** Interpola duas cores hexadecimais. */
 function mistura(de, para, t) {
@@ -108,8 +109,8 @@ function cabeONomeInteiro(ctx, { nomes, nomesDoTopo, largura, cabe, lado }) {
 function corDaFracao(fracao) {
   const t = Math.min(1, Math.max(0, fracao));
   return t < 0.5
-    ? mistura(COR.vermelho, BADGE_MEIO, t * 2)
-    : mistura(BADGE_MEIO, BADGE_VERDE, (t - 0.5) * 2);
+    ? mistura(COR.vermelho, BADGE_MEIO(), t * 2)
+    : mistura(BADGE_MEIO(), BADGE_VERDE(), (t - 0.5) * 2);
 }
 
 /** A dificuldade daquele adversário virando cor. */

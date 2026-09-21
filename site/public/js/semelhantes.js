@@ -14,7 +14,7 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_semelhantes.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 const PADRAO = { melhor: 1, pior: 4 };
 
@@ -138,9 +138,9 @@ function desenharClubes(classificados) {
   // lado a lado não cabem, e o escudo já diz quem é.
   el("clubes").innerHTML = classificados.map((c) => `
     <button type="button" class="clube" data-equipe="${c.equipe}"
-            title="${nomeBonito(c.equipe)} · ${c.pts} pontos em ${c.j} jogos">
+            title="${nomeComUf(c.equipe)} · ${c.pts} pontos em ${c.j} jogos">
       <span class="clube-pos">${c.pos}</span>
-      <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="${nomeBonito(c.equipe)}">
+      <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="${nomeComUf(c.equipe)}">
       <span class="clube-pts">${c.pts}</span>
       <span class="clube-situacao">${c.j} jogos</span>
     </button>`).join("");

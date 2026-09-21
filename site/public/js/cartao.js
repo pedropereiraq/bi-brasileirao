@@ -11,6 +11,11 @@
  * Vocabulário e cores: **triunfo** (nunca "vitória"), azul para triunfo, cinza
  * para empate, vermelho para derrota, em todo elemento.
  *
+ * Com a marca do Podcast45 a paleta inteira troca — fundo preto, marca
+ * dourada — e o par positivo/negativo deixa de ser azul e vermelho para ser
+ * verde e vermelho. Quem desenha continua pedindo `COR.azul` para "o lado
+ * bom": a chave está na paleta, e não em cada card.
+ *
  * O que NÃO vem da skill é a regra do holofote no Bahia. Lá o card fala de um
  * clube; aqui é a tabela de um campeonato, e puxar o recorte para um clube
  * distorceria o que está sendo mostrado. A leitura é neutra.
@@ -20,32 +25,90 @@
  * origem contamina o canvas e bloqueia a exportação.
  */
 
+import { marcaAtual, marcaEscolhida } from "/js/marca.js";
+
 export const CARD = { largura: 1600, altura: 900, escala: 1.5 };
 
-const COR = {
-  fundo: "#F4F2ED",
-  branco: "#FFFFFF",
-  azul: "#0B5394",
-  azulEscuro: "#073763",
-  azulMedio: "#3D7EB8",
-  azulClaro: "#A9C7E2",
-  azulLavado: "#E2EBF4",
-  vermelho: "#CC4125",
-  vermelhoLavado: "#F5E3DE",
-  // O verde não está na identidade porque nenhum card precisava dele até a
-  // régua por posição. Sai da mesma paleta de onde vieram o azul e o vermelho
-  // do ECBahia, para não destoar: é o verde escuro daquele conjunto.
-  verde: "#6AA84F",
-  verdeEscuro: "#38761D",
-  verdeLavado: "#E6EFE1",
-  cinza: "#CCCCCC",
-  cinzaEscuro: "#8A8A8A",
-  cinzaTexto: "#5C5C5C",
-  cinzaClaro: "#E4E1DB",
-  linha: "#DBD8D2",
+/**
+ * As duas paletas, chave por chave.
+ *
+ * Os nomes são os do ECBahia porque foi de lá que vieram, mas o que vale é o
+ * papel de cada um: `azul` é o lado bom, `vermelho` o ruim, `azulEscuro` o
+ * texto mais forte, `branco` o que se escreve em cima de um preenchimento
+ * colorido (e também a superfície elevada), `marca` a cor da assinatura.
+ *
+ * No Podcast45 tudo isso vira o negativo de si: `branco` é quase preto porque
+ * é sobre dourado e verde que ele vai ser escrito, e `azulEscuro` é creme
+ * porque é o texto que precisa saltar do fundo.
+ */
+const PALETAS = {
+  ecbahia: {
+    fundo: "#F4F2ED",
+    branco: "#FFFFFF",
+    marca: "#0B5394",
+    marcaTexto: "#FFFFFF",
+    marcaSuave: "#A9C7E2",
+    azul: "#0B5394",
+    azulEscuro: "#073763",
+    azulMedio: "#3D7EB8",
+    azulClaro: "#A9C7E2",
+    azulLavado: "#E2EBF4",
+    vermelho: "#CC4125",
+    vermelhoLavado: "#F5E3DE",
+    // O verde não está na identidade porque nenhum card precisava dele até a
+    // régua por posição. Sai da mesma paleta de onde vieram o azul e o
+    // vermelho do ECBahia, para não destoar.
+    verde: "#6AA84F",
+    verdeEscuro: "#38761D",
+    verdeLavado: "#E6EFE1",
+    cinza: "#CCCCCC",
+    cinzaEscuro: "#8A8A8A",
+    cinzaTexto: "#5C5C5C",
+    cinzaClaro: "#E4E1DB",
+    linha: "#DBD8D2",
+    rampaBaixo: "#E7E4DE",
+    rampaAlto: "#7EAFD8",
+    // Sobre o offwhite todo escudo se vê; num fundo preto, não.
+    discoDoEscudo: null,
+  },
+  podcast45: {
+    // Preto morno, e não preto puro: o selo do canal é dourado sobre um preto
+    // que puxa para o marrom, e o preto de verdade deixaria o dourado sujo.
+    fundo: "#0E0C09",
+    branco: "#1A1611",
+    marca: "#D4B463",
+    marcaTexto: "#14110C",
+    marcaSuave: "#6E5A22",
+    azul: "#6FBF52",
+    azulEscuro: "#F1E7D4",
+    azulMedio: "#9AD183",
+    azulClaro: "#25331D",
+    azulLavado: "#1B2517",
+    vermelho: "#EE6E4E",
+    vermelhoLavado: "#2B1811",
+    verde: "#6FBF52",
+    verdeEscuro: "#A6DC8C",
+    verdeLavado: "#1B2517",
+    cinza: "#4E473B",
+    cinzaEscuro: "#938974",
+    cinzaTexto: "#BCB19B",
+    cinzaClaro: "#241F18",
+    linha: "#322B22",
+    rampaBaixo: "#221D16",
+    rampaAlto: "#7A6226",
+    // Escudo preto some no fundo preto — Atlético, Botafogo, Corinthians,
+    // Vasco. Um disco quase invisível por baixo devolve a silhueta sem virar
+    // adesivo branco no meio do card.
+    discoDoEscudo: "rgba(255, 246, 228, .10)",
+  },
 };
 
-export const CORES_RESULTADO = { T: COR.azul, E: COR.cinzaEscuro, D: COR.vermelho };
+const COR = { ...PALETAS.ecbahia };
+
+/** Troca a paleta no lugar: quem guardou `COR` continua com o objeto certo. */
+function vestirPaleta(nome) {
+  Object.assign(COR, PALETAS[nome] ?? PALETAS.ecbahia);
+}
 
 const MARGEM = 56;
 const imagens = new Map();
@@ -120,6 +183,14 @@ async function imagem(url) {
 
 function desenharEscudo(ctx, im, x, y, tamanho) {
   if (!im) return;
+  if (COR.discoDoEscudo) {
+    ctx.save();
+    ctx.fillStyle = COR.discoDoEscudo;
+    ctx.beginPath();
+    ctx.arc(x + tamanho / 2, y + tamanho / 2, tamanho / 2 + 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   const proporcao = im.naturalWidth / im.naturalHeight || 1;
   const l = proporcao >= 1 ? tamanho : tamanho * proporcao;
   const a = proporcao >= 1 ? tamanho / proporcao : tamanho;
@@ -131,12 +202,15 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
   ctx.fillStyle = COR.fundo;
   ctx.fillRect(0, 0, CARD.largura, CARD.altura);
 
-  // Marca no canto superior direito, alinhada ao topo do título, 250px na
-  // régua de 1600 — como manda a skill dos cards.
-  const marca = await imagem("/img/marca.png");
+  // Marca no canto superior direito, alinhada ao topo do título. A largura
+  // vem da marca: o logotipo deitado do ECBahia ocupa os 250px da skill, o
+  // selo redondo do Podcast45 desceria até a régua com a mesma medida.
+  const assinatura = marcaAtual();
+  const marca = await imagem(assinatura.logo);
   if (marca) {
-    const l = 250, a = l * (marca.naturalHeight / marca.naturalWidth);
-    ctx.drawImage(marca, CARD.largura - MARGEM - l, 40, l, a);
+    const l = assinatura.larguraNoCard;
+    const a = l * (marca.naturalHeight / marca.naturalWidth);
+    ctx.drawImage(marca, CARD.largura - MARGEM - l, assinatura.topoNoCard, l, a);
   }
 
   let x = MARGEM;
@@ -147,7 +221,7 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
 
   // O título agora carrega a frase inteira e varia muito de comprimento;
   // encolhe até caber em vez de invadir a marca.
-  const limite = CARD.largura - MARGEM - 250 - 28 - x;
+  const limite = CARD.largura - MARGEM - assinatura.larguraNoCard - 28 - x;
   let corpoTitulo = 42;
   ctx.save();
   for (; corpoTitulo > 26; corpoTitulo -= 1) {
@@ -156,13 +230,13 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
   }
   ctx.restore();
   texto(ctx, titulo, x, 74, {
-    tamanho: corpoTitulo, peso: 700, cor: COR.azul, familia: "Bree Serif",
+    tamanho: corpoTitulo, peso: 700, cor: COR.marca, familia: "Bree Serif",
   });
   texto(ctx, subtitulo, x, 104, { tamanho: 17, cor: COR.cinzaEscuro });
 
   // A régua é assinatura da página: entra em todo card.
   const yRegua = 124, largura = CARD.largura - MARGEM * 2;
-  caixa(ctx, MARGEM, yRegua, largura * 0.66, 6, COR.azul, 3);
+  caixa(ctx, MARGEM, yRegua, largura * 0.66, 6, COR.marca, 3);
   caixa(ctx, MARGEM + largura * 0.66, yRegua, largura * 0.22, 6, COR.vermelho, 0);
   caixa(ctx, MARGEM + largura * 0.88, yRegua, largura * 0.12, 6, COR.cinza, 3);
 
@@ -172,7 +246,7 @@ async function moldura(ctx, { titulo, subtitulo, numeros, nota, escudo }) {
     texto(ctx, nota, MARGEM, CARD.altura - 34,
           { tamanho: 13.5, cor: COR.cinzaEscuro });
   }
-  texto(ctx, "@ECBahiaNumeros · atualizado em " + hoje(),
+  texto(ctx, `${assinatura.assinatura} · atualizado em ${hoje()}`,
         CARD.largura - MARGEM, CARD.altura - 34,
         { tamanho: 13.5, cor: COR.cinzaEscuro, alinha: "right" });
   linhaH(ctx, MARGEM, CARD.largura - MARGEM, CARD.altura - 58);
@@ -193,13 +267,14 @@ function faixaDeNumeros(ctx, numeros, y) {
 
   numeros.forEach((n, i) => {
     const x = MARGEM + i * (cada + vao);
-    const fundo = n.destaque === "azul" ? COR.azul
+    const fundo = n.destaque === "azul" ? COR.marca
                 : n.destaque === "escuro" ? COR.azulEscuro
                 : n.destaque === "cinza" ? COR.cinzaClaro
                 : n.destaque === "vermelho" ? COR.vermelhoLavado
                 : COR.branco;
-    const tinta = (n.destaque === "azul" || n.destaque === "escuro")
-      ? COR.branco : COR.azulEscuro;
+    const tinta = n.destaque === "azul" ? COR.marcaTexto
+                : n.destaque === "escuro" ? COR.branco
+                : COR.azulEscuro;
     caixa(ctx, x, y, cada, altura, fundo);
     if (!n.destaque) {
       ctx.save(); ctx.strokeStyle = COR.linha; ctx.lineWidth = 1;
@@ -209,7 +284,8 @@ function faixaDeNumeros(ctx, numeros, y) {
     texto(ctx, n.valor, x + 18, y + 56, { tamanho: 40, peso: 800, cor: tinta });
     texto(ctx, n.nome, x + 18, y + 80, {
       tamanho: 12, peso: 700, maiuscula: true, espaco: 1.1,
-      cor: (n.destaque === "azul" || n.destaque === "escuro") ? COR.azulClaro : COR.cinzaEscuro,
+      cor: n.destaque === "azul" ? COR.marcaSuave
+         : n.destaque === "escuro" ? COR.azulClaro : COR.cinzaEscuro,
     });
   });
   return y + altura + 26;
@@ -262,6 +338,10 @@ export function registrarCartao(fn) {
 }
 
 export async function desenharSpec(spec, canvas = document.createElement("canvas")) {
+  // A paleta é decidida aqui, e não na importação: a marca troca com a página
+  // aberta, e o próximo desenho tem de sair com as cores novas.
+  vestirPaleta(marcaEscolhida());
+
   canvas.width = CARD.largura * CARD.escala;
   canvas.height = CARD.altura * CARD.escala;
   const ctx = canvas.getContext("2d");

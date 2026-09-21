@@ -12,7 +12,7 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_recortes.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
 import { jogosNaEdicaoCorrente } from "/js/recorte_inicial.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeBonito, nomeComUf } from "/js/nomes.js";
 
 // O G4 em verde, o Z4 em vermelho e o meio em cinza: as três faixas que
 // qualquer leitor da tabela já tem na cabeça.
@@ -97,7 +97,7 @@ function trocarSerie(serie, url = {}) {
     nomeBonito(a).localeCompare(nomeBonito(b), "pt-BR"));
 
   el("equipe").innerHTML = lista
-    .map((e) => `<option value="${e}">${nomeBonito(e)}</option>`).join("");
+    .map((e) => `<option value="${e}">${nomeComUf(e)}</option>`).join("");
 
   const desejada = url.equipe ?? estado.equipe;
   trocarEquipe(lista.includes(desejada) ? desejada : lista[0],

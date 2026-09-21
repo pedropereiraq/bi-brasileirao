@@ -36,8 +36,9 @@ const VAO_COLUNA = 2;
 // A rampa da grade: cinza claro quente na menor pontuação do ano, azul médio
 // na maior. O teto é escolhido para o azul-escuro do número continuar legível
 // em cima dele do começo ao fim da coluna.
-const RAMPA_BAIXO = "#E7E4DE";
-const RAMPA_ALTO = "#7EAFD8";
+// As pontas da rampa vêm da paleta: com a marca do Podcast45 a grade inteira
+// inverte, e um par fixo deixaria as células claras num card preto.
+const rampa = () => ({ baixo: COR.rampaBaixo, alto: COR.rampaAlto });
 
 const num = (v, casas = 1) => v.toFixed(casas).replace(".", ",");
 const ordinal = (p) => `${p}º`;
@@ -203,7 +204,7 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
       const t = alto === baixo ? 1 : (celula.pontos - baixo) / (alto - baixo);
 
       ctx.save();
-      ctx.fillStyle = mistura(RAMPA_BAIXO, RAMPA_ALTO, t);
+      ctx.fillStyle = mistura(rampa().baixo, rampa().alto, t);
       ctx.fillRect(xc, yLinha, larguraAno, ALTURA_LINHA);
       ctx.restore();
 

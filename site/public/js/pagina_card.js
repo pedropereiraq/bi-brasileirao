@@ -11,6 +11,7 @@
  * vezes seguidas à toa, e de salvar.
  */
 import { desenharSpec, CARD } from "/js/cartao.js";
+import { aoMudarMarca } from "/js/marca.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -27,6 +28,9 @@ export function ligarPaginaDeCard(fn) {
   montarSpec = fn;
   canvas = el("card");
   el("salvar")?.addEventListener("click", salvar);
+  // Trocar a marca troca a paleta do card: o que está na tela precisa sair
+  // vestido de novo, sem o usuário ter de mexer em nenhum filtro.
+  aoMudarMarca(() => redesenhar());
   return redesenhar;
 }
 

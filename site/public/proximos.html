@@ -8,6 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/bi.css">
+<script>
+// Antes da primeira pintura: sem isto a página nasce clara e pisca para o
+// preto quando o módulo da marca carrega.
+try { document.documentElement.dataset.marca =
+        localStorage.getItem("bi-marca") || "ecbahia"; } catch (e) {}
+</script>
 </head>
 <body>
 
@@ -20,12 +26,20 @@
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
+      <div class="chaves chaves-marca" id="chave-marca" role="group"
+           aria-label="Marca dos cards">
+        <button type="button" class="chave" data-marca="ecbahia"
+                aria-pressed="true">ecbahia</button>
+        <button type="button" class="chave" data-marca="podcast45"
+                aria-pressed="false">45</button>
+      </div>
     </div>
   </header>
 
   <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
 
   <nav class="navegacao">
+    <a href="/">Telas</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da pontuação</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
@@ -34,8 +48,6 @@
     <a href="/recortes.html">Recortes iniciais</a>
     <a href="/medias.html">Média por posição e rodada</a>
     <a href="/proximos.html" aria-current="page">Próximos jogos</a>
-    <a href="/">Classificação</a>
-    <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
   </nav>
 
@@ -73,11 +85,12 @@
   <footer class="rodape">
     <p>O que está na tela é exatamente a imagem que o botão salva: 2400 × 1350,
        no padrão dos cards do ECBahia Números.</p>
-    <p><b>ecbahia</b>numeros · Podcast45</p>
+    <p data-assinatura><b>ecbahia</b>numeros</p>
   </footer>
 
 </main>
 
+<script type="module" src="/js/marca.js"></script>
 <script type="module" src="/js/proximos.js"></script>
 </body>
 </html>

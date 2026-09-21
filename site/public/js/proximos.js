@@ -9,7 +9,7 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_proximos.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 // Da liderança ao 6º: a briga pela Libertadores, que é a comparação de
 // calendário que mais se faz na reta final.
@@ -103,7 +103,7 @@ function resumirFaixa() {
   const dentro = estado.classificacao
     .filter((c) => c.pos >= estado.faixa.melhor && c.pos <= estado.faixa.pior);
   alvo.innerHTML = dentro.length
-    ? dentro.map((c) => `<b>${c.pos}º</b> ${nomeBonito(c.equipe)}`).join(" · ")
+    ? dentro.map((c) => `<b>${c.pos}º</b> ${nomeComUf(c.equipe)}`).join(" · ")
     : "ninguém nesta faixa";
 }
 

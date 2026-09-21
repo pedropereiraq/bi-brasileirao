@@ -663,3 +663,64 @@ table.mini-classificacao {
   font-size: 13px; line-height: 1.5; color: var(--cinza-texto);
 }
 .nota-ordem b { color: var(--azul-escuro); }
+
+/* =====================================================================
+ * A marca do Podcast45.
+ *
+ * O mesmo BI vestido de outra casa: fundo preto morno, marca dourada, e o
+ * par positivo/negativo em verde e vermelho — no ECBahia o azul faz as duas
+ * coisas, aqui o dourado fica com a identidade e o verde com o "lado bom".
+ * Os nomes das variáveis continuam os do ECBahia porque é o papel delas que
+ * importa, não a cor que as batizou.
+ * =================================================================== */
+:root[data-marca="podcast45"] {
+  --offwhite: #0E0C09;
+  --branco: #1A1611;
+
+  --azul: #D4B463;
+  --azul-escuro: #F1E7D4;
+  --azul-medio: #B99A4E;
+  --azul-claro: #6E5A22;
+  --azul-lavado: #221C12;
+
+  --verde: #6FBF52;
+  --verde-escuro: #A6DC8C;
+  --verde-lavado: #1B2517;
+
+  --vermelho: #E05A3C;
+  --vermelho-claro: #8C3C28;
+  --vermelho-lavado: #2B1811;
+
+  --cinza: #4E473B;
+  --cinza-escuro: #938974;
+  --cinza-texto: #BCB19B;
+  --cinza-claro: #241F18;
+  --linha: #322B22;
+
+  --sombra: 0 1px 2px rgba(0, 0, 0, .5), 0 4px 16px rgba(0, 0, 0, .35);
+}
+
+/* A pinta que identifica o primeiro lado num filtro é a mesma cor que o card
+   usa para ele: dourada na página seria mentira, porque no card ele é verde. */
+:root[data-marca="podcast45"] .pinta.azul { background: var(--verde); }
+
+/* ------------------------------------------------------- chave da marca */
+.marca { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.chaves-marca .chave { padding: 3px 10px; font-size: 11px; }
+
+/* O selo do Podcast45 é redondo: com a largura do logotipo deitado ele viraria
+   uma bola enorme no cabeçalho. */
+:root[data-marca="podcast45"] .marca img { width: 86px; }
+@media (max-width: 560px) {
+  :root[data-marca="podcast45"] .marca img { width: 64px; }
+}
+
+/* ------------------------------------------------------------- a capa */
+.telas {
+  display: grid; gap: 14px; margin-top: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.tela { display: block; padding: 16px 18px; text-decoration: none; color: inherit; }
+.tela h2 { font-size: 19px; margin-bottom: 6px; }
+.tela p { margin: 0; font-size: 13.5px; color: var(--cinza-texto); }
+.tela:hover { border-color: var(--azul); }

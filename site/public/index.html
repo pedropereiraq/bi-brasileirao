@@ -3,29 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Classificação · BI Brasileirão</title>
+<title>Cards do Brasileirão · ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/bi.css">
+<script>
+// Antes da primeira pintura: sem isto a página nasce clara e pisca para o
+// preto quando o módulo da marca carrega.
+try { document.documentElement.dataset.marca =
+        localStorage.getItem("bi-marca") || "ecbahia"; } catch (e) {}
+</script>
 </head>
 <body>
 
-<main class="pagina">
+<main class="pagina larga">
 
   <header class="topo">
     <div>
-      <h1>Classificação</h1>
-      <p class="subtitulo" id="subtitulo">carregando…</p>
+      <h1>Cards do Brasileirão</h1>
+      <p class="subtitulo">Cada tela desenha um card. Os filtros ficam fora dele.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
+      <div class="chaves chaves-marca" id="chave-marca" role="group"
+           aria-label="Marca dos cards">
+        <button type="button" class="chave" data-marca="ecbahia"
+                aria-pressed="true">ecbahia</button>
+        <button type="button" class="chave" data-marca="podcast45"
+                aria-pressed="false">45</button>
+      </div>
     </div>
   </header>
 
   <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
 
   <nav class="navegacao">
+    <a href="/" aria-current="page">Telas</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da pontuação</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
@@ -34,102 +48,57 @@
     <a href="/recortes.html">Recortes iniciais</a>
     <a href="/medias.html">Média por posição e rodada</a>
     <a href="/proximos.html">Próximos jogos</a>
-    <a href="/" aria-current="page">Classificação</a>
-    <a href="/jogos.html">Tabela de jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
-    <span class="separador"></span>
-    <button type="button" class="botao-card" id="gerar-card">Gerar card</button>
   </nav>
 
-  <section class="cartao filtros">
-    <div class="filtros-linha">
-      <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
-      </div>
-      <div class="campo">
-        <label for="edicao">Edição</label>
-        <select id="edicao"></select>
-      </div>
-
-      <div class="campo">
-        <span class="rotulo">Mando</span>
-        <div class="segmentado" id="mando" role="group" aria-label="Mando de campo">
-          <button type="button" data-valor="todos" aria-pressed="true">Todos</button>
-          <button type="button" data-valor="casa" aria-pressed="false">Casa</button>
-          <button type="button" data-valor="fora" aria-pressed="false">Fora</button>
-        </div>
-      </div>
-
-      <div class="campo">
-        <span class="rotulo">Rodadas</span>
-        <div class="par">
-          <select id="rodada-de"></select>
-          <span>a</span>
-          <select id="rodada-ate"></select>
-        </div>
-      </div>
-
-      <div class="campo">
-        <label for="ultimos">Últimos jogos</label>
-        <select id="ultimos"></select>
-      </div>
-
-      <div class="campo">
-        <span class="rotulo">Datas</span>
-        <div class="par">
-          <input type="date" id="data-de" aria-label="Data inicial">
-          <span>a</span>
-          <input type="date" id="data-ate" aria-label="Data final">
-        </div>
-      </div>
-
-      <button type="button" class="botao-texto" id="limpar">Limpar filtros</button>
-    </div>
-    <p class="resumo-filtro" id="resumo"></p>
+  <section class="telas">
+    <a class="cartao tela" href="/comparativo.html">
+      <h2>Comparativo de campanhas</h2>
+      <p>Duas campanhas lado a lado, jogo a jogo, com a diferença de pontos no
+         mesmo número de jogos.</p>
+    </a>
+    <a class="cartao tela" href="/evolucao.html">
+      <h2>Evolução da pontuação</h2>
+      <p>Uma campanha contra o ritmo que duas posições costumam exigir.</p>
+    </a>
+    <a class="cartao tela" href="/diferenca.html">
+      <h2>Diferença entre dois pontos</h2>
+      <p>Equipe × equipe, equipe × posição ou posição × posição, rodada a
+         rodada.</p>
+    </a>
+    <a class="cartao tela" href="/blocos.html">
+      <h2>Blocos de 6 jogos</h2>
+      <p>A meta de uma posição repartida em seis blocos mais um de dois jogos.</p>
+    </a>
+    <a class="cartao tela" href="/semelhantes.html">
+      <h2>Campanhas semelhantes</h2>
+      <p>O que aconteceu com quem tinha os mesmos pontos no mesmo número de
+         jogos.</p>
+    </a>
+    <a class="cartao tela" href="/recortes.html">
+      <h2>Recortes iniciais</h2>
+      <p>Quanto um clube tinha depois de X jogos em cada edição que disputou.</p>
+    </a>
+    <a class="cartao tela" href="/medias.html">
+      <h2>Média por posição e rodada</h2>
+      <p>Quanto vale cada posição numa rodada, em todas as edições de uma
+         série.</p>
+    </a>
+    <a class="cartao tela" href="/proximos.html">
+      <h2>Próximos jogos</h2>
+      <p>Quem tem a tabela mais dura daqui para a frente, entre concorrentes
+         diretos.</p>
+    </a>
   </section>
-
-  <section class="cartao">
-    <div class="tabela-caixa">
-      <table class="classificacao">
-        <thead>
-          <tr>
-            <th class="pos">#</th>
-            <th class="clube">Clube</th>
-            <th title="Pontos">P</th>
-            <th title="Jogos">J</th>
-            <th title="Triunfos">T</th>
-            <th title="Empates">E</th>
-            <th title="Derrotas">D</th>
-            <th title="Gols pró">GP</th>
-            <th title="Gols contra">GC</th>
-            <th title="Saldo de gols">SG</th>
-            <th title="Aproveitamento dos pontos disputados">%</th>
-            <th title="Últimos cinco jogos, do mais antigo ao mais recente">Últimos</th>
-          </tr>
-        </thead>
-        <tbody id="corpo"></tbody>
-      </table>
-    </div>
-    <div class="legenda-faixa">
-      <span><i style="background:var(--azul)"></i>G4</span>
-      <span><i style="background:var(--vermelho)"></i>Z4</span>
-      <span><i style="background:var(--azul)"></i>triunfo</span>
-      <span><i style="background:var(--cinza-escuro)"></i>empate</span>
-      <span><i style="background:var(--vermelho)"></i>derrota</span>
-      <span>clique num clube para ver a campanha</span>
-    </div>
-  </section>
-
-  <section id="painel" hidden></section>
 
   <footer class="rodape">
-    <p id="metodologia"></p>
-    <p><b>ecbahia</b>numeros · Podcast45</p>
+    <p>A classificação e a tabela de jogos saíram: eram do modelo antigo e vão
+       voltar redesenhadas.</p>
+    <p data-assinatura><b>ecbahia</b>numeros</p>
   </footer>
 
 </main>
 
-<script type="module" src="/js/classificacao.js"></script>
+<script type="module" src="/js/marca.js"></script>
 </body>
 </html>

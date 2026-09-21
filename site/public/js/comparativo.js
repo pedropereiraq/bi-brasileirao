@@ -8,7 +8,7 @@
 import { clubesDaEdicao, tabela } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_comparativo.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 const estado = {
   edicoes: [], clubes: {}, serie: null,
@@ -85,7 +85,7 @@ async function trocarAno(lado, apelido, clubeDesejado, { silencioso = false } = 
   const clubes = clubesDaEdicao(jogos);
 
   el(`equipe-${lado}`).innerHTML = clubes
-    .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+    .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
 
   // Mantém o clube quando ele jogou naquele ano; senão propõe um da frente da
   // tabela, que é a campanha que alguém abriria primeiro.
@@ -106,7 +106,7 @@ function inverter() {
   for (const lado of ["a", "b"]) {
     el(`ano-${lado}`).value = estado[lado].apelido;
     el(`equipe-${lado}`).innerHTML = clubesDaEdicao(estado[lado].jogos)
-      .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
+      .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
     el(`equipe-${lado}`).value = estado[lado].clube;
   }
   aplicar();
