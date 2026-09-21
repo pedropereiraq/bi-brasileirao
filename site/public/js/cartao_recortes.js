@@ -121,6 +121,9 @@ async function linhasDasEdicoes(ctx, { recortes, faixa, cores, jogos, y }) {
   const larguraBarra = X_FIM_BARRA - X_BARRA;
   const maximo = Math.max(...recortes.map((r) => r.pontosFim), 1);
   const escala = (v) => (v / maximo) * larguraBarra;
+  // A bolinha da pontuação é maior que a barra, mas não pode encostar na linha
+  // de cima nem na de baixo: o raio sai da altura da linha.
+  const raio = Math.min(14, altura / 2 - 1);
 
   cabecalho(ctx, { jogos, y: y - 12 });
 
@@ -147,6 +150,11 @@ async function linhasDasEdicoes(ctx, { recortes, faixa, cores, jogos, y }) {
     const cheio = Math.max(4, escala(recorte.pontosNoCorte));
     caixa(ctx, X_BARRA, meio - 6, cheio, 12, cor, 6);
 
+    // A pontuação do corte vai numa bolinha na ponta da barra, e não dentro
+    // dela: assim o número cresce sem engrossar a barra, que é o que dá a
+    // proporção entre as edições.
+    const centro = X_BARRA + Math.max(cheio, raio);
+
     // O que veio depois do corte, pontilhado até a pontuação final. Só nas
     // edições encerradas: na que está em curso não há "depois" ainda.
     if (recorte.encerrada && recorte.pontosFim > recorte.pontosNoCorte) {
@@ -156,18 +164,20 @@ async function linhasDasEdicoes(ctx, { recortes, faixa, cores, jogos, y }) {
       ctx.lineCap = "round";
       ctx.setLineDash([0.1, 8]);
       ctx.beginPath();
-      ctx.moveTo(X_BARRA + cheio + 6, meio);
+      ctx.moveTo(centro + raio + 7, meio);
       ctx.lineTo(X_BARRA + escala(recorte.pontosFim), meio);
       ctx.stroke();
       ctx.restore();
     }
 
-    // O número do corte dentro da barra quando cabe; fora dela quando não.
-    const dentro = cheio > 46;
-    texto(ctx, recorte.pontosNoCorte,
-          X_BARRA + (dentro ? cheio - 10 : cheio + 10), meio + 4,
-          { tamanho: 12, peso: 800, alinha: dentro ? "right" : "left",
-            cor: dentro ? COR.branco : cor });
+    ctx.save();
+    ctx.fillStyle = cor;
+    ctx.beginPath();
+    ctx.arc(centro, meio, raio, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    texto(ctx, recorte.pontosNoCorte, centro, meio + raio * 0.37,
+          { tamanho: raio * 1.08, peso: 800, alinha: "center", cor: COR.branco });
 
     texto(ctx, recorte.pontosFim, X_PONTOS_FIM, meio + 5,
           { tamanho: 15, peso: 800, alinha: "right",
