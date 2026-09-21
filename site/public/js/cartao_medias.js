@@ -26,7 +26,7 @@
 import { CARD, COR, MARGEM, texto, caixa, cortar } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import {
-  POSICOES, comparacaoComAMedia, estatisticasPorPosicao, grade,
+  POSICOES, comparacaoComAMedia, desfechoDaEdicao, estatisticasPorPosicao, grade,
 } from "/js/media_posicao.js";
 import { zonaDaPosicao, zonasDaFaixa } from "/js/similares.js";
 
@@ -73,6 +73,7 @@ export function montarCartao(estado) {
   const cores = coresDasZonas(faixa);
   const escolhida = colunas.find((c) => c.ano === anoEscolhido) ?? colunas.at(-1);
   const comparada = comparacaoComAMedia(escolhida, estatisticas);
+  const desfecho = desfechoDaEdicao(posicoes, { serie, ano: escolhida?.ano });
 
   const spec = {
     titulo: `Média de pontuação por posição na ${rodada}ª rodada `
@@ -84,7 +85,7 @@ export function montarCartao(estado) {
     corpo: async (ctx, y) => {
       legenda(ctx, { colunas, estatisticas, y: y + 10 });
 
-      const larguraGrade = 1026;
+      const larguraGrade = 986;
       const alvos = desenharGrade(ctx, {
         colunas, estatisticas, faixa, cores, escolhida,
         x: MARGEM, largura: larguraGrade, y: y + 44,
@@ -92,7 +93,7 @@ export function montarCartao(estado) {
 
       const xPainel = MARGEM + larguraGrade + 20;
       const doPainel = painelDoAno(ctx, {
-        comparada, estatisticas, escolhida, clubes, faixa, cores,
+        comparada, estatisticas, desfecho, escolhida, clubes, faixa, cores,
         x: xPainel, largura: CARD.largura - MARGEM - xPainel, y: y + 44,
       });
 
@@ -258,12 +259,12 @@ function dicaDaCelula(celula, { media }) {
  * caminhos. A média e a diferença em número ficam ao lado, fora do gráfico:
  * dentro, virariam marcas disputando espaço com a bolinha.
  */
-function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
-                            cores, x, largura, y }) {
+function painelDoAno(ctx, { comparada, estatisticas, desfecho, escolhida, clubes,
+                            faixa, cores, x, largura, y }) {
   const larguraTime = 52;
   const centroTime = x + 20 + larguraTime / 2;
-  const xMin = x + 94, trilho = { de: x + 102, ate: x + 298 }, xMax = x + 304;
-  const xMed = x + 374;
+  const xMin = x + 94, trilho = { de: x + 102, ate: x + 288 }, xMax = x + 294;
+  const xMed = x + 352, xFim = x + 404;
   const xDif = x + largura - 4, larguraDif = 56;
   const raio = 11.5;
 
@@ -278,6 +279,7 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
   rotulo("pontos", (trilho.de + trilho.ate) / 2, "center");
   rotulo("máx", xMax, "left");
   rotulo("méd", xMed, "right");
+  rotulo("fim", xFim, "right");
   rotulo("dif", xDif, "right");
 
   // A escala da cor é a da própria coluna: cinza no zero, e a cor cheia na
@@ -288,6 +290,10 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
     return mistura(COR.cinzaTexto, diferenca >= 0 ? COR.azul : COR.vermelho, t);
   };
 
+  // Duas listas: a da coluna do fim vai na frente, para o cursor sobre ela
+  // pegar o clube que terminou naquela posição em vez do que estava nela na
+  // rodada. São clubes diferentes na maioria das linhas.
+  const alvosDoFim = [];
   const alvos = [];
 
   for (const [i, linha] of comparada.entries()) {
@@ -314,6 +320,25 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
       x, y: yLinha, l: largura, a: ALTURA_LINHA - 2,
       ...dicaDaCelula(linha, { media: estatistica.media }),
     });
+
+    // Quem terminou nesta posição, que raramente é quem estava nela na rodada.
+    const terminou = desfecho?.[i] ?? null;
+    texto(ctx, terminou ? terminou.pontos : "—", xFim, meio,
+          { tamanho: 12.5, peso: 800, alinha: "right",
+            cor: terminou ? COR.azulEscuro : COR.cinza });
+    if (terminou) {
+      alvosDoFim.push({
+        n: `${escolhida?.ano ?? ""} · ${ordinal(linha.posicao)} no fim`,
+        x: xFim - 44, y: yLinha, l: 52, a: ALTURA_LINHA - 2,
+        itens: [{
+          rotulo: nomeBonito(terminou.equipe),
+          cor: COR.azul,
+          pontos: terminou.pontos,
+          detalhe: `terminou em ${ordinal(linha.posicao)} nesta edição`,
+        }],
+        diferenca: null,
+      });
+    }
 
     if (estatistica.media === null) {
       texto(ctx, linha.pontos, (trilho.de + trilho.ate) / 2, meio,
@@ -362,5 +387,5 @@ function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
           { tamanho: 12, peso: 800, alinha: "center", cor: COR.branco });
   }
 
-  return alvos;
+  return [...alvosDoFim, ...alvos];
 }

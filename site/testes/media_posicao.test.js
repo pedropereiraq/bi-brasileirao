@@ -13,8 +13,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  anosComRodada, colunaDaEdicao, comparacaoComAMedia, estatisticasPorPosicao,
-  grade, rodadaCorrente, rodadaMaxima, POSICOES,
+  anosComRodada, colunaDaEdicao, comparacaoComAMedia, desfechoDaEdicao,
+  estatisticasPorPosicao, grade, rodadaCorrente, rodadaMaxima, POSICOES,
 } from "../public/js/media_posicao.js";
 
 /**
@@ -113,4 +113,29 @@ test("a comparação diz quanto cada posição está acima ou abaixo da média",
   assert.deepEqual(comparada.map((c) => c.pontos), [6, 3, 1, 1]);
 
   assert.deepEqual(comparacaoComAMedia(null, estatisticas), []);
+});
+
+test("o desfecho é indexado pela posição final, não pela da rodada", () => {
+  // Em 2021 o ALFA lidera a rodada 2 com 6 e o BETA tem 4; no fim, o ALFA
+  // termina em 1º com 7 e o BETA em 2º com 6.
+  const fim = desfechoDaEdicao(dados, { serie: "A", ano: 2021 });
+  assert.deepEqual(fim.slice(0, 4), [
+    { equipe: "ALFA (SP)", pontos: 7 },
+    { equipe: "BETA (RJ)", pontos: 6 },
+    { equipe: "GAMA (MG)", pontos: 3 },
+    { equipe: "DELTA (BA)", pontos: 1 },
+  ]);
+  assert.equal(fim.length, POSICOES);
+  assert.ok(fim.slice(4).every((v) => v === null), "as posições que não existem");
+});
+
+test("edição em andamento não tem desfecho nenhum", () => {
+  const fim = desfechoDaEdicao(dados, { serie: "A", ano: 2026 });
+  assert.equal(fim.length, POSICOES);
+  assert.ok(fim.every((v) => v === null));
+});
+
+test("edição inexistente devolve lista vazia, não estoura", () => {
+  assert.ok(desfechoDaEdicao(dados, { serie: "A", ano: 1999 }).every((v) => v === null));
+  assert.ok(desfechoDaEdicao(undefined, { serie: "A", ano: 2020 }).every((v) => v === null));
 });

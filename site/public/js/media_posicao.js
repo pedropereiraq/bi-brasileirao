@@ -67,6 +67,31 @@ export function colunaDaEdicao(dados, { serie, ano, rodada }) {
   };
 }
 
+/**
+ * Quem terminou em cada posição daquela edição, e com quantos pontos.
+ *
+ * Não é a mesma coisa que a coluna da rodada: o 5º da rodada 28 raramente é o
+ * 5º do fim. Por isso o desfecho é indexado pela posição **final**, e não pela
+ * da rodada escolhida.
+ *
+ * Edição em andamento devolve uma lista de `null`: não terminou nada ainda.
+ */
+export function desfechoDaEdicao(dados, { serie, ano }) {
+  const edicao = dados?.series?.[serie]?.[String(ano)];
+  const vazio = Array.from({ length: POSICOES }, () => null);
+  if (!edicao?.encerrada) return vazio;
+
+  const porPosicao = [...vazio];
+  edicao.fim.forEach((desfecho, indice) => {
+    if (!desfecho) return;
+    const [posicao, pontos] = desfecho;
+    if (posicao >= 1 && posicao <= POSICOES) {
+      porPosicao[posicao - 1] = { equipe: edicao.clubes[indice], pontos };
+    }
+  });
+  return porPosicao;
+}
+
 /** A grade inteira: uma coluna por edição que chegou àquela rodada. */
 export function grade(dados, { serie, rodada }) {
   return anosComRodada(dados, { serie, rodada })
