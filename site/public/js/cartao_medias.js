@@ -71,22 +71,20 @@ export function montarCartao(estado) {
     corpo: async (ctx, y) => {
       legenda(ctx, { colunas, estatisticas, y: y + 10 });
 
-      const larguraGrade = 1076;
+      const larguraGrade = 1026;
       const alvos = desenharGrade(ctx, {
         colunas, estatisticas, faixa, cores, escolhida,
         x: MARGEM, largura: larguraGrade, y: y + 44,
       });
 
-      const xPainel = MARGEM + larguraGrade + 18;
-      painelDasEstatisticas(ctx, { estatisticas, x: xPainel, largura: 156, y: y + 44 });
-      painelDaClassificacao(ctx, {
-        comparada, escolhida, clubes, faixa, cores,
-        x: xPainel + 170, largura: CARD.largura - MARGEM - (xPainel + 170),
-        y: y + 44,
+      const xPainel = MARGEM + larguraGrade + 20;
+      const doPainel = painelDoAno(ctx, {
+        comparada, estatisticas, escolhida, clubes, faixa, cores,
+        x: xPainel, largura: CARD.largura - MARGEM - xPainel, y: y + 44,
       });
 
       spec.hover = {
-        pontos: alvos, eixo: "caixa", unidade: "",
+        pontos: [...alvos, ...doPainel], eixo: "caixa", unidade: "",
         topo: y + 44, alturaPlot: POSICOES * ALTURA_LINHA + 30,
         x0: MARGEM, x1: MARGEM + larguraGrade,
         // Só o cabeçalho troca o ano. Clicar num número é o gesto de quem
@@ -221,92 +219,120 @@ function dicaDaCelula(celula, { media }) {
 }
 
 /* ------------------------------------------------------------- painéis */
-function painelDasEstatisticas(ctx, { estatisticas, x, largura, y }) {
-  const colunas = [
-    { rotulo: "mín", chave: "minimo", casas: 0 },
-    { rotulo: "méd", chave: "media", casas: 1 },
-    { rotulo: "máx", chave: "maximo", casas: 0 },
-  ];
-  const larguraCol = largura / colunas.length;
-  const centro = (i) => x + (i + 0.5) * larguraCol;
-
-  for (const [i, coluna] of colunas.entries()) {
-    texto(ctx, coluna.rotulo, centro(i), y + 16,
-          { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
-            alinha: "center", cor: COR.cinzaEscuro });
-  }
-
-  for (const [i, estatistica] of estatisticas.entries()) {
-    const yLinha = y + 26 + i * ALTURA_LINHA;
-    caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 3,
-          i % 2 ? COR.fundo : COR.branco, 4);
-    for (const [j, coluna] of colunas.entries()) {
-      const valor = estatistica[coluna.chave];
-      texto(ctx, valor === null ? "—" : num(valor, coluna.casas),
-            centro(j), yLinha + ALTURA_LINHA / 2 + 2,
-            { tamanho: 12.5, peso: coluna.chave === "media" ? 800 : 400,
-              alinha: "center",
-              cor: coluna.chave === "media" ? COR.azulEscuro : COR.cinzaTexto });
-    }
-  }
-}
-
-function painelDaClassificacao(ctx, { comparada, escolhida, clubes, faixa, cores,
-                                     x, largura, y }) {
-  // A sigla vai centralizada numa coluna de largura fixa: alinhada à
-  // esquerda, "SPA" e "RBB" ocupam larguras diferentes e a coluna fica torta.
-  const larguraTime = 52, xTime = x + 24;
-  const centroTime = xTime + larguraTime / 2;
-  const xPts = x + 100, xMed = x + 142;
-  const xDif = x + largura - 4, larguraDif = 58;
+/**
+ * O ano escolhido contra o que cada posição costuma valer.
+ *
+ * Os números de mínimo, média e máximo eram três colunas ao lado da
+ * classificação, e ler "57, mín 51, méd 58,0, máx 67" exigia montar a régua na
+ * cabeça a cada linha. Aqui a régua está desenhada: o trilho vai do mínimo ao
+ * máximo, e o ponto marca onde este ano caiu.
+ *
+ * O destaque é a **diferença**, não o valor: o traço grosso sai da média e vai
+ * até o ponto, então ela se lê pelo comprimento e pela cor ao mesmo tempo. A
+ * média em si fica do lado de fora, em número — dentro do gráfico seria mais
+ * uma marca competindo com o ponto.
+ */
+function painelDoAno(ctx, { comparada, estatisticas, escolhida, clubes, faixa,
+                            cores, x, largura, y }) {
+  const larguraTime = 52;
+  const centroTime = x + 20 + larguraTime / 2;
+  const xPts = x + 106;
+  const xMin = x + 134, trilho = { de: x + 140, ate: x + 300 }, xMax = x + 306;
+  const xMed = x + 372;
+  const xDif = x + largura - 4, larguraDif = 56;
 
   texto(ctx, `${escolhida?.ano ?? ""}`, x + 11, y + 16,
         { tamanho: 11.5, peso: 800, alinha: "center", cor: COR.azul });
-  for (const [rotulo, xr, alinha] of [["time", centroTime, "center"],
-                                      ["pts", xPts, "right"],
-                                      ["méd", xMed, "right"],
-                                      ["dif", xDif, "right"]]) {
-    texto(ctx, rotulo, xr, y + 16,
+  const rotulo = (texto_, xr, alinha) =>
+    texto(ctx, texto_, xr, y + 16,
           { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
             alinha, cor: COR.cinzaEscuro });
-  }
+  rotulo("time", centroTime, "center");
+  rotulo("pts", xPts, "right");
+  rotulo("mín", xMin, "right");
+  rotulo("máx", xMax, "left");
+  rotulo("méd", xMed, "right");
+  rotulo("dif", xDif, "right");
 
   // A escala da diferença é a da própria coluna: cinza no zero, azul quanto
   // mais acima da média, vermelho quanto mais abaixo.
-  const maiorDif = Math.max(1,
-    ...comparada.map((l) => Math.abs(l.diferenca ?? 0)));
+  const maiorDif = Math.max(1, ...comparada.map((l) => Math.abs(l.diferenca ?? 0)));
+  const alvos = [];
 
   for (const [i, linha] of comparada.entries()) {
     const yLinha = y + 26 + i * ALTURA_LINHA;
     const meio = yLinha + ALTURA_LINHA / 2 + 3;
+    const estatistica = estatisticas[i];
     caixa(ctx, x, yLinha, largura, ALTURA_LINHA - 2,
           i % 2 ? COR.fundo : COR.branco, 3);
 
-    const cor = linha.posFim === null
+    const corFim = linha.posFim === null
       ? null : cores[zonaDaPosicao(linha.posFim, faixa)];
     texto(ctx, linha.posicao, x + 11, meio,
           { tamanho: 12, peso: 800, alinha: "center",
-            cor: cor ?? COR.cinzaEscuro });
+            cor: corFim ?? COR.cinzaEscuro });
 
     const sigla = clubes?.[linha.equipe]?.sigla
       ?? nomeBonito(linha.equipe).slice(0, 3).toUpperCase();
     texto(ctx, cortar(ctx, sigla, larguraTime, 12.5, 700), centroTime, meio,
           { tamanho: 12.5, peso: 700, alinha: "center", cor: COR.azulEscuro });
-
     texto(ctx, linha.pontos, xPts, meio,
           { tamanho: 12.5, peso: 800, alinha: "right", cor: COR.azulEscuro });
-    texto(ctx, linha.media === null ? "—" : num(linha.media), xMed, meio,
+
+    alvos.push({
+      n: `${escolhida?.ano ?? ""} · ${ordinal(linha.posicao)}`,
+      x, y: yLinha, l: largura, a: ALTURA_LINHA - 2,
+      ...dicaDaCelula(linha, { media: estatistica.media }),
+    });
+
+    if (estatistica.media === null) continue;
+
+    const { minimo, maximo, media } = estatistica;
+    // A escala abre para caber o ano escolhido: o mínimo e o máximo vêm das
+    // edições encerradas, e o ano em curso pode estar fora dos dois.
+    const piso = Math.min(minimo, linha.pontos, media);
+    const teto = Math.max(maximo, linha.pontos, media);
+    const onde = (v) => (teto === piso ? (trilho.de + trilho.ate) / 2
+      : trilho.de + ((v - piso) / (teto - piso)) * (trilho.ate - trilho.de));
+
+    texto(ctx, minimo, xMin, meio,
+          { tamanho: 11, alinha: "right", cor: COR.cinzaEscuro });
+    texto(ctx, maximo, xMax, meio,
+          { tamanho: 11, alinha: "left", cor: COR.cinzaEscuro });
+
+    caixa(ctx, onde(minimo), meio - 8, Math.max(2, onde(maximo) - onde(minimo)), 5,
+          COR.cinzaClaro, 2.5);
+
+    const t = Math.min(1, Math.abs(linha.diferenca) / maiorDif);
+    const forte = linha.diferenca >= 0
+      ? mistura(COR.cinza, COR.azul, Math.max(t, 0.18))
+      : mistura(COR.cinza, COR.vermelho, Math.max(t, 0.18));
+
+    // O traço da média até o ponto: é a diferença virando comprimento.
+    const de = Math.min(onde(media), onde(linha.pontos));
+    const ate = Math.max(onde(media), onde(linha.pontos));
+    caixa(ctx, de, meio - 8, Math.max(2, ate - de), 5, forte, 2.5);
+
+    ctx.save();
+    ctx.fillStyle = COR.fundo;
+    ctx.beginPath();
+    ctx.arc(onde(linha.pontos), meio - 5.5, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = forte;
+    ctx.beginPath();
+    ctx.arc(onde(linha.pontos), meio - 5.5, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    texto(ctx, num(media), xMed, meio,
           { tamanho: 12, alinha: "right", cor: COR.cinzaTexto });
 
-    if (linha.diferenca === null) continue;
-    const t = Math.min(1, Math.abs(linha.diferenca) / maiorDif);
-    const fundo = linha.diferenca >= 0
-      ? mistura(COR.cinza, COR.azul, t)
-      : mistura(COR.cinza, COR.vermelho, t);
     caixa(ctx, xDif - larguraDif, yLinha + 3, larguraDif, ALTURA_LINHA - 8,
-          fundo, 4);
+          forte, 4);
     texto(ctx, comSinal(linha.diferenca), xDif - larguraDif / 2, meio,
           { tamanho: 12, peso: 800, alinha: "center",
             cor: t > 0.48 ? COR.branco : COR.azulEscuro });
   }
+
+  return alvos;
 }
