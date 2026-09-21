@@ -20,6 +20,9 @@ const estado = {
   serie: null, edicao: null, jogos: null,
   geral: [], casa: [], fora: [],
   criterio: "pontos", destaque: "",
+  // O card chama de volta quando alguém clica num clube: escolher o destaque
+  // na própria lista é mais rápido do que achar a sigla no filtro.
+  aoEscolher: (equipe) => escolherDestaque(equipe),
 };
 
 const el = (id) => document.getElementById(id);
@@ -120,6 +123,13 @@ async function trocarAno(apelido, url = {}) {
   estado.destaque = clubes.includes(querido) ? querido : "";
   el("destaque").value = estado.destaque;
 
+  aplicar();
+}
+
+/** Clicar no clube que já está em destaque tira o destaque: é o mesmo gesto. */
+function escolherDestaque(equipe) {
+  estado.destaque = estado.destaque === equipe ? "" : equipe;
+  el("destaque").value = estado.destaque;
   aplicar();
 }
 
