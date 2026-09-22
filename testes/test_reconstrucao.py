@@ -213,6 +213,28 @@ def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
                     assert 0 <= depois - antes <= 3, f"{equipe} {serie}{ano}"
 
 
+def test_o_fluxo_fecha_com_a_grade_em_toda_rodada(jogos):
+    """
+    A identidade que sustenta a última linha do card de médias: o que a rodada
+    tinha para dar é o que chegou à tabela mais o que ficou pelo caminho.
+
+    Se ela abrir, o card passa a explicar uma diferença para a média com uma
+    conta que não fecha — que é pior do que não explicar nada.
+    """
+    from bi import publicacao
+
+    dados = publicacao.posicoes_por_rodada(jogos)
+    for serie, anos in dados["series"].items():
+        for ano, edicao in anos.items():
+            por_rodada = len(edicao["clubes"]) // 2
+            for i, (rodada, (queimados, retidos)) in enumerate(
+                    zip(edicao["grade"], edicao["fluxo"]), start=1):
+                distribuidos = sum(pts for _, pts in rodada)
+                assert distribuidos + queimados + retidos == por_rodada * i * 3, (
+                    f"{serie}{ano} rodada {i}: a conta dos pontos não fecha"
+                )
+
+
 def test_as_posicoes_publicadas_batem_com_o_canonico(jogos):
     """A tabela de cada rodada também é derivada, não digitada."""
     from bi import publicacao

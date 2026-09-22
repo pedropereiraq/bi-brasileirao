@@ -14,7 +14,8 @@ import assert from "node:assert/strict";
 
 import {
   anosComRodada, colunaDaEdicao, comparacaoComAMedia, desfechoDaEdicao,
-  estatisticasPorPosicao, grade, rodadaCorrente, rodadaMaxima, POSICOES,
+  estatisticasPorPosicao, grade, perdaDaTabela, rodadaCorrente, rodadaMaxima,
+  POSICOES,
 } from "../public/js/media_posicao.js";
 
 /**
@@ -138,4 +139,34 @@ test("edição em andamento não tem desfecho nenhum", () => {
 test("edição inexistente devolve lista vazia, não estoura", () => {
   assert.ok(desfechoDaEdicao(dados, { serie: "A", ano: 1999 }).every((v) => v === null));
   assert.ok(desfechoDaEdicao(undefined, { serie: "A", ano: 2020 }).every((v) => v === null));
+});
+
+/* ------------------------------------------- o que não chegou à tabela */
+test("a perda é o que a rodada tinha para dar e a tabela não recebeu", () => {
+  // Quatro clubes: dois jogos por rodada, seis pontos em disputa em cada uma.
+  const comFluxo = {
+    series: {
+      A: {
+        2020: { ...dados.series.A[2020], fluxo: [[1, 0], [1, 3], [2, 3]] },
+      },
+    },
+  };
+  const perda = perdaDaTabela(comFluxo, { serie: "A", ano: 2020, rodada: 2 });
+
+  assert.equal(perda.possiveis, 12);
+  assert.equal(perda.queimados, 1, "um empate na primeira rodada");
+  assert.equal(perda.retidos, 3, "um jogo por disputar na segunda");
+  assert.equal(perda.faltando, 4);
+  assert.equal(perda.distribuidos, 8);
+  assert.equal(perda.fracao, 4 / 12);
+});
+
+test("sem chegar à rodada, e sem fluxo, não há perda que contar", () => {
+  const comFluxo = {
+    series: { A: { 2026: { ...dados.series.A[2026], fluxo: [[0, 0], [1, 0]] } } },
+  };
+  assert.equal(perdaDaTabela(comFluxo, { serie: "A", ano: 2026, rodada: 3 }), null);
+  // Dado antigo, publicado antes do fluxo existir: melhor nada que um número
+  // inventado.
+  assert.equal(perdaDaTabela(dados, { serie: "A", ano: 2020, rodada: 2 }), null);
 });

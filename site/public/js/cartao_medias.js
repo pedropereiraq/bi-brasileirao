@@ -27,11 +27,14 @@ import { CARD, COR, MARGEM, texto, caixa, cortar } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import {
   POSICOES, comparacaoComAMedia, desfechoDaEdicao, estatisticasPorPosicao, grade,
+  perdaDaTabela,
 } from "/js/media_posicao.js";
 import { zonaDaPosicao, zonasDaFaixa } from "/js/similares.js";
 
-const ALTURA_LINHA = 31;
+const ALTURA_LINHA = 29;
 const VAO_COLUNA = 2;
+const ALTURA_PERDA = 26;
+const VAO_PERDA = 8;
 
 // A rampa da grade: cinza claro quente na menor pontuação do ano, azul médio
 // na maior. O teto é escolhido para o azul-escuro do número continuar legível
@@ -76,6 +79,8 @@ export function montarCartao(estado) {
   const escolhida = colunas.find((c) => c.ano === anoEscolhido) ?? colunas.at(-1);
   const comparada = comparacaoComAMedia(escolhida, estatisticas);
   const desfecho = desfechoDaEdicao(posicoes, { serie, ano: escolhida?.ano });
+  const perdas = colunas.map((coluna) =>
+    perdaDaTabela(posicoes, { serie, ano: coluna.ano, rodada }));
 
   const spec = {
     titulo: `Média de pontuação por posição na ${rodada}ª rodada `
@@ -89,7 +94,7 @@ export function montarCartao(estado) {
       legendaDosPontos(ctx, { zonas, cores, y: y + 14 });
       const larguraGrade = 986;
       const alvos = desenharGrade(ctx, {
-        colunas, estatisticas, faixa, cores, escolhida,
+        colunas, estatisticas, faixa, cores, escolhida, perdas, rodada,
         x: MARGEM, largura: larguraGrade, y: yGrade,
       });
 
@@ -101,7 +106,8 @@ export function montarCartao(estado) {
 
       spec.hover = {
         pontos: [...alvos, ...doPainel], eixo: "caixa", unidade: "",
-        topo: yGrade, alturaPlot: POSICOES * ALTURA_LINHA + 30,
+        topo: yGrade,
+        alturaPlot: POSICOES * ALTURA_LINHA + 30 + VAO_PERDA + ALTURA_PERDA,
         x0: MARGEM, x1: MARGEM + larguraGrade,
         // Só o cabeçalho troca o ano. Clicar num número é o gesto de quem
         // quer ler aquele número, não de quem quer trocar o painel.
@@ -147,7 +153,7 @@ function legendaDosPontos(ctx, { zonas, cores, y }) {
 
 /* --------------------------------------------------------------- grade */
 function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
-                              x, largura, y }) {
+                              perdas, rodada, x, largura, y }) {
   const larguraPos = 38;
   const larguraAno =
     (largura - larguraPos - VAO_COLUNA * colunas.length) / colunas.length;
@@ -232,6 +238,79 @@ function desenharGrade(ctx, { colunas, estatisticas, faixa, cores, escolhida,
     texto(ctx, pos, x + larguraPos - 8, yDaLinha(pos) + ALTURA_LINHA / 2 + 4,
           { tamanho: 12, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
   }
+
+  alvos.push(...linhaDaPerda(ctx, {
+    colunas, perdas, rodada, xDaColuna, larguraAno,
+    x, larguraPos, largura, y: yDaLinha(POSICOES) + ALTURA_LINHA + VAO_PERDA,
+  }));
+  return alvos;
+}
+
+/**
+ * A última linha: os pontos que a rodada tinha para dar e a tabela não recebeu.
+ *
+ * Vive colada à grade, com a mesma rampa e a mesma largura de coluna, porque a
+ * pergunta que ela responde é sobre a grade inteira: o ano em que o 15º lugar
+ * pontuou pouco pode ser só o ano em que se empatou muito. Sem esta linha, a
+ * coluna clara vira "campeonato fraco" sem que nada desminta.
+ *
+ * Em pontos, e não em percentual: o card inteiro está numa rodada só, todas as
+ * edições têm o mesmo total em disputa, e o ponto é a unidade em que o resto do
+ * card está escrito. O percentual e o motivo de cada ponto ter saído de
+ * circulação ficam na dica do mouse, que tem espaço para os dois.
+ *
+ * O degradê corre na horizontal, como no resto do card — os limites são a menor
+ * e a maior perda entre as edições desta rodada, e não zero e o total: a
+ * diferença que interessa cabe em trinta pontos, e uma escala fixa pintaria
+ * todas as colunas da mesma cor.
+ */
+function linhaDaPerda(ctx, { colunas, perdas, rodada, xDaColuna, larguraAno,
+                             x, larguraPos, largura, y }) {
+  const valores = perdas.filter(Boolean).map((p) => p.faltando);
+  if (!valores.length) return [];
+
+  const baixo = Math.min(...valores);
+  const alto = Math.max(...valores);
+
+  texto(ctx, "fora", x + larguraPos - 8, y + ALTURA_PERDA / 2 + 3,
+        { tamanho: 9, peso: 700, maiuscula: true, espaco: .6,
+          alinha: "right", cor: COR.cinzaEscuro });
+
+  const alvos = [];
+  for (const [i, coluna] of colunas.entries()) {
+    const perda = perdas[i];
+    if (!perda) continue;
+    const xc = xDaColuna(i);
+    const t = alto === baixo ? 1 : (perda.faltando - baixo) / (alto - baixo);
+
+    caixa(ctx, xc, y, larguraAno, ALTURA_PERDA,
+          mistura(rampa().baixo, rampa().alto, t), 3);
+    texto(ctx, perda.faltando, xc + larguraAno / 2, y + ALTURA_PERDA / 2 + 5,
+          { tamanho: 14, peso: 800, alinha: "center", cor: COR.azulEscuro });
+
+    alvos.push({
+      n: `${coluna.ano} · fora da tabela`,
+      x: xc, y, l: larguraAno, a: ALTURA_PERDA,
+      itens: [
+        { rotulo: "queimados no empate", cor: COR.cinzaEscuro,
+          pontos: perda.queimados, detalhe: "não voltam mais" },
+        { rotulo: "retidos em jogo por disputar", cor: COR.negativo,
+          pontos: perda.retidos, detalhe: "voltam quando o jogo sair" },
+      ],
+      diferenca: {
+        rotulo: `${num(perda.fracao * 100)}%`,
+        texto: `dos ${perda.possiveis} pontos em disputa até a ${rodada}ª rodada`,
+        cor: COR.negativo,
+      },
+    });
+  }
+
+  const xTexto = x + largura + 20;
+  texto(ctx, "pontos que não chegaram à tabela",
+        xTexto, y + 12, { tamanho: 11.5, peso: 700, cor: COR.azulEscuro });
+  texto(ctx, "o empate queima um ponto; o jogo por disputar retém três",
+        xTexto, y + 26, { tamanho: 10.5, cor: COR.cinzaEscuro });
+
   return alvos;
 }
 

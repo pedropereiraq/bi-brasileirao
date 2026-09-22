@@ -68,6 +68,32 @@ export function colunaDaEdicao(dados, { serie, ano, rodada }) {
 }
 
 /**
+ * O que não chegou à tabela até aquela rodada, naquela edição.
+ *
+ * Toda rodada põe em disputa três pontos por jogo, e a tabela quase nunca
+ * recebe os três: o empate distribui dois e queima o terceiro para sempre, e o
+ * jogo por disputar retém os três até acontecer.
+ *
+ * É o que impede de ler uma coluna inteira abaixo da média como campeonato
+ * fraco — pode ser só ponto que não foi distribuído.
+ */
+export function perdaDaTabela(dados, { serie, ano, rodada }) {
+  const edicao = dados?.series?.[serie]?.[String(ano)];
+  if (!edicao || edicao.rodadas < rodada) return null;
+
+  const [queimados, retidos] = edicao.fluxo?.[rodada - 1] ?? [];
+  if (queimados === undefined) return null;
+
+  const possiveis = (edicao.clubes.length / 2) * rodada * 3;
+  const faltando = queimados + retidos;
+  return {
+    queimados, retidos, possiveis, faltando,
+    distribuidos: possiveis - faltando,
+    fracao: possiveis > 0 ? faltando / possiveis : 0,
+  };
+}
+
+/**
  * Quem terminou em cada posição daquela edição, e com quantos pontos.
  *
  * Não é a mesma coisa que a coluna da rodada: o 5º da rodada 28 raramente é o

@@ -262,6 +262,35 @@ def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
     return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
 
 
+def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int) -> list[list[int]]:
+    """
+    Quanto dos pontos em disputa não chegou à tabela, rodada a rodada.
+
+    Toda rodada põe em disputa três pontos por jogo, e a tabela quase nunca
+    recebe os três. Duas coisas os seguram, e são de naturezas diferentes: o
+    **empate** distribui dois e queima o terceiro para sempre, e o **jogo por
+    disputar** retém os três até acontecer. Por isso vão em números separados —
+    uma coluna só diria que são a mesma coisa.
+
+    É o que impede de ler uma rodada inteira abaixo da média como campeonato
+    fraco: pode ser só ponto que não foi distribuído.
+
+    Acumulado, como a própria tabela: a rodada 10 traz o que o campeonato
+    inteiro deixou pelo caminho até ali.
+    """
+    feito = jogos["status"] == cfg.STATUS_REALIZADO
+    empate = feito & (jogos["gols_m"] == jogos["gols_v"])
+
+    saida = []
+    queimados = retidos = 0
+    for etapa in range(1, ultima + 1):
+        da_rodada = jogos["rodada"] == etapa
+        queimados += int((empate & da_rodada).sum())
+        retidos += int((~feito & da_rodada).sum()) * 3
+        saida.append([queimados, retidos])
+    return saida
+
+
 # ------------------------------------------- pontuação por posição e rodada
 def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
     """
@@ -282,6 +311,11 @@ def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
     `fim` é `None` na edição em andamento: ela não tem posição nem pontuação
     final. A grade dela entra igual, porque é justamente a edição que se quer
     comparar com a média das outras.
+
+    Junto vai o `fluxo`: o que cada rodada deixou de entregar à tabela. Sai
+    daqui, e não do navegador, porque a página cruza vinte edições e só tem em
+    mãos a grade de pontos — de onde não se enxerga se o ponto que falta foi
+    queimado num empate ou está retido num jogo adiado.
     """
     from . import derivadas, motor
 
@@ -303,6 +337,8 @@ def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
             for linha in final.itertuples():
                 fim[indice[linha.equipe]] = [int(linha.pos), int(linha.pts)]
 
+        da_edicao = recorte[(recorte["serie"] == serie) & (recorte["ano"] == ano)]
+
         grade = []
         for etapa in range(1, ultima + 1):
             da_rodada = grupo[grupo["etapa"] == etapa].sort_values("pos")
@@ -315,9 +351,14 @@ def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
             "rodadas": ultima,
             "encerrada": encerrada,
             "grade": grade,
+            "fluxo": _fluxo_da_edicao(da_edicao, ultima),
         }
 
-    return {"campos": ["indice_do_clube", "pontos"], "series": series}
+    return {
+        "campos": ["indice_do_clube", "pontos"],
+        "campos_fluxo": ["queimados_no_empate", "retidos_em_jogo_por_disputar"],
+        "series": series,
+    }
 
 
 def construir(jogos: pd.DataFrame | None = None,
