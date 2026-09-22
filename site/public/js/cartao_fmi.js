@@ -124,25 +124,34 @@ async function borboleta(ctx, o) {
     const marcado = destaque === linha.equipe;
     const alturaBarra = Math.min(20, alturaLinha - 8);
 
-    if (marcado) caixa(ctx, x, yLinha, largura, alturaLinha - 2, COR.marca, 5);
+    // A faixa do escolhido é cinza de propósito: azul e vermelho já são as
+    // duas asas, e uma terceira cor forte na mesma linha disputaria a leitura
+    // com os números que ela existe para destacar.
+    if (marcado) {
+      caixa(ctx, x, yLinha, largura, alturaLinha - 2, COR.cinzaClaro, 5);
+      ctx.save();
+      ctx.strokeStyle = COR.cinza;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x + .75, yLinha + .75, largura - 1.5, alturaLinha - 3.5, 5);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // O índice antes do escudo: é ele que ordena a lista, e quem lê de cima
     // para baixo está seguindo essa coluna.
     const corIndice = linha.fmi > 0 ? COR.positivo
                     : linha.fmi < 0 ? COR.negativo : COR.cinzaEscuro;
-    caixa(ctx, x + 4, meio - 13, 52, 26,
-          marcado ? COR.marcaTexto : corIndice, 6);
+    caixa(ctx, x + 4, meio - 13, 52, 26, corIndice, 6);
     texto(ctx, comSinal(linha.fmi), x + 30, meio + 6,
-          { tamanho: 14, peso: 800, alinha: "center",
-            cor: marcado ? corIndice : COR.branco });
+          { tamanho: 14, peso: 800, alinha: "center", cor: COR.branco });
 
     const lado = Math.min(22, alturaLinha - 6);
     desenharEscudo(ctx, await imagem(clubes?.[linha.equipe]?.escudo),
                    x + 66, meio - lado / 2, lado);
-    texto(ctx, cortar(ctx, nomeBonito(linha.equipe), 104, 12, 700),
+    texto(ctx, cortar(ctx, nomeBonito(linha.equipe), 104, 12, marcado ? 800 : 700),
           x + 94, meio + 4,
-          { tamanho: 12, peso: 700,
-            cor: marcado ? COR.marcaTexto : COR.azulEscuro });
+          { tamanho: 12, peso: marcado ? 800 : 700, cor: COR.azulEscuro });
 
     const perdidos = linha.perdidosCasa * porPonto;
     const ganhos = linha.ganhosFora * porPonto;
@@ -152,11 +161,9 @@ async function borboleta(ctx, o) {
           COR.positivo, 4);
 
     texto(ctx, linha.perdidosCasa, xEixo - perdidos - 8, meio + 5,
-          { tamanho: 12, peso: 800, alinha: "right",
-            cor: marcado ? COR.marcaTexto : COR.negativo });
+          { tamanho: 12, peso: 800, alinha: "right", cor: COR.negativo });
     texto(ctx, linha.ganhosFora, xEixo + ganhos + 8, meio + 5,
-          { tamanho: 12, peso: 800,
-            cor: marcado ? COR.marcaTexto : COR.positivo });
+          { tamanho: 12, peso: 800, cor: COR.positivo });
 
     alvos.push({
       n: nomeBonito(linha.equipe), equipe: linha.equipe,
