@@ -68,6 +68,58 @@ export function colunaDaEdicao(dados, { serie, ano, rodada }) {
 }
 
 /**
+ * A distância entre duas posições, edição por edição, naquela rodada.
+ *
+ * A grade de médias responde "quanto vale cada posição"; esta responde "quanto
+ * separa uma da outra", que é outra pergunta: um campeonato pode ter o 4º
+ * lugar valendo o de sempre e mesmo assim ser o ano em que o G4 mais se
+ * descolou do Z4.
+ *
+ * A diferença nunca é negativa — as posições saem de uma tabela ordenada, e
+ * quem está acima tem pelo menos tantos pontos quanto quem está abaixo.
+ */
+export function distanciaEntrePosicoes(dados, { serie, rodada, melhor, pior }) {
+  const cima = Math.min(melhor, pior);
+  const baixo = Math.max(melhor, pior);
+
+  const linhas = [];
+  for (const ano of anosComRodada(dados, { serie, rodada })) {
+    const coluna = colunaDaEdicao(dados, { serie, ano, rodada });
+    const de = coluna?.celulas[cima - 1];
+    const ate = coluna?.celulas[baixo - 1];
+    if (!de || !ate) continue;
+    linhas.push({
+      ano, encerrada: coluna.encerrada,
+      melhor: de, pior: ate, diferenca: de.pontos - ate.pontos,
+    });
+  }
+  return linhas;
+}
+
+/**
+ * Os três números do card e as duas médias que viram linha no gráfico.
+ *
+ * O extremo devolve a linha inteira, e não só o valor: quem olha a maior
+ * distância quer saber de que ano ela é.
+ */
+export function resumoDaDistancia(linhas) {
+  if (!linhas?.length) return null;
+
+  const soma = (pegar) => linhas.reduce((s, l) => s + pegar(l), 0);
+  const extremo = (vence) =>
+    linhas.reduce((m, l) => (vence(l.diferenca, m.diferenca) ? l : m), linhas[0]);
+
+  return {
+    edicoes: linhas.length,
+    media: soma((l) => l.diferenca) / linhas.length,
+    maxima: extremo((v, m) => v > m),
+    minima: extremo((v, m) => v < m),
+    mediaMelhor: soma((l) => l.melhor.pontos) / linhas.length,
+    mediaPior: soma((l) => l.pior.pontos) / linhas.length,
+  };
+}
+
+/**
  * O que não chegou à tabela até aquela rodada, naquela edição.
  *
  * Toda rodada põe em disputa três pontos por jogo, e a tabela quase nunca

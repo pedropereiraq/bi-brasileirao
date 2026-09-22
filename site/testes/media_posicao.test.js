@@ -14,8 +14,8 @@ import assert from "node:assert/strict";
 
 import {
   anosComRodada, colunaDaEdicao, comparacaoComAMedia, desfechoDaEdicao,
-  estatisticasPorPosicao, grade, perdaDaTabela, rodadaCorrente, rodadaMaxima,
-  POSICOES,
+  distanciaEntrePosicoes, estatisticasPorPosicao, grade, perdaDaTabela,
+  resumoDaDistancia, rodadaCorrente, rodadaMaxima, POSICOES,
 } from "../public/js/media_posicao.js";
 
 /**
@@ -169,4 +169,43 @@ test("sem chegar à rodada, e sem fluxo, não há perda que contar", () => {
   // Dado antigo, publicado antes do fluxo existir: melhor nada que um número
   // inventado.
   assert.equal(perdaDaTabela(dados, { serie: "A", ano: 2020, rodada: 2 }), null);
+});
+
+/* ------------------------------------------ distância entre duas posições */
+test("a distância sai da tabela de cada edição, e nunca é negativa", () => {
+  const linhas = distanciaEntrePosicoes(dados,
+    { serie: "A", rodada: 2, melhor: 1, pior: 3 });
+
+  assert.deepEqual(linhas.map((l) => [l.ano, l.diferenca]),
+    [[2020, 4], [2021, 4], [2026, 5]]);
+  assert.equal(linhas[0].melhor.equipe, "ALFA (SP)");
+  assert.equal(linhas[0].pior.equipe, "GAMA (MG)");
+});
+
+test("o range vale nos dois sentidos", () => {
+  const direto = distanciaEntrePosicoes(dados,
+    { serie: "A", rodada: 2, melhor: 1, pior: 3 });
+  const avesso = distanciaEntrePosicoes(dados,
+    { serie: "A", rodada: 2, melhor: 3, pior: 1 });
+  assert.deepEqual(avesso, direto);
+});
+
+test("só as edições que chegaram à rodada entram na conta", () => {
+  const linhas = distanciaEntrePosicoes(dados,
+    { serie: "A", rodada: 3, melhor: 1, pior: 4 });
+  assert.deepEqual(linhas.map((l) => l.ano), [2020, 2021],
+    "a edição em andamento parou na rodada 2");
+});
+
+test("o resumo diz de que ano é cada extremo", () => {
+  const linhas = distanciaEntrePosicoes(dados,
+    { serie: "A", rodada: 2, melhor: 1, pior: 4 });
+  const resumo = resumoDaDistancia(linhas);
+
+  assert.deepEqual(linhas.map((l) => l.diferenca), [5, 6, 5]);
+  assert.equal(resumo.maxima.ano, 2021);
+  assert.equal(resumo.minima.ano, 2020, "empate fica com o primeiro");
+  assert.equal(resumo.media, 16 / 3);
+  assert.equal(resumo.edicoes, 3);
+  assert.equal(resumoDaDistancia([]), null);
 });

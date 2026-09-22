@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blocos de 6 jogos · Cards ECBahia Números</title>
+<title>Distância entre posições · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Blocos de 6 jogos</h1>
-      <p class="subtitulo">A campanha repartida em sete blocos, contra uma meta.</p>
+      <h1>Distância entre posições</h1>
+      <p class="subtitulo">Quanto separa duas posições da tabela, edição por edição.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -48,11 +48,11 @@ try { document.documentElement.dataset.marca =
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da campanha</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
-    <a href="/blocos.html" aria-current="page">Blocos de 6 jogos</a>
+    <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
     <a href="/medias.html">Média por posição e rodada</a>
-    <a href="/distancias.html">Distância entre posições</a>
+    <a href="/distancias.html" aria-current="page">Distância entre posições</a>
     <a href="/proximos.html">Próximos jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
   </nav>
@@ -60,39 +60,54 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo">
-        <label for="ano">Ano</label>
-        <select id="ano"></select>
-      </div>
-      <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
-        <select id="equipe"></select>
+        <label id="rotulo-alinhamento">Alinhar o gráfico
+          <span class="dica-campo">a mesma distância, lida de quatro formas</span>
+        </label>
+        <div class="chaves" id="alinhamento" role="group"
+             aria-labelledby="rotulo-alinhamento">
+          <button type="button" class="chave" data-valor="pontuacao"
+                  aria-pressed="true">Pela pontuação</button>
+          <button type="button" class="chave" data-valor="topo"
+                  aria-pressed="false">Pelo melhor</button>
+          <button type="button" class="chave" data-valor="base"
+                  aria-pressed="false">Pelo pior</button>
+          <button type="button" class="chave" data-valor="centro"
+                  aria-pressed="false">Pelo centro</button>
+        </div>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posição meta
-        <span class="dica-campo">arraste a bolinha até a posição que você quer
-          alcançar</span>
-      </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-      <p class="resumo-meta" id="resumo-meta"></p>
+    <div class="coluna-controles">
+      <div class="campo campo-deslizante">
+        <label for="rodada">Rodada <output id="valor-rodada">—</output>
+          <span class="dica-campo">começa na rodada do campeonato em andamento</span>
+        </label>
+        <input type="range" id="rodada" min="1" max="38" step="1" value="10">
+      </div>
+      <div class="campo campo-posicoes">
+        <label id="rotulo-posicoes">Posições comparadas
+          <span class="dica-campo">as duas pontas do range: a de cima entra em
+            verde, a de baixo em vermelho</span>
+        </label>
+        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      </div>
     </div>
-    <p class="nota-ordem"><b>Ordem cronológica, não a da rodada.</b> O
-      eixo é o n-ésimo jogo de cada clube, na ordem em que ele foi
-      disputado. Rodada não é tempo: um jogo adiado da 4ª disputado em
-      agosto poria o acumulado de agosto lá atrás. É a leitura certa quando
-      a pergunta é sobre a campanha.</p>
+    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> Cada
+      coluna é a tabela ao fim daquela rodada: jogo adiado conta na rodada a que
+      pertence, e por isso duas edições podem chegar à mesma rodada com números
+      de jogos diferentes. É a leitura certa quando a pergunta é sobre o
+      campeonato, e não sobre a campanha de um clube.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de blocos de 6 jogos"></canvas>
+            aria-label="card de distância entre posições"></canvas>
   </section>
 
   <footer class="rodape">
@@ -104,6 +119,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/blocos.js"></script>
+<script type="module" src="/js/distancias.js"></script>
 </body>
 </html>
