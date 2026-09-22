@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evolução da campanha · Cards ECBahia Números</title>
+<title>Jogos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Evolução da campanha</h1>
-      <p class="subtitulo">Uma campanha contra o que duas posições costumam exigir.</p>
+      <h1>Jogos</h1>
+      <p class="subtitulo">O calendário da edição: o que já foi jogado e o que falta.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -41,10 +41,10 @@ try { document.documentElement.dataset.marca =
   <nav class="navegacao">
     <a href="/">Telas</a>
     <a href="/classificacao.html">Classificação</a>
-    <a href="/jogos.html">Jogos</a>
+    <a href="/jogos.html" aria-current="page">Jogos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
-    <a href="/evolucao.html" aria-current="page">Evolução da campanha</a>
+    <a href="/evolucao.html">Evolução da campanha</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
@@ -57,38 +57,34 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-modo">A linha mede</label>
-        <div class="chaves" id="modo" role="group" aria-labelledby="rotulo-modo"></div>
-      </div>
-      <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo">
         <label for="ano">Ano</label>
         <select id="ano"></select>
       </div>
-      <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
-        <select id="equipe"></select>
+      <div class="campo campo-deslizante">
+        <label for="rodada">Rodada <output id="valor-rodada">—</output>
+          <span class="dica-campo">ou clique na coluna da rodada no card</span>
+        </label>
+        <input type="range" id="rodada" min="1" max="38" step="1" value="1">
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posições de referência
-        <span class="dica-campo">arraste as bolinhas: a verde é a posição melhor,
-          a vermelha a pior</span>
-      </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-    </div>
-    <p class="nota-ordem" id="nota-ordem"></p>
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>A coluna de cada rodada enche conforme os jogos
+      saem.</b> Toda rodada tem o mesmo número de jogos: o que muda é quantos
+      já aconteceram. Na classificação, a coluna <b>dif</b> diz quantos jogos o
+      clube tem a mais ou a menos que o número mais comum da tabela — passe o
+      mouse sobre ele para ver quais jogos faltam.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de evolução da pontuação"></canvas>
+            aria-label="card de jogos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -100,6 +96,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/evolucao.js"></script>
+<script type="module" src="/js/jogos.js"></script>
 </body>
 </html>
