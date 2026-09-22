@@ -25,12 +25,20 @@ import {
   resumoDasRodadas,
 } from "/js/jogos_rodada.js";
 
-const LARGURA_DIREITA = 336;
+const LARGURA_DIREITA = 404;
 const VAO = 32;
 
 const ordinal = (n) => `${n}º`;
 const comSinal = (v) => (v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : "0");
 const dataBr = (iso) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "");
+
+/**
+ * Jogo sem data marcada é publicado no último dia do ano — a convenção que
+ * põe o adiado no fim de qualquer ordenação sem inventar uma data. Aqui ele
+ * volta a se chamar pelo que é.
+ */
+const semData = (iso) => Boolean(iso) && iso.endsWith("-12-31");
+const quando = (iso) => (semData(iso) ? "a marcar" : dataBr(iso));
 const porCento = (v) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
 
 export function montarCartao(estado) {
@@ -90,19 +98,40 @@ export function montarCartao(estado) {
 }
 
 /* ------------------------------------------------------------ andamento */
+/**
+ * A barra do andamento, com o percentual numa bolinha na ponta do preenchido.
+ *
+ * A bolinha é maior que a barra de propósito: o número precisa de corpo para
+ * ser o primeiro que se lê no card, e engrossar a barra inteira para caber
+ * nele gastaria altura que o gráfico de rodadas usa melhor.
+ */
 function barraDeAndamento(ctx, { andamento, x, y, largura }) {
   const altura = 22;
+  const raio = 21;
+
   texto(ctx, "andamento do campeonato", x, y + 2,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
           cor: COR.cinzaEscuro });
-  texto(ctx, `${andamento.realizados} de ${andamento.total} jogos · `
-           + porCento(andamento.fracao),
+  texto(ctx, `${andamento.realizados} de ${andamento.total} jogos`,
         x + largura, y + 2,
         { tamanho: 11.5, peso: 700, alinha: "right", cor: COR.azulEscuro });
 
+  const meio = y + 10 + altura / 2;
   caixa(ctx, x, y + 10, largura, altura, COR.cinzaClaro, altura / 2);
   const feito = Math.max(altura, largura * andamento.fracao);
   caixa(ctx, x, y + 10, feito, altura, COR.marca, altura / 2);
+
+  // Presa dentro da barra nos dois extremos: no começo do campeonato ela
+  // sairia pela esquerda, e no fim, pela direita.
+  const cx = Math.min(Math.max(x + feito, x + raio), x + largura - raio);
+  ctx.save();
+  ctx.fillStyle = COR.marca;
+  ctx.beginPath();
+  ctx.arc(cx, meio, raio, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  texto(ctx, `${Math.round(andamento.fracao * 100)}%`, cx, meio + 7,
+        { tamanho: 18, peso: 800, alinha: "center", cor: COR.marcaTexto });
 }
 
 /* -------------------------------------------------------------- rodadas */
@@ -131,11 +160,20 @@ function desenharRodadas(ctx, { rodadas, rodada, x, y, largura }) {
 
     caixa(ctx, xb, topo, larguraBarra, alturaBarra, COR.cinzaClaro, 4);
     const fracao = r.total ? r.realizados / r.total : 0;
+    const alto = alturaBarra * fracao;
     if (fracao > 0) {
-      const alto = alturaBarra * fracao;
       caixa(ctx, xb, topo + alturaBarra - alto, larguraBarra, alto,
             r.completa ? COR.marca : COR.azulMedio, 4);
     }
+
+    // Quantos jogos já saíram, na ponta de dentro do preenchido. Rodada ainda
+    // sem jogo não tem ponta: o número fica no pé do trilho, em cinza.
+    const cabeDentro = alto >= 22;
+    texto(ctx, r.realizados, cx,
+          cabeDentro ? topo + alturaBarra - alto + 15
+                     : topo + alturaBarra - 8,
+          { tamanho: 11.5, peso: 800, alinha: "center",
+            cor: cabeDentro ? COR.marcaTexto : COR.cinzaEscuro });
     if (escolhida) {
       ctx.save();
       ctx.strokeStyle = COR.marca;
@@ -188,8 +226,6 @@ async function listaDeJogos(ctx, { jogos, rodada, clubes, x, y, largura, base })
 
   const topo = y + 16;
   const alturaLinha = Math.min(56, (base - topo) / jogos.length);
-  const sigla = (equipe) => clubes?.[equipe]?.sigla
-    ?? nomeBonito(equipe).slice(0, 3).toUpperCase();
 
   const alvos = [];
   for (const [i, jogo] of jogos.entries()) {
@@ -197,14 +233,18 @@ async function listaDeJogos(ctx, { jogos, rodada, clubes, x, y, largura, base })
     const meio = yLinha + alturaLinha / 2;
     if (i % 2 === 0) caixa(ctx, x, yLinha, largura, alturaLinha - 2, COR.branco, 5);
 
-    texto(ctx, dataBr(jogo.data), x + 14, meio + 5,
-          { tamanho: 12.5, peso: 700, cor: COR.cinzaEscuro });
+    texto(ctx, quando(jogo.data), x + 14, meio + 5,
+          { tamanho: 12.5, peso: 700,
+            cor: semData(jogo.data) ? COR.vermelho : COR.cinzaEscuro });
 
     const lado = Math.min(26, alturaLinha - 10);
     const centro = x + largura * 0.5;
 
-    texto(ctx, sigla(jogo.mandante), centro - 108, meio + 5,
-          { tamanho: 14, peso: 800, alinha: "right", cor: COR.azulEscuro });
+    // Nome inteiro: a lista tem largura de sobra, e sigla é economia que só se
+    // justifica onde o espaço aperta.
+    texto(ctx, cortar(ctx, nomeBonito(jogo.mandante), 300, 15, 700),
+          centro - 108, meio + 5,
+          { tamanho: 15, peso: 700, alinha: "right", cor: COR.azulEscuro });
     desenharEscudo(ctx, await imagem(clubes?.[jogo.mandante]?.escudo),
                    centro - 98, meio - lado / 2, lado);
 
@@ -220,8 +260,9 @@ async function listaDeJogos(ctx, { jogos, rodada, clubes, x, y, largura, base })
 
     desenharEscudo(ctx, await imagem(clubes?.[jogo.visitante]?.escudo),
                    centro + 72, meio - lado / 2, lado);
-    texto(ctx, sigla(jogo.visitante), centro + 108, meio + 5,
-          { tamanho: 14, peso: 800, cor: COR.azulEscuro });
+    texto(ctx, cortar(ctx, nomeBonito(jogo.visitante), 300, 15, 700),
+          centro + 108, meio + 5,
+          { tamanho: 15, peso: 700, cor: COR.azulEscuro });
 
     texto(ctx, jogo.realizado ? "encerrado" : "a jogar", x + largura - 14,
           meio + 5,
@@ -238,8 +279,10 @@ async function listaDeJogos(ctx, { jogos, rodada, clubes, x, y, largura, base })
           pontos: jogo.realizado ? jogo.gc : null, detalhe: "fora" },
       ],
       diferenca: {
-        rotulo: dataBr(jogo.data),
-        texto: jogo.realizado ? "encerrado" : "ainda por jogar",
+        rotulo: quando(jogo.data),
+        texto: jogo.realizado ? "encerrado"
+             : semData(jogo.data) ? "adiado, sem data marcada"
+             : "ainda por jogar",
         cor: jogo.realizado ? COR.cinzaTexto : COR.vermelho,
       },
     });
@@ -307,10 +350,10 @@ async function classificacaoLateral(ctx, o) {
     desenharEscudo(ctx, await imagem(clubes?.[clube.equipe]?.escudo),
                    x + 26, meio - lado / 2, lado);
 
-    const sigla = clubes?.[clube.equipe]?.sigla
-      ?? nomeBonito(clube.equipe).slice(0, 3).toUpperCase();
-    texto(ctx, sigla, x + 52, meio + 4,
-          { tamanho: 12, peso: 700, cor: COR.azulEscuro });
+    const cabeNome = posicoes[0].x - (x + 52) - 8;
+    texto(ctx, cortar(ctx, nomeBonito(clube.equipe), cabeNome, 12.5, 700),
+          x + 52, meio + 4,
+          { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
 
     const dif = clube.j - moda;
     const valores = [String(clube.pts), String(clube.j), comSinal(dif)];
@@ -329,7 +372,7 @@ async function classificacaoLateral(ctx, o) {
     alvos.push({
       n: nomeBonito(clube.equipe),
       x, y: yLinha, l: largura, a: alturaLinha - 1,
-      ...dicaDoClube(clube, dif, pendentes[clube.equipe] ?? [], clubes),
+      ...dicaDoClube(clube, dif, pendentes[clube.equipe] ?? []),
     });
   }
   return alvos;
@@ -341,9 +384,10 @@ async function classificacaoLateral(ctx, o) {
  * É a pergunta que a coluna de diferença provoca — "um jogo a menos contra
  * quem?" — e responder no próprio card evita a viagem até a tabela de jogos.
  */
-function dicaDoClube(clube, dif, pendentes, clubes) {
-  const sigla = (equipe) => clubes?.[equipe]?.sigla
-    ?? nomeBonito(equipe).slice(0, 3).toUpperCase();
+function dicaDoClube(clube, dif, pendentes) {
+  // Só o que ficou para trás. Jogo da próxima rodada não é pendência: é
+  // calendário, e listá-lo aqui afogaria o atraso, que é o assunto da coluna.
+  const atrasados = pendentes.filter((jogo) => jogo.atrasado);
 
   const itens = [{
     rotulo: nomeBonito(clube.equipe),
@@ -352,13 +396,13 @@ function dicaDoClube(clube, dif, pendentes, clubes) {
     detalhe: `${clube.j} jogos · ${ordinal(clube.pos)} lugar`,
   }];
 
-  for (const jogo of pendentes.slice(0, 4)) {
+  for (const jogo of atrasados.slice(0, 4)) {
     itens.push({
       rotulo: `${ordinal(jogo.rodada)} rodada`,
       cor: COR.vermelho,
       pontos: null,
       detalhe: `${jogo.mando === "casa" ? "casa" : "fora"} · `
-             + `${sigla(jogo.adversario)} · ${dataBr(jogo.data)}`,
+             + `${nomeBonito(jogo.adversario)} · ${quando(jogo.data)}`,
     });
   }
 
@@ -366,10 +410,10 @@ function dicaDoClube(clube, dif, pendentes, clubes) {
     itens,
     diferenca: {
       rotulo: comSinal(dif),
-      texto: dif === 0 ? "calendário em dia"
-           : dif > 0 ? "jogos a mais que a maioria"
-           : `${pendentes.length} jogos pendentes`,
-      cor: dif === 0 ? COR.cinzaTexto : dif > 0 ? COR.azul : COR.vermelho,
+      texto: !atrasados.length ? "nenhum jogo atrasado"
+           : `${atrasados.length} `
+             + `${atrasados.length === 1 ? "jogo atrasado" : "jogos atrasados"}`,
+      cor: !atrasados.length ? COR.cinzaTexto : COR.vermelho,
     },
   };
 }

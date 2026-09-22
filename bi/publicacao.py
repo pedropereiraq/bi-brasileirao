@@ -19,6 +19,7 @@ edições e não caberiam no navegador.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import shutil
 from pathlib import Path
@@ -110,8 +111,31 @@ def publicar_clubes(jogos: pd.DataFrame, clubes: pd.DataFrame) -> dict:
 
 
 def publicar_edicao(jogos: pd.DataFrame) -> list[list]:
-    """Uma edição como lista de listas, na ordem de CAMPOS_JOGO."""
-    ordenados = jogos.sort_values(["rodada", "data", "mandante"])
+    """
+    Uma edição como lista de listas, na ordem de CAMPOS_JOGO.
+
+    Jogo não realizado com data no passado não é um jogo de ontem que ninguém
+    registrou: é jogo **sem data marcada**. A federação mantém a data original
+    no calendário até remarcar, e publicá-la faria o site ordenar o jogo entre
+    os de julho e anunciá-lo como "a jogar" numa data que já passou.
+
+    Ele vai para o último dia do ano da edição, que é a convenção de "ainda sem
+    data": fica no fim de qualquer ordenação por data e não se confunde com
+    jogo de verdade. O status continua o que era — "adiado" é o registro
+    correto, e é a data que estava mentindo.
+    """
+    normalizados = jogos.copy()
+    hoje = pd.Timestamp(datetime.date.today())
+    sem_data = (normalizados["status"] != cfg.STATUS_REALIZADO) & (
+        normalizados["data"] < hoje
+    )
+    if sem_data.any():
+        normalizados.loc[sem_data, "data"] = [
+            pd.Timestamp(int(ano), 12, 31)
+            for ano in normalizados.loc[sem_data, "ano"]
+        ]
+
+    ordenados = normalizados.sort_values(["rodada", "data", "mandante"])
     linhas = []
     for j in ordenados.itertuples():
         linhas.append([

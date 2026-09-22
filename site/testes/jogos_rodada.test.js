@@ -70,9 +70,20 @@ test("a moda de jogos desempata pela maior, que é a do calendário em dia", () 
 test("os pendentes de cada clube vêm com mando e adversário", () => {
   const pendentes = pendentesPorClube(partidas);
   assert.deepEqual(pendentes["ALFA (SP)"], [
-    { rodada: 2, data: "2026-08-20", mando: "fora", adversario: "DELTA (BA)" },
-    { rodada: 3, data: "2026-02-11", mando: "casa", adversario: "GAMA (MG)" },
+    { rodada: 2, data: "2026-08-20", mando: "fora", atrasado: false,
+      adversario: "DELTA (BA)" },
+    { rodada: 3, data: "2026-02-11", mando: "casa", atrasado: false,
+      adversario: "GAMA (MG)" },
   ]);
   // Quem já jogou tudo não aparece na lista.
   assert.equal(pendentesPorClube(partidas.slice(0, 2))["ALFA (SP)"], undefined);
+});
+
+test("atrasado é o jogo de uma rodada que o campeonato já passou", () => {
+  // Com a 3ª já em andamento, o adiado da 2ª vira atraso; o da 3ª, não.
+  const comTerceira = [...partidas,
+    jogo(3, "2026-02-11", "ALFA (SP)", "BETA (RJ)", 1, 0)];
+  const pendentes = pendentesPorClube(comTerceira);
+  assert.deepEqual(pendentes["DELTA (BA)"].map((j) => [j.rodada, j.atrasado]),
+    [[2, true], [3, false]]);
 });

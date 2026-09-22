@@ -90,14 +90,22 @@ export function modaDeJogos(tabela) {
  *
  * Indexado por clube porque a pergunta é sempre sobre um deles: "o Bahia tem
  * um jogo a menos — contra quem?".
+ *
+ * `atrasado` distingue os dois tipos de pendência, e a régua é a rodada, não a
+ * data: jogo que ficou para trás é o de uma rodada que o campeonato já
+ * passou. Pela data não dava — um adiado sem nova data marcada aparece com
+ * data futura, e um jogo da rodada corrente ainda por disputar apareceria como
+ * atrasado só por estar marcado para amanhã.
  */
 export function pendentesPorClube(partidas) {
+  const corrente = rodadaCorrente(partidas);
   const saida = {};
   const anotar = (clube, jogo, mando) => {
     (saida[clube] ??= []).push({
       rodada: jogo.rodada,
       data: jogo.data,
       mando,
+      atrasado: jogo.rodada < corrente,
       adversario: mando === "casa" ? jogo.visitante : jogo.mandante,
     });
   };
