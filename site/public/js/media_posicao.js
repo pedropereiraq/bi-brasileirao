@@ -139,3 +139,31 @@ export function comparacaoComAMedia(coluna, estatisticas) {
     };
   });
 }
+
+/**
+ * A diferença para a média em cada posição, rodada a rodada.
+ *
+ * É a grade da tela de médias virada de lado: lá cada coluna é uma edição numa
+ * rodada; aqui cada coluna é uma rodada de uma edição só. O que se ganha com
+ * isso é o movimento — a sobra de pontos que numa rodada está no fim da tabela
+ * aparece semanas depois no meio dela, e é esse deslocamento que a leitura
+ * quer mostrar.
+ *
+ * A média de cada rodada é recalculada com as edições que chegaram àquela
+ * rodada, e sempre sem a que está sendo desenhada: comparar uma edição com uma
+ * média que a inclui é comparar um número com ele mesmo diluído.
+ */
+export function evolucaoDaDiferenca(dados, { serie, ano }) {
+  const edicao = dados?.series?.[serie]?.[String(ano)];
+  if (!edicao) return [];
+
+  const saida = [];
+  for (let rodada = 1; rodada <= edicao.rodadas; rodada++) {
+    const colunas = grade(dados, { serie, rodada })
+      .filter((coluna) => coluna.ano !== Number(ano));
+    const estatisticas = estatisticasPorPosicao(colunas);
+    const coluna = colunaDaEdicao(dados, { serie, ano, rodada });
+    saida.push({ rodada, celulas: comparacaoComAMedia(coluna, estatisticas) });
+  }
+  return saida;
+}

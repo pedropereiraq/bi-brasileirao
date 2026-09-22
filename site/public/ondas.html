@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Média por posição e rodada · Cards ECBahia Números</title>
+<title>Distribuição de pontos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Média por posição e rodada</h1>
-      <p class="subtitulo">Como está este campeonato perto do que costuma ser.</p>
+      <h1>Distribuição de pontos</h1>
+      <p class="subtitulo">Onde a tabela pontua acima e abaixo do normal, rodada a rodada.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -44,14 +44,14 @@ try { document.documentElement.dataset.marca =
     <a href="/jogos.html">Jogos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/fmi.html">FMI</a>
-    <a href="/ondas.html">Distribuição de pontos</a>
+    <a href="/ondas.html" aria-current="page">Distribuição de pontos</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da campanha</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
-    <a href="/medias.html" aria-current="page">Média por posição e rodada</a>
+    <a href="/medias.html">Média por posição e rodada</a>
     <a href="/proximos.html">Próximos jogos</a>
     <a href="/atualizar.html">Atualizar dados</a>
   </nav>
@@ -62,35 +62,26 @@ try { document.documentElement.dataset.marca =
         <label id="rotulo-serie">Série</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
+      <div class="campo">
+        <label for="ano">Edição</label>
+        <select id="ano"></select>
+      </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="coluna-controles">
-      <div class="campo campo-deslizante">
-        <label for="rodada">Rodada <output id="valor-rodada">—</output>
-          <span class="dica-campo">começa na rodada do campeonato em andamento</span>
-        </label>
-        <input type="range" id="rodada" min="1" max="38" step="1" value="10">
-      </div>
-      <div class="campo campo-posicoes">
-        <label id="rotulo-posicoes">Destacar posições finais
-          <span class="dica-campo">a borda de cada quadrado marca onde aquele clube
-            terminou: verde acima da faixa, vermelho abaixo</span>
-        </label>
-        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-      </div>
-    </div>
-    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> Cada
-      ponto é a pontuação ao fim daquela rodada: jogo adiado conta na rodada
-      a que pertence, e por isso dois clubes podem ter números de jogos
-      diferentes na mesma rodada. É a leitura certa quando a pergunta é
-      sobre o campeonato.</p>
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> Cada coluna
+      é o retrato da tabela ao fim daquela rodada, e jogo adiado conta na rodada
+      a que pertence. Duas coisas puxam uma coluna inteira para baixo sem que
+      ninguém tenha jogado mal: o <b>empate</b>, que distribui dois pontos em
+      vez de três e queima o terceiro para sempre, e o <b>jogo por disputar</b>,
+      que retém três até acontecer. As duas aparecem na faixa ao pé da grade.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de média por posição e rodada"></canvas>
+            aria-label="card de distribuição de pontos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -102,6 +93,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/medias.js"></script>
+<script type="module" src="/js/ondas.js"></script>
 </body>
 </html>
