@@ -29,11 +29,15 @@ import { aproveitamentoDaTabela, fluxoDePontos } from "/js/fluxo_de_pontos.js";
 const RODADAS = 38;
 const CALHA = 46;
 const CALHA_DIR = 168;
-const ALTURA_FLUXO = 92;
+const ALTURA_FLUXO = 104;
 
 const ordinal = (n) => `${n}º`;
 const num = (v) => (v === null ? "—" : v.toFixed(1).replace(".", ","));
 const comSinal = (v) => (v > 0 ? `+${num(v)}` : v < 0 ? `−${num(-v)}` : "0");
+const inteiroComSinal = (v) => {
+  const inteiro = Math.round(v);
+  return inteiro > 0 ? `+${inteiro}` : inteiro < 0 ? `−${-inteiro}` : "0";
+};
 
 export function montarCartao(estado) {
   const { serie, edicao, posicoes, partidas } = estado;
@@ -115,9 +119,15 @@ function mistura(de, para, t) {
  * outro — aparece sozinha, sem competir com as casas em que nada acontece.
  */
 function corDaDiferenca(diferenca, extremo) {
-  if (diferenca === null) return COR.cinzaClaro;
+  if (diferenca === null) return { fundo: COR.cinzaClaro, tinta: COR.cinzaEscuro };
   const t = Math.min(1, Math.abs(diferenca) / extremo);
-  return mistura(COR.fundo, diferenca >= 0 ? COR.positivo : COR.negativo, t);
+  return {
+    fundo: mistura(COR.fundo, diferenca >= 0 ? COR.positivo : COR.negativo, t),
+    // O número tem de se ler nas duas pontas da escala: escuro no quase
+    // branco do meio, claro no tom cheio das bordas.
+    tinta: t > 0.5 ? COR.branco : COR.azulEscuro,
+    forca: t,
+  };
 }
 
 function legenda(ctx, { x, y, extremo }) {
@@ -131,7 +141,7 @@ function legenda(ctx, { x, y, extremo }) {
   for (let i = 0; i < passos; i++) {
     const t = (i / (passos - 1)) * 2 - 1;
     caixa(ctx, cursor, y + 2, largura, 12,
-          corDaDiferenca(t * extremo, extremo), 2);
+          corDaDiferenca(t * extremo, extremo).fundo, 2);
     cursor += largura + 2;
   }
   texto(ctx, "acima da média", cursor + 8, y + 12,
@@ -158,8 +168,19 @@ function desenharGrade(ctx, o) {
     const x = x0 + (coluna.rodada - 1) * largura;
     for (const [i, celula] of coluna.celulas.entries()) {
       const yLinha = topo + i * alturaLinha;
+      const tom = corDaDiferenca(celula.diferenca, extremo);
       caixa(ctx, x + .5, yLinha + .5, largura - 1, alturaLinha - 1,
-            corDaDiferenca(celula.diferenca, extremo), 2);
+            tom.fundo, 2);
+
+      // O valor dentro da casa: a cor diz onde olhar, o número diz quanto.
+      // Arredondado ao ponto inteiro, que é a unidade da tabela — a casa
+      // decimal fica na dica do mouse, onde há espaço para ela.
+      if (celula.diferenca !== null) {
+        texto(ctx, inteiroComSinal(celula.diferenca),
+              x + largura / 2, yLinha + alturaLinha / 2 + 4,
+              { tamanho: 10, peso: tom.forca > 0.35 ? 800 : 400,
+                alinha: "center", cor: tom.tinta });
+      }
 
       alvos.push({
         n: `${ordinal(i + 1)} na ${ordinal(coluna.rodada)} rodada`,
@@ -192,21 +213,26 @@ function desenharGrade(ctx, o) {
  * acontecer. Uma cor só diria que são a mesma coisa.
  */
 function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
-  texto(ctx, "pontos que não chegaram à tabela", MARGEM, y - 6,
+  texto(ctx, "% dos pontos em disputa que não chegaram à tabela", MARGEM,
+        y - 6,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
           cor: COR.cinzaEscuro });
 
-  const maximo = Math.max(1, ...fluxo.map((l) => l.faltando));
+  // Em percentual, e não em pontos: o total em disputa cresce a cada rodada,
+  // e uma coluna de pontos subiria sozinha mesmo com o campeonato perdendo
+  // sempre a mesma fatia. A fração compara rodada com rodada.
+  const fracao = (linha, chave) => linha[chave] / linha.possiveis;
+  const maximo = Math.max(.02, ...fluxo.map((l) => fracao(l, "faltando")));
   const base = y + altura;
-  const escala = (v) => (v / maximo) * (altura - 16);
+  const escala = (v) => (v / maximo) * (altura - 22);
 
   linhaH(ctx, x0, x0 + RODADAS * largura, base, COR.linha);
 
   const alvos = [];
   for (const linha of fluxo) {
     const x = x0 + (linha.rodada - 1) * largura;
-    const alturaEmpate = escala(linha.queimados);
-    const alturaRetido = escala(linha.retidos);
+    const alturaEmpate = escala(fracao(linha, "queimados"));
+    const alturaRetido = escala(fracao(linha, "retidos"));
 
     caixa(ctx, x + 2, base - alturaEmpate, largura - 4, alturaEmpate,
           COR.cinzaEscuro, 2);
@@ -214,15 +240,21 @@ function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
       caixa(ctx, x + 2, base - alturaEmpate - alturaRetido, largura - 4,
             alturaRetido, COR.negativo, 2);
     }
+    texto(ctx, `${Math.round(fracao(linha, "faltando") * 100)}%`,
+          x + largura / 2, base - alturaEmpate - alturaRetido - 6,
+          { tamanho: 9.5, peso: 800, alinha: "center", cor: COR.azulEscuro });
 
     alvos.push({
       n: `${ordinal(linha.rodada)} rodada`,
       x, y: y - 10, l: largura, a: altura + 10,
       itens: [
         { rotulo: "queimados no empate", cor: COR.cinzaEscuro,
-          pontos: linha.queimados, detalhe: "não voltam mais" },
+          pontos: linha.queimados,
+          detalhe: `${num(fracao(linha, "queimados") * 100)}% · não voltam mais` },
         { rotulo: "retidos em jogo por disputar", cor: COR.negativo,
-          pontos: linha.retidos, detalhe: "voltam quando o jogo sair" },
+          pontos: linha.retidos,
+          detalhe: `${num(fracao(linha, "retidos") * 100)}% · voltam quando o `
+                 + `jogo sair` },
       ],
       diferenca: {
         rotulo: `${Math.round(aproveitamentoDaTabela(linha) * 100)}%`,
