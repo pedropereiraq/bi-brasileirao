@@ -18,10 +18,14 @@ import { rodadaCorrente, rodadaMaxima } from "/js/media_posicao.js";
 // Libertadores e a primeira cadeira do rebaixamento.
 const PADRAO = { melhor: 4, pior: 17 };
 const ALINHAMENTOS = ["pontuacao", "topo", "base", "centro"];
+// O eixo central é o que responde primeiro à pergunta da tela: quanto
+// separa as duas posições. A escala de pontos responde a seguinte — em
+// que patamar da tabela isso aconteceu —, e fica a um clique.
+const PADRAO_ALINHAMENTO = "centro";
 
 const estado = {
   posicoes: null,
-  serie: null, rodada: null, faixa: { ...PADRAO }, alinhamento: "pontuacao",
+  serie: null, rodada: null, faixa: { ...PADRAO }, alinhamento: PADRAO_ALINHAMENTO,
 };
 
 const el = (id) => document.getElementById(id);
@@ -44,7 +48,7 @@ async function inicializar() {
     pior: url.pior ?? PADRAO.pior,
   };
   estado.alinhamento = ALINHAMENTOS.includes(url.alinhamento)
-    ? url.alinhamento : "pontuacao";
+    ? url.alinhamento : PADRAO_ALINHAMENTO;
 
   montarChavesDeSerie(Object.keys(estado.posicoes.series ?? {}).sort());
 
