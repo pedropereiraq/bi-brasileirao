@@ -1,10 +1,19 @@
 /**
  * Card: a dificuldade da tabela de cada clube.
  *
- * À esquerda, a lista inteira: uma barra por clube, com o número que a
- * sustenta e a contagem de adversários por região da tabela. À direita, o
- * clube escolhido aberto — de onde vêm os adversários dele, quais são os
- * jogos, e quanto pesa a tabela em casa e fora.
+ * A lista inteira é o card: uma barra por clube, com o número que a sustenta
+ * e a contagem de adversários por região da tabela. Ela ocupa tudo enquanto
+ * ninguém for escolhido — o detalhe de um clube é uma segunda pergunta, e
+ * abrir um por conta própria seria responder o que não se perguntou.
+ *
+ * Escolhido um clube, o painel abre à direita: de onde vêm os adversários
+ * dele, quanto pesa a tabela em casa e fora, e **em que região da tabela**
+ * estão os jogos. Essa última é a pergunta que a lista cronológica não
+ * respondia: ela dizia contra quem, na ordem do calendário, e era preciso
+ * decorar a classificação para enxergar o desenho. Com a classificação
+ * inteira desenhada e uma etiqueta em cada confronto, o desenho aparece
+ * sozinho — as etiquetas se acumulam na faixa do campeonato em que o clube
+ * ainda tem trabalho.
  *
  * A cor é a mesma da tela de próximos jogos, e de propósito: vermelho na
  * tabela mais dura da tela, verde na mais leve, cinza no meio. Duas telas que
@@ -50,6 +59,11 @@ function corDaFracao(fracao) {
 }
 
 const corDaPosicao = (posicao) => corDaFracao((posicao - 1) / (POSICOES - 1));
+
+// Triunfo, empate e derrota na tríade da marca, a mesma da barra de campanha.
+const corDoResultado = (resultado) =>
+  resultado === "T" ? COR.positivo
+  : resultado === "E" ? COR.cinzaEscuro : COR.negativo;
 const corDaFaixa = (chave) => corDaPosicao(MEIO_DA_FAIXA[chave]);
 
 const rotuloDoCriterio = (criterio) =>
@@ -73,7 +87,10 @@ export function montarCartao(estado) {
   if (!linhas.length) return null;
 
   const dureza = escalaDaDureza(linhas, criterio);
-  const aberto = linhas.find((l) => l.equipe === destaque) ?? linhas[0];
+  // Sem escolha não há painel: o padrão é a tabela, e só.
+  const aberto = destaque ? linhas.find((l) => l.equipe === destaque) : null;
+  const classificacao = Object.values(tabelas.geral)
+    .sort((a, b) => a.pos - b.pos);
 
   const spec = {
     titulo: `Dificuldade de tabela na Série ${serie} ${edicao.ano}`,
@@ -93,17 +110,20 @@ export function montarCartao(estado) {
       + `faixas G-4 a Z-4 são os cinco blocos de quatro posições da tabela.`,
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
+      const cheia = CARD.largura - MARGEM * 2;
 
       const alvos = await lista(ctx, {
         linhas, clubes, criterio, dureza, destaque: aberto?.equipe,
-        x: MARGEM, largura: LARGURA_LISTA, y, base,
+        x: MARGEM, largura: aberto ? LARGURA_LISTA : cheia, y, base,
       });
 
-      const xPainel = MARGEM + LARGURA_LISTA + VAO;
-      alvos.push(...await painel(ctx, {
-        linha: aberto, clubes, criterio, quando,
-        x: xPainel, largura: CARD.largura - MARGEM - xPainel, y, base,
-      }));
+      if (aberto) {
+        const xPainel = MARGEM + LARGURA_LISTA + VAO;
+        alvos.push(...await painel(ctx, {
+          linha: aberto, classificacao, clubes, criterio, quando,
+          x: xPainel, largura: CARD.largura - MARGEM - xPainel, y, base,
+        }));
+      }
 
       spec.hover = {
         pontos: alvos, eixo: "caixa", unidade: "",
@@ -121,17 +141,16 @@ export function montarCartao(estado) {
 /* ----------------------------------------------------------------- lista */
 async function lista(ctx, { linhas, clubes, criterio, dureza, destaque,
                             x, largura, y, base }) {
-  const colunas = {
-    ordem: x + 14,
-    escudo: x + 28,
-    nome: x + 54,
-    barra: { de: x + 216, ate: x + 416 },
-    valor: x + 486,
-    jogos: x + 518,
-    faixas: x + 536,
-  };
   const ladoFaixa = 34;
   const vaoFaixa = 3;
+
+  // As colunas se penduram na borda direita: sem o painel aberto a lista
+  // ocupa o card inteiro, e é a barra que cresce — é ela que compara.
+  const colunas = { ordem: x + 14, escudo: x + 28, nome: x + 54 };
+  colunas.faixas = x + largura - FAIXAS.length * (ladoFaixa + vaoFaixa) - 2;
+  colunas.jogos = colunas.faixas - 18;
+  colunas.valor = colunas.jogos - 32;
+  colunas.barra = { de: x + 216, ate: colunas.valor - 70 };
 
   const topo = y + 30;
   const alturaLinha = (base - topo) / linhas.length;
@@ -230,8 +249,8 @@ async function lista(ctx, { linhas, clubes, criterio, dureza, destaque,
 }
 
 /* ---------------------------------------------------------------- painel */
-async function painel(ctx, { linha, clubes, criterio, quando, x, largura,
-                             y, base }) {
+async function painel(ctx, { linha, classificacao, clubes, criterio, quando,
+                             x, largura, y, base }) {
   if (!linha) return [];
 
   const lado = 34;
@@ -273,8 +292,8 @@ async function painel(ctx, { linha, clubes, criterio, quando, x, largura,
   const alvos = pizza(ctx, {
     linha, x, largura: 300, y: topo, base,
   });
-  alvos.push(...agenda(ctx, {
-    linha, clubes, quando, x: x + 320, largura: largura - 320,
+  alvos.push(...tabelaComEtiquetas(ctx, {
+    linha, classificacao, quando, x: x + 320, largura: largura - 320,
     y: topo, base,
   }));
   return alvos;
@@ -352,40 +371,87 @@ function pizza(ctx, { linha, x, largura, y, base }) {
   return [];
 }
 
-/** Os jogos do recorte, na ordem em que aconteceram ou vão acontecer. */
-function agenda(ctx, { linha, clubes, quando, x, largura, y, base }) {
-  texto(ctx, quando === "realizados" ? "jogos já realizados" : "jogos a realizar",
+/**
+ * A classificação inteira, com etiqueta nos jogos que entram na conta.
+ *
+ * A régua aqui é a tabela, e não o calendário. Uma lista cronológica diz
+ * contra quem se joga; esta diz **onde**, e é isso que se quer ver — três
+ * etiquetas coladas no topo são uma reta final contra o G-4, as mesmas três
+ * espalhadas embaixo são outra história inteiramente.
+ *
+ * A etiqueta muda com o recorte, porque a pergunta muda. No que ainda vem,
+ * o que interessa é onde se joga: azul para casa, vermelho para fora, que é o
+ * par da marca. No que já passou, onde se jogou é história velha — o que
+ * interessa é o que se tirou de lá, e a etiqueta vira o placar, na cor do
+ * desfecho.
+ *
+ * Quem joga duas vezes contra o mesmo adversário no recorte ganha as duas
+ * etiquetas, na ordem em que os jogos vêm.
+ */
+function tabelaComEtiquetas(ctx, { linha, classificacao, quando, x, largura,
+                                   y, base }) {
+  texto(ctx, quando === "realizados" ? "onde os jogos aconteceram"
+                                     : "onde os jogos serão disputados",
         x, y - 10,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
           cor: COR.cinzaEscuro });
 
-  const jogos = linha.jogos;
-  if (!jogos.length) return [];
+  const porAdversario = new Map();
+  for (const jogo of linha.jogos) {
+    if (!porAdversario.has(jogo.adversario)) porAdversario.set(jogo.adversario, []);
+    porAdversario.get(jogo.adversario).push(jogo);
+  }
 
-  const altura = Math.min(28, (base - y) / Math.max(1, jogos.length));
-  const xPos = x + largura - 96;
-  const xMando = x + largura - 58;
+  const altura = Math.min(28, (base - y) / Math.max(1, classificacao.length));
+  const TAG = { largura: 52, altura: 18, vao: 5 };
+  const xTags = x + largura - 2 * TAG.largura - TAG.vao;
 
-  for (const [i, jogo] of jogos.entries()) {
+  const alvos = [];
+  for (const [i, clube] of classificacao.entries()) {
+    const jogos = porAdversario.get(clube.equipe) ?? [];
+    const proprio = clube.equipe === linha.equipe;
     const yl = y + i * altura;
     const meio = yl + altura / 2;
-    if (i % 2 === 0) caixa(ctx, x, yl, largura, altura - 1, COR.branco, 3);
 
-    texto(ctx, `${jogo.rodada}ª`, x + 22, meio + 4,
-          { tamanho: 10.5, alinha: "right", cor: COR.cinzaEscuro });
-    texto(ctx, cortar(ctx, nomeBonito(jogo.adversario), xPos - x - 44, 12.5, 700),
-          x + 32, meio + 4,
-          { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+    if (jogos.length) caixa(ctx, x, yl, largura, altura - 1, COR.branco, 3);
+    if (proprio) caixa(ctx, x, yl, largura, altura - 1, COR.cinzaClaro, 3);
 
-    if (jogo.posicao !== null) {
-      caixa(ctx, xPos - 2, meio - 10, 30, 20, corDaPosicao(jogo.posicao), 4);
-      texto(ctx, jogo.posicao, xPos + 13, meio + 5,
-            { tamanho: 12, peso: 800, alinha: "center", cor: COR.branco });
+    texto(ctx, clube.pos, x + 20, meio + 4,
+          { tamanho: 11.5, peso: 800, alinha: "right",
+            cor: jogos.length || proprio ? COR.azulEscuro : COR.cinzaEscuro });
+    texto(ctx, cortar(ctx, nomeBonito(clube.equipe), xTags - x - 38, 12.5, 700),
+          x + 30, meio + 4,
+          { tamanho: 12.5, peso: jogos.length || proprio ? 700 : 400,
+            cor: jogos.length || proprio ? COR.azulEscuro : COR.cinzaTexto });
+
+    jogos.slice(0, 2).forEach((jogo, k) => {
+      const xt = xTags + k * (TAG.largura + TAG.vao);
+      const passado = quando === "realizados" && jogo.gp !== null;
+      caixa(ctx, xt, meio - TAG.altura / 2, TAG.largura, TAG.altura,
+            passado ? corDoResultado(jogo.resultado)
+                    : jogo.mando === "casa" ? COR.azul : COR.vermelho, 4);
+      texto(ctx, passado ? `${jogo.gp}×${jogo.gc}`
+                         : jogo.mando === "casa" ? "casa" : "fora",
+            xt + TAG.largura / 2, meio + 4,
+            { tamanho: passado ? 11.5 : 10, peso: 800,
+              maiuscula: !passado, espaco: passado ? 0 : .7,
+              alinha: "center", cor: COR.branco });
+    });
+
+    if (jogos.length) {
+      alvos.push({
+        n: `${nomeBonito(clube.equipe)} · ${ordinal(clube.pos)}`,
+        x, y: yl, l: largura, a: altura - 1,
+        itens: [],
+        diferenca: {
+          rotulo: jogos.length === 1 ? "1 jogo" : `${jogos.length} jogos`,
+          texto: jogos.map((j) => `${j.rodada}ª rodada `
+                 + `${j.mando === "casa" ? "em casa" : "fora"}`
+                 + (j.gp === null ? "" : ` · ${j.gp}×${j.gc}`)).join(" · "),
+          cor: jogos[0].mando === "casa" ? COR.azul : COR.vermelho,
+        },
+      });
     }
-
-    texto(ctx, jogo.mando === "casa" ? "casa" : "fora", xMando, meio + 4,
-          { tamanho: 11, peso: 700, maiuscula: true, espaco: .6,
-            cor: jogo.mando === "casa" ? COR.azul : COR.cinzaEscuro });
   }
-  return [];
+  return alvos;
 }

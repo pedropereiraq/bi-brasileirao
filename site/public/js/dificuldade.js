@@ -139,7 +139,7 @@ async function trocarAno(apelido, url = {}) {
   // edição não pode desfazer a escolha dele.
   if (!escolhaDoUsuario.quando) estado.quando = padraoDoQuando(edicao);
 
-  el("destaque").innerHTML = '<option value="">a mais dura da lista</option>'
+  el("destaque").innerHTML = '<option value="">nenhuma</option>'
     + clubes.map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
   const querido = url.destaque ?? estado.destaque;
   estado.destaque = clubes.includes(querido) ? querido : "";
@@ -160,12 +160,23 @@ function padraoDoQuando(edicao) {
 
 function montarAgendas(jogos, clubes) {
   const agendas = Object.fromEntries(clubes.map((c) => [c, []]));
+  // O placar vai junto, do ponto de vista de cada lado: no recorte dos jogos
+  // já realizados é ele que vira etiqueta, no lugar do mando.
+  const desfecho = (gp, gc) => (gp > gc ? "T" : gp === gc ? "E" : "D");
   for (const j of jogos) {
     const feito = j[STATUS] === "realizado"
       && j[GOLS_M] !== null && j[GOLS_V] !== null;
     const comum = { rodada: j[RODADA], data: j[DATA], realizado: feito };
-    agendas[j[MANDANTE]]?.push({ ...comum, adversario: j[VISITANTE], mando: "casa" });
-    agendas[j[VISITANTE]]?.push({ ...comum, adversario: j[MANDANTE], mando: "fora" });
+    const gm = feito ? j[GOLS_M] : null;
+    const gv = feito ? j[GOLS_V] : null;
+    agendas[j[MANDANTE]]?.push({
+      ...comum, adversario: j[VISITANTE], mando: "casa",
+      gp: gm, gc: gv, resultado: feito ? desfecho(gm, gv) : null,
+    });
+    agendas[j[VISITANTE]]?.push({
+      ...comum, adversario: j[MANDANTE], mando: "fora",
+      gp: gv, gc: gm, resultado: feito ? desfecho(gv, gm) : null,
+    });
   }
   for (const lista of Object.values(agendas)) {
     lista.sort((a, b) => (a.data === b.data ? a.rodada - b.rodada
