@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evolução da campanha · Cards ECBahia Números</title>
+<title>Comparativo de turnos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Evolução da campanha</h1>
-      <p class="subtitulo">Uma campanha contra o que duas posições costumam exigir.</p>
+      <h1>Comparativo de turnos</h1>
+      <p class="subtitulo">O que mudou do primeiro para o segundo turno, confronto a confronto.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -45,10 +45,10 @@ try { document.documentElement.dataset.marca =
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
-    <a href="/turnos.html">Comparativo de turnos</a>
+    <a href="/turnos.html" aria-current="page">Comparativo de turnos</a>
     <a href="/ondas.html">Distribuição de pontos</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
-    <a href="/evolucao.html" aria-current="page">Evolução da campanha</a>
+    <a href="/evolucao.html">Evolução da campanha</a>
     <a href="/diferenca.html">Diferença entre dois pontos</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
@@ -62,38 +62,36 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-modo">A linha mede</label>
-        <div class="chaves" id="modo" role="group" aria-labelledby="rotulo-modo"></div>
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo">
-        <label for="serie">Série</label>
-        <select id="serie"></select>
-      </div>
-      <div class="campo">
-        <label for="ano">Ano</label>
+        <label for="ano">Edição</label>
         <select id="ano"></select>
       </div>
       <div class="campo campo-equipe">
-        <label for="equipe"><i class="pinta azul" aria-hidden="true"></i>Equipe</label>
+        <label for="equipe">Equipe
+          <span class="dica-campo">ou clique num clube dentro do card</span>
+        </label>
         <select id="equipe"></select>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo campo-posicoes">
-      <label id="rotulo-posicoes">Posições de referência
-        <span class="dica-campo">arraste as bolinhas: a verde é a posição melhor,
-          a vermelha a pior</span>
-      </label>
-      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
-    </div>
-    <p class="nota-ordem" id="nota-ordem"></p>
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> A tabela do
+      Brasileirão é espelhada: a rodada 20 é o returno da rodada 1, a 21 o da 2,
+      e assim até a 38. É isso que põe a ida e a volta de cada confronto na
+      mesma coluna. As linhas acumulam o que o clube somou nos jogos já
+      disputados até aquela rodada do turno, de modo que jogo adiado deixa a
+      linha plana na coluna dele e entra quando acontecer — como na tabela do
+      dia.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de evolução da pontuação"></canvas>
+            aria-label="card de comparativo de turnos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -105,6 +103,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/evolucao.js"></script>
+<script type="module" src="/js/turnos_pagina.js"></script>
 </body>
 </html>
