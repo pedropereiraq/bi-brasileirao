@@ -47,6 +47,7 @@ const ordinal = (p) => `${p}º`;
 const num = (v, casas = 2) =>
   (v === null ? "—" : v.toFixed(casas).replace(".", ","));
 const comSinal = (v) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
+const plural = (n, um, muitos) => `${n} ${n === 1 ? um : muitos}`;
 
 const COR_DO_TURNO = () => ({ ida: COR.azul, volta: COR.vermelho });
 
@@ -61,14 +62,18 @@ export function montarCartao(estado) {
   const ida = resumoDoTurno(confrontos, "ida");
   const volta = resumoDoTurno(confrontos, "volta");
   const saldo = saldoComparavel(confrontos);
+  // O mesmo resumo, restrito aos confrontos que os dois turnos já jogaram:
+  // é a comparação justa enquanto a edição corre.
+  const ateAqui = confrontos.slice(0, Math.max(1, saldo.colunas));
+  const idaAteAqui = resumoDoTurno(ateAqui, "ida");
+  const voltaAteAqui = resumoDoTurno(ateAqui, "volta");
   if (!ida.jogos) return null;
 
 
   const spec = {
     titulo: `Os dois turnos ${artigo(equipe)} ${nomeBonito(equipe)} na Série `
           + `${serie} ${edicao.ano}`,
-    subtitulo: `Cada coluna é um adversário: a ida na rodada n, a volta na `
-             + `rodada n+19`,
+    subtitulo: "",
     arquivo: `turnos-${serie}-${edicao.ano}-${equipe}`,
     // Sem faixa de números: os totais de cada turno já estão nas duas
     // classificações, e repeti-los em caixa grande seria dizer duas vezes o
@@ -95,9 +100,20 @@ export function montarCartao(estado) {
       const larguraDireita = CARD.largura - MARGEM - x0;
       const meio = (larguraDireita - VAO_PAINEL) / 2;
 
-      rosca(ctx, { saldo, x: x0, largura: meio, y, altura: ALTURA_PAINEL });
-      ritmo(ctx, { ida, volta, x: x0 + meio + VAO_PAINEL, largura: meio, y,
-                   altura: ALTURA_PAINEL });
+      // Dois painéis do mesmo tipo, de propósito: lado a lado eles mostram
+      // que o ritmo do returno até aqui e o do turno inteiro são perguntas
+      // diferentes — e quanto uma responde diferente da outra.
+      ritmo(ctx, {
+        ida: idaAteAqui, volta: voltaAteAqui, x: x0, largura: meio, y,
+        altura: ALTURA_PAINEL,
+        titulo: saldo.completo
+          ? `pontos por jogo nos ${saldo.colunas} confrontos`
+          : `pontos por jogo nos ${saldo.colunas} confrontos já repetidos`,
+      });
+      ritmo(ctx, {
+        ida, volta, x: x0 + meio + VAO_PAINEL, largura: meio, y,
+        altura: ALTURA_PAINEL, titulo: "pontos por jogo no turno inteiro",
+      });
 
       alvos.push(...await grafico(ctx, {
         confrontos, ida, volta, clubes,
@@ -261,6 +277,34 @@ async function grafico(ctx, { confrontos, ida, volta, clubes, x, largura,
     }
   }
 
+  // A vertical de onde o returno está: é ali que as duas linhas podem ser
+  // comparadas, e a diferença entre elas naquele ponto vai escrita no pé.
+  if (corte) {
+    const xc = centro(confrontos[corte - 1].n);
+    ctx.save();
+    ctx.strokeStyle = COR.cinza;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(xc, plotTopo);
+    ctx.lineTo(xc, plotBase);
+    ctx.stroke();
+    ctx.restore();
+
+    const { acumuladoIda, acumuladoVolta } = confrontos[corte - 1];
+    const diferenca = acumuladoVolta - acumuladoIda;
+    const rotulo = `${comSinal(diferenca)} pts`;
+    ctx.save();
+    ctx.font = '800 12.5px "Assistant", sans-serif';
+    const l = ctx.measureText(rotulo).width + 18;
+    ctx.restore();
+    caixa(ctx, xc - l / 2, plotBase - 26, l, 22,
+          diferenca > 0 ? COR.positivo : diferenca < 0 ? COR.negativo
+            : COR.cinzaEscuro, 5);
+    texto(ctx, rotulo, xc, plotBase - 11,
+          { tamanho: 12.5, peso: 800, alinha: "center", cor: COR.branco });
+  }
+
   // O total de cada turno na ponta da sua linha, que é onde o olho já está.
   for (const { pontos, cor, resumo } of desenhos) {
     const fim = pontos.at(-1);
@@ -312,79 +356,15 @@ function etiquetaDaLinha(ctx, [px, py], rotulo, cor, { x, largura,
 }
 
 /**
- * A rosca da diferença: os pontos de cada turno nos confrontos já repetidos.
- *
- * O anel diz a proporção — quanto de tudo o que se somou nesses confrontos
- * saiu de cada turno — e o miolo diz o que interessa, que é o saldo entre os
- * dois. Num campeonato em andamento a conta para na última coluna em que os
- * dois turnos jogaram: comparar dezenove jogos com nove não seria comparar.
- */
-function rosca(ctx, { saldo, x, largura, y, altura }) {
-  moldura(ctx, x, y, largura, altura);
-  texto(ctx, saldo.completo ? "diferença entre os turnos"
-          : `diferença nos ${saldo.colunas} confrontos repetidos`,
-        x + 16, y + 22,
-        { tamanho: 10, peso: 700, maiuscula: true, espaco: .9,
-          cor: COR.cinzaEscuro });
-
-  const raio = 44;
-  const cx = x + 16 + raio;
-  const cy = y + 34 + raio;
-  const total = saldo.ida + saldo.volta;
-  const cores = COR_DO_TURNO();
-
-  ctx.save();
-  ctx.lineWidth = 17;
-  ctx.lineCap = "butt";
-  if (!total) {
-    ctx.strokeStyle = COR.cinzaClaro;
-    ctx.beginPath();
-    ctx.arc(cx, cy, raio, 0, Math.PI * 2);
-    ctx.stroke();
-  } else {
-    let inicio = -Math.PI / 2;
-    for (const [lado, valor] of [["ida", saldo.ida], ["volta", saldo.volta]]) {
-      if (!valor) continue;
-      const fim = inicio + (valor / total) * Math.PI * 2;
-      ctx.strokeStyle = cores[lado];
-      ctx.beginPath();
-      ctx.arc(cx, cy, raio, inicio, fim);
-      ctx.stroke();
-      inicio = fim;
-    }
-  }
-  ctx.restore();
-
-  texto(ctx, comSinal(saldo.diferenca), cx, cy + 4,
-        { tamanho: 26, peso: 800, alinha: "center",
-          cor: saldo.diferenca > 0 ? COR.positivo
-            : saldo.diferenca < 0 ? COR.negativo : COR.cinzaEscuro });
-  texto(ctx, "pontos", cx, cy + 20,
-        { tamanho: 10, alinha: "center", cor: COR.cinzaEscuro });
-
-  const xLegenda = cx + raio + 22;
-  [["1º turno", saldo.ida, cores.ida], ["2º turno", saldo.volta, cores.volta]]
-    .forEach(([rotulo, valor, cor], i) => {
-      const yl = y + 56 + i * 34;
-      caixa(ctx, xLegenda, yl - 10, 5, 22, cor, 2);
-      texto(ctx, `${valor} pts`, xLegenda + 14, yl,
-            { tamanho: 16, peso: 800, cor: COR.azulEscuro });
-      texto(ctx, rotulo, xLegenda + 14, yl + 15,
-            { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .8,
-              cor: COR.cinzaEscuro });
-    });
-}
-
-/**
  * O ritmo dos dois turnos, e quanto um mudou em relação ao outro.
  *
  * Pontos por jogo, e não pontos: é a única medida que compara turnos com
  * números de jogos diferentes. O percentual do meio é a variação de um para o
  * outro — subiu de 1,58 para 1,78 é mais 13%, e é assim que se lê ritmo.
  */
-function ritmo(ctx, { ida, volta, x, largura, y, altura }) {
+function ritmo(ctx, { ida, volta, x, largura, y, altura, titulo }) {
   moldura(ctx, x, y, largura, altura);
-  texto(ctx, "pontos por jogo", x + 16, y + 22,
+  texto(ctx, titulo, x + 16, y + 22,
         { tamanho: 10, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
 
@@ -480,15 +460,19 @@ async function faixaDosConfrontos(ctx, { confrontos, clubes, centro, passo,
     alvos.push({
       n: nomeBonito(confronto.adversario ?? "—"),
       x: cx - passo / 2, y: topoDoPlot, l: passo, a: base - topoDoPlot,
+      // O número em destaque é o acumulado naquele ponto da linha — é o que
+      // o olho está seguindo no gráfico. O que o jogo rendeu vai no detalhe.
       itens: [
         { rotulo: `1º turno · ${confronto.ida?.mando ?? "—"}`,
           cor: COR_DO_TURNO().ida,
-          pontos: confronto.pontosIda,
-          detalhe: descrever(confronto.ida) },
+          pontos: confronto.acumuladoIda,
+          detalhe: `${descrever(confronto.ida)}`
+                 + `${rendeu(confronto.pontosIda)}` },
         { rotulo: `2º turno · ${confronto.volta?.mando ?? "—"}`,
           cor: COR_DO_TURNO().volta,
-          pontos: confronto.pontosVolta,
-          detalhe: descrever(confronto.volta) },
+          pontos: confronto.acumuladoVolta,
+          detalhe: `${descrever(confronto.volta)}`
+                 + `${rendeu(confronto.pontosVolta)}` },
       ],
       diferenca: confronto.saldo === null ? null : {
         rotulo: comSinal(confronto.saldo),
@@ -526,6 +510,9 @@ function etiquetaDePlacar(ctx, cx, y, jogo) {
   texto(ctx, `${jogo.gp}×${jogo.gc}`, cx, y + TAG_PLACAR.altura - 6,
         { tamanho: 12.5, peso: 800, alinha: "center", cor: COR.branco });
 }
+
+const rendeu = (pontos) => (pontos === null ? ""
+  : ` · ${plural(pontos, "ponto", "pontos")} no jogo`);
 
 const descrever = (jogo) => (!jogo ? "sem jogo nesta rodada"
   : jogo.realizado ? `${jogo.gp}×${jogo.gc} na ${jogo.rodada}ª rodada`
