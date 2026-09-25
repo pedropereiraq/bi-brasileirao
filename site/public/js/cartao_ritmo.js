@@ -1,17 +1,17 @@
 /**
  * Card: quem acelera e quem desacelera, por posição.
  *
- * A tabela da esquerda é a resposta inteira em vinte linhas: o ritmo médio de
- * pontos por rodada de quem estava em cada posição até a rodada escolhida, o
- * ritmo do que veio depois, e a diferença entre os dois. Verde quem acelerou,
- * vermelho quem desacelerou, com a força da cor no tamanho da mudança.
+ * O sujeito é a posição, e não um clube. O ritmo até a rodada é o do time que
+ * estava lá; o ritmo depois é o que a posição rendeu até o fim, e no caminho
+ * ela troca de dono várias vezes. Por isso, onde aparece clube, aparecem os
+ * dois: quem ocupava a posição na rodada analisada e quem terminou nela.
  *
- * O que a média esconde é a dispersão: uma posição pode ter diferença quase
- * zero porque nada acontece nela ou porque metade das edições acelerou e a
- * outra metade desacelerou. Por isso o clique abre as duas leituras que
- * faltam — a curva do ritmo rodada a rodada, que diz **quando** a posição fica
- * mais cara, e uma barra por edição, que diz **em quantas** delas houve
- * aceleração de verdade.
+ * A tabela da esquerda é a resposta inteira em vinte linhas, com a mudança
+ * média em barra que cresce para os dois lados do zero. O que a média esconde
+ * é a dispersão — diferença perto de zero pode ser posição morna ou metade das
+ * edições acelerando e metade freando —, e é isso que o clique abre: a curva
+ * do ritmo rodada a rodada, que diz **quando** a posição fica mais cara, e uma
+ * barra por edição, que diz **em quantas** delas houve aceleração de verdade.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
@@ -67,8 +67,9 @@ export function montarCartao(estado) {
                          : "quem mais desacelera" },
       { valor: `${amostras}`, nome: "edições encerradas na conta" },
     ],
-    nota: `Ritmo é pontos por rodada, e o "depois" acompanha o clube que `
-        + `estava na posição — não a posição. Clique para abrir as edições.`,
+    nota: `Ritmo é pontos por rodada da posição, e não de um clube: o antes `
+        + `é do time que estava ali na ${rodada}ª rodada, o depois é do que `
+        + `terminou na mesma posição. Clique para abrir as edições.`,
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
       const cheia = CARD.largura - MARGEM * 2;
@@ -113,11 +114,6 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
   const topo = y + 30;
   const alturaLinha = (base - topo) / linhas.length;
   const extremo = Math.max(.01, ...linhas.map((l) => Math.abs(l.diferenca ?? 0)));
-  // A faixa de edições tem escala própria: uma edição sozinha varia muito
-  // mais que a média de vinte, e usar a escala da média jogaria metade dos
-  // traços para fora do card.
-  const extremoEdicoes = Math.max(.1, ...linhas.flatMap(
-    (l) => l.porEdicao.map((e) => Math.abs(e.diferenca))));
 
   const cabecalho = (conteudo, xr, alinha = "right") =>
     texto(ctx, conteudo, xr, y + 18,
@@ -128,7 +124,10 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
   cabecalho(`ritmo até a ${rodada}ª`, colunas.antes);
   cabecalho("depois", colunas.depois);
   cabecalho("mudança", colunas.chip.ate);
-  if (barra) cabecalho("edição a edição", (barra.de + barra.ate) / 2, "center");
+  if (barra) {
+    cabecalho("aceleração média · edições em que acelerou",
+              (barra.de + barra.ate) / 2, "center");
+  }
 
   const alvos = [];
   for (const [i, linha] of linhas.entries()) {
@@ -156,27 +155,31 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
           { tamanho: 12.5, peso: 800, alinha: "center",
             cor: forte ? COR.branco : COR.azulEscuro });
 
-    // Com a tabela aberta em toda a largura, cada edição vira um traço: é a
-    // dispersão que a média esconde, e ela cabe aqui sem custar nada.
+    // A mudança média em barra, para os dois lados do zero: a mesma
+    // informação do número ao lado, na forma em que vinte linhas se comparam
+    // de uma olhada. Ao fim dela, em quantas edições a posição acelerou.
     if (barra) {
       const meioBarra = (barra.de + barra.ate) / 2;
-      linhaH(ctx, barra.de, barra.ate, meio, COR.linha);
       ctx.save();
       ctx.strokeStyle = COR.cinza;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(meioBarra, yLinha + 4);
-      ctx.lineTo(meioBarra, yLinha + alturaLinha - 8);
+      ctx.moveTo(meioBarra, yLinha + 3);
+      ctx.lineTo(meioBarra, yLinha + alturaLinha - 6);
       ctx.stroke();
       ctx.restore();
 
-      const meia = (barra.ate - barra.de) / 2 - 6;
-      for (const edicao of linha.porEdicao) {
-        const desvio = (edicao.diferenca / extremoEdicoes) * meia;
-        const xe = meioBarra + Math.max(-meia, Math.min(meia, desvio));
-        caixa(ctx, xe - 2, meio - 7, 4, 14,
-              edicao.diferenca >= 0 ? COR.verde : COR.negativo, 2);
-      }
+      const meia = (barra.ate - barra.de) / 2 - 46;
+      const comprimento = (Math.abs(linha.diferenca ?? 0) / extremo) * meia;
+      const acelerou = (linha.diferenca ?? 0) >= 0;
+      caixa(ctx, acelerou ? meioBarra : meioBarra - comprimento, meio - 8,
+            Math.max(2, comprimento), 16,
+            acelerou ? COR.verde : COR.negativo, 3);
+      texto(ctx, `${linha.aceleraram} de ${linha.amostras}`,
+            acelerou ? meioBarra + comprimento + 10
+                     : meioBarra - comprimento - 10, meio + 4,
+            { tamanho: 10.5, peso: 700, alinha: acelerou ? "left" : "right",
+              cor: COR.cinzaEscuro });
     }
 
     alvos.push({
@@ -186,8 +189,9 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       itens: [],
       diferenca: {
         rotulo: comSinal(linha.diferenca),
-        texto: `${num(linha.antes)} → ${num(linha.depois)} pontos por rodada · `
-             + `${linha.aceleraram} de ${linha.amostras} edições aceleraram`,
+        texto: `${num(linha.antes)} → ${num(linha.depois)} pontos por rodada `
+             + `da posição · ${linha.aceleraram} de ${linha.amostras} edições `
+             + `aceleraram`,
         cor: (linha.diferenca ?? 0) >= 0 ? COR.verde : COR.negativo,
       },
     });
@@ -308,22 +312,34 @@ async function porEdicao(ctx, { linha, clubes, x, largura, y, base }) {
     caixa(ctx, cx - l / 2, acelerou ? meio - altura : meio, l, Math.max(2, altura),
           acelerou ? COR.verde : COR.negativo, 3);
 
-    const lado = Math.min(22, passo - 14);
-    desenharEscudo(ctx, await imagem(clubes?.[edicao.equipe]?.escudo),
-                   cx - lado / 2,
-                   acelerou ? meio - altura - lado - 6 : meio + altura + 6, lado);
+    // Os dois donos da posição: quem estava nela na rodada e quem terminou
+    // nela. Quando são o mesmo clube, um escudo só — ele ficou o caminho todo.
+    const mesmos = edicao.equipeFim === edicao.equipe;
+    const lado = Math.min(20, (passo - 12) / (mesmos ? 1 : 2));
+    const yEscudos = acelerou ? meio - altura - lado - 6 : meio + altura + 6;
+    const donos = mesmos ? [edicao.equipe] : [edicao.equipe, edicao.equipeFim];
+    const larguraDonos = donos.length * lado + (donos.length - 1) * 3;
+    for (const [k, dono] of donos.entries()) {
+      desenharEscudo(ctx, await imagem(clubes?.[dono]?.escudo),
+                     cx - larguraDonos / 2 + k * (lado + 3), yEscudos, lado);
+    }
 
     texto(ctx, edicao.ano, cx, base - 10,
           { tamanho: 10, peso: 700, alinha: "center", cor: COR.cinzaEscuro });
 
     alvos.push({
-      n: `${edicao.ano} · ${nomeBonito(edicao.equipe)}`,
+      n: `${edicao.ano}`,
       x: cx - passo / 2, y: topo, l: passo, a: base - 20 - topo,
-      itens: [],
+      itens: [
+        { rotulo: nomeBonito(edicao.equipe), cor: COR.azul,
+          pontos: edicao.pontos, detalhe: "estava na posição nesta rodada" },
+        { rotulo: nomeBonito(edicao.equipeFim ?? edicao.equipe),
+          cor: COR.cinzaEscuro, pontos: edicao.pontosFim,
+          detalhe: "terminou a edição nesta posição" },
+      ],
       diferenca: {
         rotulo: comSinal(edicao.diferenca),
-        texto: `${num(edicao.antes)} → ${num(edicao.depois)} pontos por rodada · `
-             + `${edicao.pontos} na rodada, ${edicao.pontosFim} no fim`,
+        texto: `${num(edicao.antes)} → ${num(edicao.depois)} pontos por rodada`,
         cor: acelerou ? COR.verde : COR.negativo,
       },
     });

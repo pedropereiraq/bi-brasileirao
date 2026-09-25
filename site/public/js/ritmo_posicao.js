@@ -1,15 +1,16 @@
 /**
  * Aceleração e desaceleração por posição.
  *
- * A pergunta: quem está no 5º lugar na 28ª rodada costuma correr mais ou menos
- * do que vinha correndo? O ritmo é **pontos por rodada** — o acumulado dividido
- * pelo número de rodadas —, e a conta compara o ritmo até ali com o ritmo do
- * que veio depois, para o mesmo clube.
+ * A pergunta: o 5º lugar na 28ª rodada costuma valer mais ou menos pontos por
+ * rodada do que vinha valendo? O sujeito é a **posição**, e não um clube: o
+ * ritmo até a rodada é o do time que estava lá, o ritmo depois é o que a
+ * posição rendeu até o fim, e no meio do caminho ela pode ter trocado de dono
+ * várias vezes. É assim que a curva rodada a rodada funciona, e a conta do
+ * antes e depois tem de falar a mesma língua.
  *
- * O detalhe que sustenta tudo: o clube que está em 5º na rodada 28 quase nunca
- * é o que termina em 5º. Por isso o "depois" não é o da posição, é o **do
- * clube que estava nela** — é ele que acelera ou desacelera. Medir a posição
- * contra ela mesma no fim mediria outra coisa: a inércia da tabela.
+ * Por isso os dois clubes viajam junto com o número: o que ocupava a posição
+ * na rodada analisada e o que terminou nela. Quase nunca são o mesmo, e ver os
+ * dois é o que impede de ler a conta como se fosse de um time.
  *
  * Só entram edições encerradas. A que está em andamento não tem "depois", e
  * completá-la com o que ela tem hoje inventaria um fim que não aconteceu.
@@ -24,7 +25,10 @@ const media = (valores) => (valores.length
  * O ritmo de cada posição antes e depois da rodada escolhida.
  *
  * `edicoes` é uma lista de `{ano, rodadas, celulas}`, em que cada célula traz
- * `{posicao, equipe, pontos, pontosFim}` na rodada analisada.
+ * `{posicao, equipe, pontos}` — quem estava na posição na rodada analisada e
+ * com quantos pontos — mais `{equipeFim, pontosFim}`, que é quem **terminou**
+ * naquela posição e com quanto. O depois é a diferença entre os dois: o que a
+ * posição rendeu da rodada em diante.
  */
 export function ritmoDasPosicoes(edicoes, { rodada, posicoes = 20 } = {}) {
   const saida = [];
@@ -40,8 +44,9 @@ export function ritmoDasPosicoes(edicoes, { rodada, posicoes = 20 } = {}) {
       const antes = celula.pontos / rodada;
       const depois = (celula.pontosFim - celula.pontos) / restantes;
       porEdicao.push({
-        ano: edicao.ano, equipe: celula.equipe,
-        pontos: celula.pontos, pontosFim: celula.pontosFim,
+        ano: edicao.ano,
+        equipe: celula.equipe, pontos: celula.pontos,
+        equipeFim: celula.equipeFim ?? null, pontosFim: celula.pontosFim,
         antes, depois, diferenca: depois - antes,
       });
     }

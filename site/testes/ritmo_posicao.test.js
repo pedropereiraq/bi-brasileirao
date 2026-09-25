@@ -1,10 +1,11 @@
 /**
  * Aceleração e desaceleração por posição.
  *
- * O que precisa de guarda é de quem é o "depois". O clube que está em 5º na
- * rodada 28 quase nunca termina em 5º, e a conta tem de seguir o clube, não a
- * posição — senão ela mede a inércia da tabela em vez do ritmo de quem estava
- * ali. E edição em andamento fica de fora: sem fim, não há depois.
+ * O que precisa de guarda é de quem é o "depois". O sujeito é a posição: o
+ * ritmo depois é o que **ela** rendeu até o fim, e não o que o clube que
+ * estava nela foi fazer — quase nunca é o mesmo clube, e os dois nomes têm de
+ * chegar juntos ao card. E edição em andamento fica de fora: sem fim, não há
+ * depois.
  *
  *     node --test site/testes/
  */
@@ -16,18 +17,19 @@ import {
 } from "../public/js/ritmo_posicao.js";
 
 const edicao = (ano, celulas, rodadas = 10) => ({ ano, rodadas, celulas });
-const celula = (posicao, equipe, pontos, pontosFim) =>
-  ({ posicao, equipe, pontos, pontosFim });
+const celula = (posicao, equipe, pontos, pontosFim, equipeFim = "OUTRO") =>
+  ({ posicao, equipe, pontos, pontosFim, equipeFim });
 
-// Duas edições de dez rodadas, analisadas na quinta.
+// Duas edições de dez rodadas, analisadas na quinta. `pontosFim` é o do clube
+// que TERMINOU na posição, e `equipeFim` diz quem foi.
 const edicoes = [
   edicao(2020, [
-    celula(1, "ALFA", 15, 20),   // 3,0/rodada e depois 1,0: desacelerou
-    celula(2, "BETA", 10, 25),   // 2,0/rodada e depois 3,0: acelerou
+    celula(1, "ALFA", 15, 20, "ZETA"),   // 3,0/rodada e depois 1,0
+    celula(2, "BETA", 10, 25, "ALFA"),   // 2,0/rodada e depois 3,0
   ]),
   edicao(2021, [
-    celula(1, "GAMA", 10, 20),   // 2,0 e depois 2,0: manteve
-    celula(2, "DELTA", 5, 20),   // 1,0 e depois 3,0: acelerou
+    celula(1, "GAMA", 10, 20, "GAMA"),   // 2,0 e depois 2,0: manteve
+    celula(2, "DELTA", 5, 20, "OMEGA"),  // 1,0 e depois 3,0
   ]),
 ];
 
@@ -43,10 +45,11 @@ test("o ritmo de cada posição sai da média das edições", () => {
   assert.equal(linhas[1].diferenca, 1.5);
 });
 
-test("o depois é o do clube que estava na posição, e não o da posição", () => {
+test("o depois é o da posição, e os dois clubes viajam com ele", () => {
   const primeiro = linhas[0].porEdicao.find((e) => e.ano === 2020);
-  // ALFA tinha 15 na 5ª e terminou com 20: cinco pontos em cinco rodadas.
-  assert.equal(primeiro.equipe, "ALFA");
+  // A posição tinha 15 pontos na 5ª e fechou com 20: cinco em cinco rodadas.
+  assert.equal(primeiro.equipe, "ALFA", "quem estava lá na rodada");
+  assert.equal(primeiro.equipeFim, "ZETA", "quem terminou lá");
   assert.equal(primeiro.depois, 1);
 });
 
@@ -58,7 +61,8 @@ test("a contagem separa quem acelerou de quem desacelerou", () => {
 test("edição sem fim fica de fora da conta", () => {
   const comAndamento = ritmoDasPosicoes([
     ...edicoes,
-    edicao(2026, [celula(1, "EM CURSO", 12, null), celula(2, "OUTRO", 9, null)]),
+    edicao(2026, [celula(1, "EM CURSO", 12, null),
+                  celula(2, "OUTRO", 9, null)]),
   ], { rodada: 5, posicoes: 2 });
 
   assert.equal(comAndamento[0].amostras, 2);

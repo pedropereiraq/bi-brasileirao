@@ -12,7 +12,7 @@
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_ritmo.js";
 import {
-  colunaDaEdicao, rodadaCorrente, rodadaMaxima,
+  colunaDaEdicao, desfechoDaEdicao, rodadaCorrente, rodadaMaxima,
 } from "/js/media_posicao.js";
 
 const estado = {
@@ -84,17 +84,32 @@ function trocarSerie(serie, url = {}) {
   aplicar();
 }
 
-/** As edições encerradas da série, na rodada escolhida. */
+/**
+ * As edições encerradas da série, na rodada escolhida.
+ *
+ * Cada célula junta as duas pontas da mesma posição: quem estava nela naquela
+ * rodada e quem terminou nela. São quase sempre clubes diferentes, e é o par
+ * que impede de ler a conta como se fosse de um time só.
+ */
 function colunasDaRodada(serie, rodada) {
   const anos = estado.posicoes.series?.[serie] ?? {};
   const saida = [];
   for (const [ano, edicao] of Object.entries(anos)) {
     if (!edicao.encerrada || edicao.rodadas < rodada) continue;
     const coluna = colunaDaEdicao(estado.posicoes, { serie, ano, rodada });
-    if (coluna) {
-      saida.push({ ano: Number(ano), rodadas: edicao.rodadas,
-                   celulas: coluna.celulas });
-    }
+    if (!coluna) continue;
+
+    const fim = desfechoDaEdicao(estado.posicoes, { serie, ano });
+    saida.push({
+      ano: Number(ano), rodadas: edicao.rodadas,
+      celulas: coluna.celulas.map((celula, i) => ({
+        posicao: celula.posicao,
+        equipe: celula.equipe,
+        pontos: celula.pontos,
+        equipeFim: fim[i]?.equipe ?? null,
+        pontosFim: fim[i]?.pontos ?? null,
+      })),
+    });
   }
   return saida.sort((a, b) => a.ano - b.ano);
 }
