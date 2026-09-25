@@ -12,7 +12,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  confrontosDoClube, extremosDosBlocos, pontosPorBloco,
+  cedidoPorMembro, confrontosDoClube, extremosDosBlocos, pontosPorBloco,
+  rankingContraBloco,
 } from "../public/js/adversarios.js";
 
 const jogo = (adversario, mando, resultado, gp = 1, gc = 0) => ({
@@ -89,4 +90,49 @@ test("os extremos ignoram bloco sem jogo", () => {
   assert.equal(melhor.de, 9, "100% contra o meio");
   assert.equal(pior.de, 17, "um ponto em dois jogos contra a lanterna");
   assert.deepEqual(extremosDosBlocos([]), { melhor: null, pior: null });
+});
+
+/* --------------------------------------------------- ranking por bloco */
+const lado = (equipe, adversario, mando, resultado) => ({
+  equipe, adversario, mando, realizado: resultado !== null, resultado,
+});
+
+// Três clubes; o bloco é {LIDER, VICE}.
+const lados = [
+  lado("ALFA", "LIDER", "casa", "T"), lado("ALFA", "LIDER", "fora", "D"),
+  lado("ALFA", "VICE", "casa", "E"), lado("ALFA", "VICE", "fora", null),
+  lado("BETA", "LIDER", "casa", "E"), lado("BETA", "LIDER", "fora", "E"),
+  lado("BETA", "VICE", "casa", "T"), lado("BETA", "VICE", "fora", "T"),
+  lado("LIDER", "VICE", "casa", "D"), lado("VICE", "LIDER", "fora", "T"),
+];
+
+test("o ranking contra o bloco vai por aproveitamento", () => {
+  const ranking = rankingContraBloco(lados, { bloco: ["LIDER", "VICE"] });
+  assert.deepEqual(ranking.map((l) => l.equipe), ["VICE", "BETA", "ALFA", "LIDER"]);
+
+  const beta = ranking.find((l) => l.equipe === "BETA");
+  assert.deepEqual([beta.jogos, beta.pontos], [4, 8]);
+  assert.equal(beta.aproveitamento, 8 / 12);
+
+  // Quem está no bloco entra no ranking pelos jogos contra os outros do bloco.
+  assert.equal(ranking.find((l) => l.equipe === "LIDER").jogos, 1);
+});
+
+test("o filtro de mando corta os dois lados da mesma lista", () => {
+  const emCasa = rankingContraBloco(lados,
+    { bloco: ["LIDER", "VICE"], mando: "casa" });
+  const alfa = emCasa.find((l) => l.equipe === "ALFA");
+  assert.deepEqual([alfa.jogos, alfa.pontos], [2, 4], "triunfo e empate");
+});
+
+test("o cedido por membro é a mesma lista vista do outro lado", () => {
+  const cedido = cedidoPorMembro(lados, { bloco: ["LIDER", "VICE"] });
+  const lider = cedido.find((c) => c.equipe === "LIDER");
+  // Contra o LIDER: ALFA fez 3 e 0, BETA fez 1 e 1, VICE fez 3. Cinco jogos.
+  assert.deepEqual([lider.jogos, lider.pontos], [5, 8]);
+
+  // Contra o VICE: ALFA empatou (1), BETA ganhou os dois (6), LIDER perdeu (0).
+  const vice = cedido.find((c) => c.equipe === "VICE");
+  assert.deepEqual([vice.jogos, vice.pontos], [4, 7]);
+  assert.equal(cedido[0].equipe, "VICE", "o mais generoso vem primeiro");
 });

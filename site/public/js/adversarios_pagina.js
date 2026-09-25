@@ -1,9 +1,11 @@
 /**
  * Página do card de resultados por adversário.
  *
- * Fora do card só série, edição e equipe: a tela é sobre uma campanha vista
- * pelo lado de quem esteve do outro lado, e o resto — confrontos, blocos da
- * tabela — sai daí sozinho.
+ * O primeiro filtro escolhe a pergunta. **Por equipe** olha a campanha de um
+ * clube pelo lado de quem esteve do outro lado. **Ranking por bloco** vira a
+ * pergunta do avesso: fixa uma faixa da tabela e mede todo mundo contra ela.
+ * São filtros diferentes porque são perguntas diferentes — a primeira pede uma
+ * equipe, a segunda pede um intervalo de posições e um mando.
  *
  * A classificação vem do motor do navegador, e não de tabela pronta: é a
  * mesma da tela de classificação, com os mesmos desempates.
@@ -13,12 +15,23 @@ import {
 } from "/js/motor.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_adversarios.js";
+import { ladosDosJogos } from "/js/adversarios.js";
+import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
 import { nomeBonito } from "/js/nomes.js";
 
 const estado = {
   edicoes: [], clubes: {},
-  serie: null, edicao: null, equipe: "",
-  jogos: [], classificacao: [], agenda: [],
+  modo: "equipe", serie: null, edicao: null, equipe: "",
+  faixa: { melhor: 1, pior: 4 }, mando: "ambos",
+  jogos: [], classificacao: [], agenda: [], lados: [],
+  aoEscolher: (equipe) => {
+    if (!equipe || equipe === estado.equipe) return;
+    estado.equipe = equipe;
+    el("equipe").value = equipe;
+    // Clicar num clube é escolher a equipe analisada; no ranking por bloco,
+    // que não tem equipe, o clique não tem o que fazer.
+    if (estado.modo === "equipe") aplicar();
+  },
 };
 
 const el = (id) => document.getElementById(id);
@@ -39,6 +52,21 @@ async function inicializar() {
   ]);
   Object.assign(estado, { edicoes: edicoes.edicoes, clubes });
 
+  montarChaves("modo", [
+    ["equipe", "Por equipe"], ["ranking", "Ranking por bloco"],
+  ], (valor) => { estado.modo = valor; aplicar(); });
+
+  montarChaves("mando", [
+    ["ambos", "Ambos"], ["casa", "Em casa"], ["fora", "Fora"],
+  ], (valor) => { estado.mando = valor; aplicar(); });
+
+  ligarSeletorDePosicoes({
+    raiz: el("posicoes"),
+    pior: estado.faixa.pior,
+    melhor: estado.faixa.melhor,
+    aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
+  });
+
   montarChaves("serie",
     [...new Set(estado.edicoes.map((e) => e.serie))].sort()
       .map((s) => [s, `Série ${s}`]),
@@ -51,6 +79,9 @@ async function inicializar() {
   });
 
   const url = daUrl();
+  if (url.modo === "ranking" || url.modo === "equipe") estado.modo = url.modo;
+  if (["ambos", "casa", "fora"].includes(url.mando)) estado.mando = url.mando;
+  if (url.de && url.ate) estado.faixa = { melhor: url.de, pior: url.ate };
   await trocarSerie(url.serie ?? "A", url);
 }
 
@@ -127,7 +158,20 @@ function agendaDoClube(jogos, clube) {
 }
 
 function aplicar() {
+  for (const [id, escolhido] of [["modo", estado.modo], ["mando", estado.mando]]) {
+    for (const botao of el(id).children) {
+      botao.setAttribute("aria-pressed", String(botao.dataset.valor === escolhido));
+    }
+  }
+  const noRanking = estado.modo === "ranking";
+  el("campo-equipe").hidden = noRanking;
+  el("campo-posicoes").hidden = !noRanking;
+  el("campo-mando").hidden = !noRanking;
+
   estado.agenda = agendaDoClube(estado.jogos, estado.equipe);
+  estado.lados = noRanking ? ladosDosJogos(Object.fromEntries(
+    estado.classificacao.map((c) =>
+      [c.equipe, agendaDoClube(estado.jogos, c.equipe)]))) : [];
 
   const { edicao } = estado;
   el("rodape-edicao").textContent = edicao
@@ -140,13 +184,22 @@ function aplicar() {
 
 function daUrl() {
   const p = new URLSearchParams(location.hash.slice(1));
-  return { serie: p.get("serie"), ano: p.get("ano"), equipe: p.get("equipe") };
+  return { serie: p.get("serie"), ano: p.get("ano"), equipe: p.get("equipe"),
+           modo: p.get("modo"), mando: p.get("mando"),
+           de: Number(p.get("de")) || null, ate: Number(p.get("ate")) || null };
 }
 
 function atualizarUrl() {
   const p = new URLSearchParams();
   if (estado.serie) p.set("serie", estado.serie);
   if (estado.edicao) p.set("ano", estado.edicao.apelido);
-  if (estado.equipe) p.set("equipe", estado.equipe);
+  p.set("modo", estado.modo);
+  if (estado.modo === "ranking") {
+    p.set("mando", estado.mando);
+    p.set("de", estado.faixa.melhor);
+    p.set("ate", estado.faixa.pior);
+  } else if (estado.equipe) {
+    p.set("equipe", estado.equipe);
+  }
   history.replaceState(null, "", `#${p}`);
 }

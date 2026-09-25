@@ -109,3 +109,68 @@ export function extremosDosBlocos(blocos) {
       (b.aproveitamento < m.aproveitamento ? b : m)),
   };
 }
+
+/**
+ * Um lado de cada jogo: quem jogou, contra quem, em que campo e como acabou.
+ *
+ * É o formato que as duas contas do ranking pedem — a do clube contra o bloco
+ * e a do bloco contra o clube são a mesma lista, agrupada por pontas
+ * diferentes.
+ */
+export function ladosDosJogos(agendas) {
+  const lados = [];
+  for (const [equipe, agenda] of Object.entries(agendas ?? {})) {
+    for (const jogo of agenda) lados.push({ ...jogo, equipe });
+  }
+  return lados;
+}
+
+const doMando = (lado, mando) =>
+  (mando === "ambos" || !mando ? true : lado.mando === mando);
+
+/**
+ * A classificação considerando só os jogos contra os clubes do bloco.
+ *
+ * Ordena por aproveitamento, que é o único critério justo quando os clubes do
+ * bloco também jogam entre si e acabam com números de jogos diferentes. Pontos
+ * e jogos vêm junto porque 100% em dois jogos não é 100% em oito.
+ */
+export function rankingContraBloco(lados, { bloco, mando = "ambos" } = {}) {
+  const alvo = new Set(bloco ?? []);
+  const porClube = new Map();
+
+  for (const lado of lados ?? []) {
+    if (!alvo.has(lado.adversario) || !doMando(lado, mando)) continue;
+    if (!porClube.has(lado.equipe)) porClube.set(lado.equipe, vazio());
+    somar(porClube.get(lado.equipe), lado);
+  }
+
+  return [...porClube.entries()]
+    .map(([equipe, conta]) => ({ equipe, ...comAproveitamento(conta) }))
+    .filter((linha) => linha.jogos > 0)
+    .sort((a, b) => (b.aproveitamento - a.aproveitamento)
+      || (b.pontos - a.pontos) || (b.jogos - a.jogos)
+      || a.equipe.localeCompare(b.equipe, "pt-BR"));
+}
+
+/**
+ * Quanto cada clube do bloco entregou ao resto.
+ *
+ * É a mesma lista de jogos do ranking, agrupada pela outra ponta: o
+ * aproveitamento aqui é o que os adversários tiraram daquele clube, de modo
+ * que número alto quer dizer bloco generoso, e não campanha boa.
+ */
+export function cedidoPorMembro(lados, { bloco, mando = "ambos" } = {}) {
+  const alvo = new Set(bloco ?? []);
+  const porMembro = new Map(
+    [...alvo].map((equipe) => [equipe, vazio()]));
+
+  for (const lado of lados ?? []) {
+    if (!alvo.has(lado.adversario) || !doMando(lado, mando)) continue;
+    somar(porMembro.get(lado.adversario), lado);
+  }
+
+  return [...porMembro.entries()]
+    .map(([equipe, conta]) => ({ equipe, ...comAproveitamento(conta) }))
+    .sort((a, b) => (b.aproveitamento ?? -1) - (a.aproveitamento ?? -1));
+}

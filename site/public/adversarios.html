@@ -66,6 +66,13 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
+        <label id="rotulo-modo">Análise
+          <span class="dica-campo">a campanha de um clube, ou todo mundo contra
+            uma faixa da tabela</span>
+        </label>
+        <div class="chaves" id="modo" role="group" aria-labelledby="rotulo-modo"></div>
+      </div>
+      <div class="campo">
         <label id="rotulo-serie">Série</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
@@ -73,13 +80,26 @@ try { document.documentElement.dataset.marca =
         <label for="ano">Edição</label>
         <select id="ano"></select>
       </div>
-      <div class="campo campo-equipe">
+      <div class="campo campo-equipe" id="campo-equipe">
         <label for="equipe">Equipe
           <span class="dica-campo">ou clique num clube dentro do card</span>
         </label>
         <select id="equipe"></select>
       </div>
+      <div class="campo" id="campo-mando" hidden>
+        <label id="rotulo-mando">Mando</label>
+        <div class="chaves" id="mando" role="group" aria-labelledby="rotulo-mando"></div>
+      </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <div class="coluna-controles">
+      <div class="campo campo-posicoes" id="campo-posicoes" hidden>
+        <label id="rotulo-posicoes">Bloco da tabela
+          <span class="dica-campo">as posições que o bloco ocupa hoje</span>
+        </label>
+        <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
+      </div>
     </div>
 
     <p class="dica-campo" id="rodape-edicao"></p>
