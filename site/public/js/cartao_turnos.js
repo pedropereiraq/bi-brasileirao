@@ -25,7 +25,7 @@ import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
   polilinha,
 } from "/js/cartao.js";
-import { nomeBonito } from "/js/nomes.js";
+import { artigo, nomeBonito } from "/js/nomes.js";
 import {
   confrontosDosTurnos, resumoDoTurno, saldoComparavel,
 } from "/js/turnos.js";
@@ -60,7 +60,8 @@ export function montarCartao(estado) {
   const posVolta = posicaoEm(tabelas.volta);
 
   const spec = {
-    titulo: `Os dois turnos ${daEquipe(equipe)} na Série ${serie} ${edicao.ano}`,
+    titulo: `Os dois turnos ${artigo(equipe)} ${nomeBonito(equipe)} na Série `
+          + `${serie} ${edicao.ano}`,
     subtitulo: `Cada coluna é um adversário: a ida na rodada n, a volta na `
              + `rodada n+19`,
     arquivo: `turnos-${serie}-${edicao.ano}-${equipe}`,
@@ -113,12 +114,6 @@ export function montarCartao(estado) {
     },
   };
   return spec;
-}
-
-/** "do Bahia", "da Chapecoense" — o artigo sai do nome, não do chute. */
-function daEquipe(equipe) {
-  const nome = nomeBonito(equipe);
-  return `do ${nome}`.replace(/^do (A|Chapecoense|Portuguesa|Ponte)/, "da $1");
 }
 
 /* ------------------------------------------------------------- tabelas */

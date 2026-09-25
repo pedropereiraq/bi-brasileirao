@@ -196,6 +196,45 @@ function ligarRecorte() {
   for (const id of ["rodada-de", "rodada-ate", "data-de", "data-ate"]) {
     el(id).addEventListener("change", lerRecorte);
   }
+  el("turno").addEventListener("click", (evento) => {
+    const botao = evento.target.closest(".chave");
+    if (botao) escolherTurno(Number(botao.dataset.turno));
+  });
+}
+
+/**
+ * O recorte de um turno inteiro, que é o corte que mais se pede.
+ *
+ * A metade sai da própria edição, e não de um 19 fixo: série com outro número
+ * de rodadas continua partindo ao meio. Clicar de novo no turno já escolhido
+ * desfaz o recorte — o atalho tem de saber voltar.
+ */
+function escolherTurno(turno) {
+  const { edicao, form } = estado;
+  const meio = Math.floor(edicao.rodadas / 2);
+  const faixa = turno === 1
+    ? { rodadaDe: 1, rodadaAte: meio }
+    : { rodadaDe: meio + 1, rodadaAte: edicao.rodadas };
+
+  const jaEstava = form.rodadaDe === faixa.rodadaDe
+                && form.rodadaAte === faixa.rodadaAte;
+  estado.form = jaEstava
+    ? { ...form, rodadaDe: 1, rodadaAte: edicao.rodadas }
+    : { ...form, ...faixa };
+
+  ajustarLimitesDoRecorte();
+  aplicar();
+}
+
+/** Marca o atalho quando o recorte em vigor é exatamente o de um turno. */
+function pintarTurno() {
+  const { edicao, form } = estado;
+  const meio = Math.floor(edicao.rodadas / 2);
+  const atual = form.rodadaDe === 1 && form.rodadaAte === meio ? "1"
+    : form.rodadaDe === meio + 1 && form.rodadaAte === edicao.rodadas ? "2" : "";
+  for (const botao of el("turno").children) {
+    botao.setAttribute("aria-pressed", String(botao.dataset.turno === atual));
+  }
 }
 
 function ajustarLimitesDoRecorte() {
@@ -210,6 +249,7 @@ function ajustarLimitesDoRecorte() {
   }
   el("rodada-de").value = form.rodadaDe;
   el("rodada-ate").value = form.rodadaAte;
+  pintarTurno();
   el("data-de").value = form.dataDe;
   el("data-ate").value = form.dataAte;
 }

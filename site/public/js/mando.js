@@ -19,7 +19,9 @@ const estado = {
   edicoes: [], clubes: {},
   serie: null, edicao: null, jogos: null,
   geral: [], casa: [], fora: [],
-  criterio: "pontos", destaque: "",
+  // O aproveitamento é o que a tela compara: com números de jogos
+  // diferentes em casa e fora, pontos somados não se comparam.
+  criterio: "aproveitamento", destaque: "",
   // O card chama de volta quando alguém clica num clube: escolher o destaque
   // na própria lista é mais rápido do que achar a sigla no filtro.
   aoEscolher: (equipe) => escolherDestaque(equipe),

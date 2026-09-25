@@ -33,6 +33,7 @@ import {
   CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
+import { marcaAtual } from "/js/marca.js";
 import { ordenarPor } from "/js/vagas.js";
 import {
   jogosPorMando, linhasDeIndependencia, maiorDesequilibrio,
@@ -383,6 +384,15 @@ function corDoIndice(indice) {
     : mistura(COR.cinzaEscuro, COR.verde, (t - 0.5) * 2);
 }
 
+/** `14J 8T 4E 2D · 66,7%` — a campanha de um mando em uma linha. */
+function campanhaResumida(recorte) {
+  if (!recorte || !recorte.j) return "sem jogos neste recorte";
+  const marca = marcaAtual();
+  return `${recorte.j}J ${recorte.t}${marca.triunfo[0].toUpperCase()} `
+       + `${recorte.e}E ${recorte.d}D · `
+       + `${percentual(recorte.aproveitamento)}`;
+}
+
 async function barras(ctx, o) {
   const { independencia, destaque, clubes, x, largura, topo, alturaCabecalho,
           alturaLinha } = o;
@@ -445,17 +455,21 @@ async function barras(ctx, o) {
       x: x - 3, y: yLinha, l: largura + 6, a: alturaLinha - 2,
       itens: [
         { rotulo: "em casa", cor: COR.azul, pontos: linha.casa?.pts ?? 0,
-          detalhe: `${percentual(linha.casa?.aproveitamento ?? null)} em `
-                 + `${linha.casa?.j ?? 0} jogos` },
+          detalhe: campanhaResumida(linha.casa) },
         { rotulo: "fora", cor: COR.vermelho, pontos: linha.fora?.pts ?? 0,
-          detalhe: `${percentual(linha.fora?.aproveitamento ?? null)} em `
-                 + `${linha.fora?.j ?? 0} jogos` },
+          detalhe: campanhaResumida(linha.fora) },
       ],
+      // A memória de cálculo junto do índice: ele é sempre uma razão entre
+      // aproveitamentos, e sem a conta à vista "72%" parece ser o
+      // aproveitamento de alguma coisa.
       diferenca: {
         rotulo: inteiroPorCento(linha.indice),
-        texto: linha.indice === null ? "sem ponto em casa"
-             : linha.indice >= 1 ? "rende igual ou mais fora"
-             : "depende do mando",
+        texto: linha.indice === null
+          ? "sem ponto em casa: não há de onde depender"
+          : `${percentual(linha.fora?.aproveitamento ?? null)} fora ÷ `
+            + `${percentual(linha.casa?.aproveitamento ?? null)} em casa · `
+            + (linha.indice >= 1 ? "rende igual ou mais fora"
+                                 : "depende do mando"),
         cor: corDoIndice(linha.indice),
       },
     });

@@ -93,6 +93,17 @@ try { document.documentElement.dataset.marca =
         <input type="number" id="rodada-ate" min="1" max="38" step="1" value="38">
       </div>
       <div class="campo">
+        <label id="rotulo-turno">Atalho
+          <span class="dica-campo">parte a edição ao meio</span>
+        </label>
+        <div class="chaves" id="turno" role="group" aria-labelledby="rotulo-turno">
+          <button type="button" class="chave" data-turno="1"
+                  aria-pressed="false">1º turno</button>
+          <button type="button" class="chave" data-turno="2"
+                  aria-pressed="false">2º turno</button>
+        </div>
+      </div>
+      <div class="campo">
         <label for="data-de">De</label>
         <input type="date" id="data-de">
       </div>
