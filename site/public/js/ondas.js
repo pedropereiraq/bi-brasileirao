@@ -11,6 +11,9 @@ import {
   RODADA, DATA, MANDANTE, VISITANTE, GOLS_M, GOLS_V, STATUS,
 } from "/js/motor.js";
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_ondas.js";
 
@@ -48,7 +51,7 @@ async function inicializar() {
   el("ano").addEventListener("change", () => trocarAno(el("ano").value));
 
   const url = daUrl();
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChaves(id, itens, aoEscolher) {
@@ -70,6 +73,7 @@ function pintarChaves(id, escolhido) {
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   pintarChaves("serie", serie);
 
   const anos = estado.edicoes.filter((e) => e.serie === serie);

@@ -14,6 +14,9 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_comparativo.js";
 import { nomeComUf } from "/js/nomes.js";
@@ -118,6 +121,7 @@ const anosDaSerie = (serie) => estado.edicoes.filter((e) => e.serie === serie);
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   el("serie").value = serie;
 
   const anos = anosDaSerie(serie);

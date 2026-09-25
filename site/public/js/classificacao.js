@@ -16,6 +16,9 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_classificacao.js";
 import { faixasDaSerie, limitesPadrao, limitesValidos } from "/js/vagas.js";
@@ -84,7 +87,7 @@ async function inicializar() {
   el("limpar").addEventListener("click", limparRecorte);
 
   pintarChaves("criterio", estado.criterio);
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 /* -------------------------------------------------------------- filtros */
@@ -107,6 +110,7 @@ function pintarChaves(id, escolhido) {
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   pintarChaves("serie", serie);
 
   // Cada série tem faixas com nomes próprios: os limites vêm do que está

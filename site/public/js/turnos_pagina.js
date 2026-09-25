@@ -15,6 +15,9 @@ import {
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  equipeLembrada, lembrarEquipe, lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_turnos.js";
 import { RODADAS_POR_TURNO } from "/js/turnos.js";
@@ -64,12 +67,12 @@ async function inicializar() {
 
   el("ano").addEventListener("change", () => trocarAno(el("ano").value));
   el("equipe").addEventListener("change", () => {
-    estado.equipe = el("equipe").value;
+    estado.equipe = lembrarEquipe(el("equipe").value);
     aplicar();
   });
 
   const url = daUrl();
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChaves(id, itens, aoEscolher) {
@@ -85,6 +88,7 @@ function montarChaves(id, itens, aoEscolher) {
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   for (const botao of el("serie").children) {
     botao.setAttribute("aria-pressed", String(botao.dataset.valor === serie));
   }
@@ -120,8 +124,9 @@ async function trocarAno(apelido, url = {}) {
 
   el("equipe").innerHTML = clubes
     .map((c) => `<option value="${c}">${nomeBonito(c)}</option>`).join("");
-  const querido = url.equipe ?? estado.equipe;
+  const querido = url.equipe ?? estado.equipe ?? equipeLembrada();
   estado.equipe = clubes.includes(querido) ? querido : clubes[0];
+  lembrarEquipe(estado.equipe);
   el("equipe").value = estado.equipe;
 
   aplicar();

@@ -8,6 +8,9 @@
  *
  * Não há filtro de edição: o card cruza todas de uma vez.
  */
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_recortes.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -64,7 +67,7 @@ async function inicializar() {
     aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
   });
 
-  trocarSerie(url.serie ?? "A", url);
+  trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 /* ------------------------------------------------------ chaves de série */
@@ -82,6 +85,7 @@ function montarChavesDeSerie(series) {
 /* ----------------------------------------------------------- filtragem */
 function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   for (const botao of el("serie").children) {
     botao.setAttribute("aria-pressed", String(botao.dataset.serie === serie));
   }

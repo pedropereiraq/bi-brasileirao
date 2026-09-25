@@ -12,6 +12,9 @@
  * lado que é equipe.
  */
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_diferenca.js";
 import { MODOS, colunaDaRodada, edicaoDe } from "/js/diferenca_pontos.js";
@@ -91,7 +94,7 @@ async function inicializar() {
     aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
   });
 
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 /* -------------------------------------------------------------- filtros */
@@ -114,6 +117,7 @@ function pintarChaves(id, escolhido) {
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   pintarChaves("serie", serie);
 
   const anos = estado.edicoes.filter((e) => e.serie === serie);

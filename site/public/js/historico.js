@@ -9,6 +9,9 @@
  * Tudo sai de `posicoes.json`, varrendo a grade de cada edição atrás do clube.
  */
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  equipeLembrada, lembrarEquipe, lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_historico.js";
 import { POSICOES_POR_SERIE } from "/js/posicoes_historicas.js";
@@ -54,7 +57,7 @@ async function inicializar() {
     .map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
 
   el("equipe").addEventListener("change", () => {
-    estado.equipe = el("equipe").value;
+    estado.equipe = lembrarEquipe(el("equipe").value);
     aplicar();
   });
   el("alvo").addEventListener("input", () => {
@@ -68,10 +71,11 @@ async function inicializar() {
 
   const url = daUrl();
   if (url.modo === "final" || url.modo === "rodadas") estado.modo = url.modo;
-  escolherSerie(url.serie ?? "A", { semDesenhar: true });
-  const querida = url.equipe ?? "BAHIA (BA)";
+  escolherSerie(url.serie ?? serieLembrada() ?? "A", { semDesenhar: true });
+  const querida = url.equipe ?? equipeLembrada() ?? "BAHIA (BA)";
   estado.equipe = todosOsClubes().includes(querida) ? querida : todosOsClubes()[0];
   el("equipe").value = estado.equipe;
+  lembrarEquipe(estado.equipe);
   if (url.alvo) estado.alvo = url.alvo;
   if (url.ignorar !== null) estado.ignorar = url.ignorar;
 
@@ -106,6 +110,7 @@ function escolherSerie(valor, { semDesenhar = false } = {}) {
   if (valor === "AB" && estado.modo !== "final") return;
   estado.series = valor === "AB" ? ["A", "B"] : [valor];
   estado.serie = valor === "AB" ? "A" : valor;
+  lembrarSerie(estado.serie);
   if (!semDesenhar) aplicar();
 }
 

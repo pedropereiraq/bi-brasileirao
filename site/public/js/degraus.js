@@ -11,6 +11,9 @@
  * mesmo quando as duas têm os mesmos pontos.
  */
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_degraus.js";
 import {
@@ -60,7 +63,7 @@ async function inicializar() {
 
   const url = daUrl();
   if (url.modo === "serie" || url.modo === "rodada") estado.modo = url.modo;
-  trocarSerie(url.serie ?? "A", url);
+  trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChaves(id, itens, aoEscolher) {
@@ -82,6 +85,7 @@ function pintarChaves(id, escolhido) {
 
 function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   pintarChaves("serie", serie);
 
   const anos = Object.keys(estado.posicoes.series?.[serie] ?? {})

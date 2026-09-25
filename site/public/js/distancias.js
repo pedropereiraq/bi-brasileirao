@@ -10,6 +10,9 @@
  * esta edição se compara às outras, e não como era a de 2006.
  */
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_distancias.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -75,7 +78,7 @@ async function inicializar() {
     aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
   });
 
-  trocarSerie(url.serie ?? "A", url);
+  trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChavesDeSerie(series) {
@@ -91,6 +94,7 @@ function montarChavesDeSerie(series) {
 
 function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   for (const botao of el("serie").children) {
     botao.setAttribute("aria-pressed", String(botao.dataset.serie === serie));
   }

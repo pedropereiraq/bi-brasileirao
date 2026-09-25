@@ -14,6 +14,9 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_semelhantes.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -83,7 +86,7 @@ async function inicializar() {
     aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
   });
 
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 /* ------------------------------------------------------ chaves de série */
@@ -107,6 +110,7 @@ function pintarChaves() {
 /* ----------------------------------------------------------- filtragem */
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   estado.referencia = estado.referencias[serie] ?? null;
   pintarChaves();
 

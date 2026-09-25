@@ -9,6 +9,9 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_proximos.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -65,7 +68,7 @@ async function inicializar() {
     aoMudar: ({ pior, melhor }) => { estado.faixa = { pior, melhor }; aplicar(); },
   });
 
-  await trocarSerie(url.serie ?? "A");
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A");
 }
 
 function montarChavesDeSerie(series) {
@@ -81,6 +84,7 @@ function montarChavesDeSerie(series) {
 
 async function trocarSerie(serie) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   for (const botao of el("serie").children) {
     botao.setAttribute("aria-pressed", String(botao.dataset.serie === serie));
   }

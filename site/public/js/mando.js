@@ -14,6 +14,9 @@ import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
+import {
+  equipeLembrada, lembrarEquipe, lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_mando.js";
 import { nomeComUf } from "/js/nomes.js";
@@ -75,12 +78,12 @@ async function inicializar() {
 
   el("ano").addEventListener("change", () => trocarAno(el("ano").value));
   el("destaque").addEventListener("change", () => {
-    estado.destaque = el("destaque").value;
+    estado.destaque = lembrarEquipe(el("destaque").value);
     aplicar();
   });
 
   pintarChaves("criterio", estado.criterio);
-  await trocarSerie(url.serie ?? "A", url);
+  await trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChaves(id, itens, aoEscolher) {
@@ -102,6 +105,7 @@ function pintarChaves(id, escolhido) {
 
 async function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   pintarChaves("serie", serie);
 
   const anos = estado.edicoes.filter((e) => e.serie === serie);
@@ -132,7 +136,7 @@ async function trocarAno(apelido, url = {}) {
   // troca de ano o deixa de fora, em vez de destacar ninguém em silêncio.
   el("destaque").innerHTML = '<option value="">nenhuma</option>'
     + clubes.map((c) => `<option value="${c}">${nomeComUf(c)}</option>`).join("");
-  const querido = url.destaque ?? estado.destaque;
+  const querido = url.destaque ?? estado.destaque ?? equipeLembrada();
   estado.destaque = clubes.includes(querido) ? querido : "";
   el("destaque").value = estado.destaque;
 

@@ -10,6 +10,9 @@
  * a frente?
  */
 import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import {
+  lembrarSerie, serieLembrada,
+} from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_ritmo.js";
 import {
@@ -58,7 +61,7 @@ async function inicializar() {
 
   const url = daUrl();
   if (url.posicao >= 1 && url.posicao <= 20) estado.posicao = url.posicao;
-  trocarSerie(url.serie ?? "A", url);
+  trocarSerie(url.serie ?? serieLembrada() ?? "A", url);
 }
 
 function montarChaves(id, itens, aoEscolher) {
@@ -74,6 +77,7 @@ function montarChaves(id, itens, aoEscolher) {
 
 function trocarSerie(serie, url = {}) {
   estado.serie = serie;
+  lembrarSerie(estado.serie);
   for (const botao of el("serie").children) {
     botao.setAttribute("aria-pressed", String(botao.dataset.valor === serie));
   }
