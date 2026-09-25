@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jogos · Cards ECBahia Números</title>
+<title>Resultados por adversário · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Jogos</h1>
-      <p class="subtitulo">O calendário da edição: o que já foi jogado e o que falta.</p>
+      <h1>Resultados por adversário</h1>
+      <p class="subtitulo">De quem o clube tirou os pontos — e de quem não tirou.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -41,12 +41,12 @@ try { document.documentElement.dataset.marca =
   <nav class="navegacao">
     <a href="/">Telas</a>
     <a href="/classificacao.html">Classificação</a>
-    <a href="/jogos.html" aria-current="page">Jogos</a>
+    <a href="/jogos.html">Jogos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
     <a href="/turnos.html">Comparativo de turnos</a>
-    <a href="/adversarios.html">Resultados por adversário</a>
+    <a href="/adversarios.html" aria-current="page">Resultados por adversário</a>
     <a href="/ondas.html">Distribuição de pontos</a>
     <a href="/comparativo.html">Comparativo de campanhas</a>
     <a href="/evolucao.html">Evolução da campanha</a>
@@ -70,30 +70,31 @@ try { document.documentElement.dataset.marca =
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo">
-        <label for="ano">Ano</label>
+        <label for="ano">Edição</label>
         <select id="ano"></select>
       </div>
-      <div class="campo campo-deslizante">
-        <label for="rodada">Rodada <output id="valor-rodada">—</output>
-          <span class="dica-campo">ou clique na coluna da rodada no card</span>
+      <div class="campo campo-equipe">
+        <label for="equipe">Equipe
+          <span class="dica-campo">ou clique num clube dentro do card</span>
         </label>
-        <input type="range" id="rodada" min="1" max="38" step="1" value="1">
+        <select id="equipe"></select>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
     <p class="dica-campo" id="rodape-edicao"></p>
-    <p class="nota-ordem"><b>A coluna de cada rodada enche conforme os jogos
-      saem.</b> Toda rodada tem o mesmo número de jogos: o que muda é quantos
-      já aconteceram. Na classificação, a coluna <b>dif</b> diz quantos jogos o
-      clube tem a mais ou a menos que o número mais comum da tabela — passe o
-      mouse sobre ele para ver quais jogos faltam.</p>
+    <p class="nota-ordem"><b>Os blocos são da tabela de hoje.</b> Um adversário
+      entra no bloco em que está agora, e não no que ocupava quando o jogo
+      aconteceu — a pergunta é sobre a classificação que se tem na mão. Jogo
+      ainda por disputar não conta como ponto perdido: ele fica de fora dos
+      pontos possíveis, e por isso o aproveitamento de um bloco não cai só
+      porque o returno não chegou.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de jogos"></canvas>
+            aria-label="card de resultados por adversário"></canvas>
   </section>
 
   <footer class="rodape">
@@ -105,6 +106,6 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
-<script type="module" src="/js/jogos.js"></script>
+<script type="module" src="/js/adversarios_pagina.js"></script>
 </body>
 </html>
