@@ -11,6 +11,7 @@
  * jogos da edição entram por causa da faixa do eixo, que mostra a agenda do
  * lado que é equipe.
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_diferenca.js";
 import { MODOS, colunaDaRodada, edicaoDe } from "/js/diferenca_pontos.js";
@@ -33,6 +34,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 let trilhaUma = null;
 let trilhaDuas = null;
 

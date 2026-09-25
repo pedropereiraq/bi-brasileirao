@@ -8,6 +8,7 @@
  * O ano do painel da direita não é filtro de tela: escolhe-se clicando na
  * coluna dentro do card. Ele é uma leitura da grade, e a grade está ali.
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_medias.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -25,6 +26,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;

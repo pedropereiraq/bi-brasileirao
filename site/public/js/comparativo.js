@@ -11,6 +11,9 @@
  * Bahia de 2019, ou com outro clube de outro ano.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_comparativo.js";
 import { nomeComUf } from "/js/nomes.js";
@@ -22,8 +25,16 @@ const estado = {
   b: { apelido: null, edicao: null, jogos: null, clube: null, grade: null },
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -138,7 +149,7 @@ async function trocarAno(lado, apelido, clubeDesejado, { silencioso = false } = 
 
   // Mantém o clube quando ele jogou naquele ano; senão propõe um da frente da
   // tabela, que é a campanha que alguém abriria primeiro.
-  const classificados = tabela(jogos, clubes, {}).map((c) => c.equipe);
+  const classificados = tabela(jogos, clubes, {}, descontos()).map((c) => c.equipe);
   const atual = clubeDesejado ?? estado[lado].clube;
   const escolhido = clubes.includes(atual) ? atual
     : classificados[lado === "a" ? 0 : 1] ?? clubes[0];

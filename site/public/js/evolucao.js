@@ -11,6 +11,9 @@
  * comparativo de campanhas.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_evolucao.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -26,8 +29,16 @@ const estado = {
   referencia: null, grade: null, ...PADRAO,
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 let trilha = null;
 
 inicializar().catch((erro) => {
@@ -167,7 +178,7 @@ async function trocarAno(apelido, clubeDesejado, { silencioso = false } = {}) {
   // campanha que alguém abriria primeiro.
   const atual = clubeDesejado ?? estado.clube;
   const escolhido = clubes.includes(atual)
-    ? atual : tabela(jogos, clubes, {})[0]?.equipe ?? clubes[0];
+    ? atual : tabela(jogos, clubes, {}, descontos())[0]?.equipe ?? clubes[0];
 
   Object.assign(estado, { apelido, edicao, jogos, clube: escolhido });
   el("equipe").value = escolhido;

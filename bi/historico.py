@@ -101,6 +101,30 @@ def ler_jogos(excel: Path | None = None, ano_minimo: int | None = None) -> pd.Da
     return jogos.reset_index(drop=True)
 
 
+def ler_tapetao(excel: Path | None = None) -> pd.DataFrame:
+    """
+    A aba `Tapetão`: pontos tirados por decisão de tribunal.
+
+    É uma tabela de fatos, e não de jogos. A punição não muda placar nenhum e
+    não pertence a uma partida: pertence a um clube, numa edição, **a partir de
+    uma rodada**. A rodada é a fronteira — dali em diante a tabela daquele
+    clube já nasce com os pontos a menos.
+
+    Os pontos vêm negativos da planilha, e assim ficam: somar é a operação.
+    """
+    excel = excel or cfg.EXCEL_HISTORICO
+    bruto = pd.read_excel(excel, sheet_name="Tapetão")
+
+    return pd.DataFrame({
+        "equipe": _normalizar_nome(bruto["EQUIPE"]),
+        "ano": bruto["ANO"].astype("Int64"),
+        "serie": _limpar_texto(bruto["SÉRIE"]),
+        "fase": _limpar_texto(bruto["FASE"]),
+        "rodada": pd.to_numeric(bruto["RODADA"], errors="coerce").astype("Int64"),
+        "pontos": pd.to_numeric(bruto["PONTOS"], errors="coerce").fillna(0).astype(int),
+    }).reset_index(drop=True)
+
+
 def _status_historico(jogos: pd.DataFrame) -> pd.Series:
     """
     No Excel só existem jogos passados, então o status sai do placar: com placar

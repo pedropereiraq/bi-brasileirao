@@ -13,6 +13,9 @@
 import {
   RODADA, DATA, MANDANTE, VISITANTE, GOLS_M, GOLS_V, STATUS, tabela,
 } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_dificuldade.js";
 import { nomeBonito } from "/js/nomes.js";
@@ -37,8 +40,16 @@ const GRUPOS = {
   ordem: [["dificuldade", "Dificuldade"], ["classificacao", "Classificação"]],
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 let escolhaDoUsuario = { quando: false };
 
 inicializar().catch((erro) => {
@@ -129,9 +140,9 @@ async function trocarAno(apelido, url = {}) {
     edicao,
     agendas: montarAgendas(jogos, clubes),
     tabelas: {
-      geral: porNome(tabela(jogos, clubes, {})),
-      casa: porNome(tabela(jogos, clubes, { mando: "casa" })),
-      fora: porNome(tabela(jogos, clubes, { mando: "fora" })),
+      geral: porNome(tabela(jogos, clubes, {}, descontos())),
+      casa: porNome(tabela(jogos, clubes, { mando: "casa" }, descontos())),
+      fora: porNome(tabela(jogos, clubes, { mando: "fora" }, descontos())),
     },
   });
 

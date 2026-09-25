@@ -193,9 +193,9 @@ def referencias_por_posicao(jogos: pd.DataFrame) -> dict:
     if fechadas.empty:
         return {}
 
-    # Sem tapetão e na ordem da rodada: é a mesma conta que o motor do
-    # navegador faz, então a régua e a linha do clube falam a mesma língua.
-    final = motor.campanha(fechadas, ordem="rodada", criterio="ST", local="todos")
+    # Com tapetão e na ordem da rodada: é a tabela como ela ficou, que é a
+    # mesma conta que o motor do navegador faz por padrão.
+    final = motor.campanha(fechadas, ordem="rodada", criterio="CT", local="todos")
     ultima = final.groupby(["ano", "serie"])["etapa"].transform("max")
     tabela = final[final["etapa"] == ultima]
 
@@ -213,7 +213,7 @@ def referencias_por_posicao(jogos: pd.DataFrame) -> dict:
 
 
 # ------------------------------------------------- campanhas semelhantes
-def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
+def campanhas_por_jogo(jogos: pd.DataFrame, criterio: str = "CT") -> dict:
     """
     A pontuação acumulada de cada campanha, jogo a jogo.
 
@@ -239,7 +239,8 @@ def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
 
     recorte = _recorte_bi(jogos)
     completas = derivadas.edicoes_completas(jogos)
-    tabela = motor.campanha(recorte, ordem="data", criterio="ST", local="todos")
+    tabela = motor.campanha(recorte, ordem="data", criterio=criterio,
+                            local="todos")
 
     # A grade é preenchida para a frente, então um clube com menos jogos que a
     # edição repete o último acumulado nas etapas que faltam. `j == etapa`
@@ -262,15 +263,17 @@ def campanhas_por_jogo(jogos: pd.DataFrame) -> dict:
     return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
 
 
-def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int) -> list[list[int]]:
+def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int,
+                     punicoes: pd.DataFrame | None = None) -> list[list[int]]:
     """
     Quanto dos pontos em disputa não chegou à tabela, rodada a rodada.
 
     Toda rodada põe em disputa três pontos por jogo, e a tabela quase nunca
-    recebe os três. Duas coisas os seguram, e são de naturezas diferentes: o
-    **empate** distribui dois e queima o terceiro para sempre, e o **jogo por
-    disputar** retém os três até acontecer. Por isso vão em números separados —
-    uma coluna só diria que são a mesma coisa.
+    recebe os três. Três coisas os seguram, e são de naturezas diferentes: o
+    **empate** distribui dois e queima o terceiro para sempre, o **jogo por
+    disputar** retém os três até acontecer, e o **tapetão** tira da tabela
+    pontos que já tinham sido distribuídos em campo. Por isso vão em números
+    separados — uma coluna só diria que são a mesma coisa.
 
     É o que impede de ler uma rodada inteira abaixo da média como campeonato
     fraco: pode ser só ponto que não foi distribuído.
@@ -280,14 +283,19 @@ def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int) -> list[list[int]]:
     """
     feito = jogos["status"] == cfg.STATUS_REALIZADO
     empate = feito & (jogos["gols_m"] == jogos["gols_v"])
+    tirados = (punicoes if punicoes is not None
+               else pd.DataFrame(columns=["rodada", "pontos"]))
 
     saida = []
-    queimados = retidos = 0
+    queimados = retidos = tapetao = 0
     for etapa in range(1, ultima + 1):
         da_rodada = jogos["rodada"] == etapa
         queimados += int((empate & da_rodada).sum())
         retidos += int((~feito & da_rodada).sum()) * 3
-        saida.append([queimados, retidos])
+        if not tirados.empty:
+            tapetao += int(-tirados.loc[tirados["rodada"] == etapa,
+                                        "pontos"].sum())
+        saida.append([queimados, retidos, tapetao])
     return saida
 
 
@@ -319,9 +327,14 @@ def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
     """
     from . import derivadas, motor
 
+    from . import canonico
+
     recorte = _recorte_bi(jogos)
     completas = derivadas.edicoes_completas(jogos)
-    tabela = motor.campanha(recorte, ordem="rodada", criterio="ST", local="todos")
+    tapetao = canonico.carregar_tapetao()
+    tabela = motor.campanha(recorte, ordem="rodada", criterio="CT", local="todos")
+    sem_punicao = motor.campanha(recorte, ordem="rodada", criterio="ST",
+                                 local="todos")
 
     series: dict[str, dict[str, dict]] = {}
     for (serie, ano), grupo in tabela.groupby(["serie", "ano"], sort=True,
@@ -331,34 +344,89 @@ def posicoes_por_rodada(jogos: pd.DataFrame) -> dict:
         ultima = int(grupo["etapa"].max())
         encerrada = (ano, serie) in completas
 
-        fim = [None] * len(clubes)
-        if encerrada:
-            final = grupo[grupo["etapa"] == ultima]
-            for linha in final.itertuples():
-                fim[indice[linha.equipe]] = [int(linha.pos), int(linha.pts)]
-
         da_edicao = recorte[(recorte["serie"] == serie) & (recorte["ano"] == ano)]
+        grade, fim = _grade_e_fim(grupo, clubes, indice, ultima, encerrada)
 
-        grade = []
-        for etapa in range(1, ultima + 1):
-            da_rodada = grupo[grupo["etapa"] == etapa].sort_values("pos")
-            grade.append([[indice[l.equipe], int(l.pts)]
-                          for l in da_rodada.itertuples()])
-
-        series.setdefault(str(serie), {})[str(int(ano))] = {
+        edicao = {
             "clubes": clubes,
             "fim": fim,
             "rodadas": ultima,
             "encerrada": encerrada,
             "grade": grade,
-            "fluxo": _fluxo_da_edicao(da_edicao, ultima),
+            "fluxo": _fluxo_da_edicao(
+                da_edicao, ultima,
+                tapetao[(tapetao["ano"] == ano) & (tapetao["serie"] == serie)]),
         }
+
+        # A grade sem tapetão só é publicada onde ela difere: são nove edições
+        # em quarenta e duas, e carregar a segunda versão de todas custaria um
+        # terço do arquivo para dizer duas vezes a mesma coisa.
+        outra = sem_punicao[(sem_punicao["ano"] == ano)
+                            & (sem_punicao["serie"] == serie)]
+        if not outra.empty:
+            grade_st, fim_st = _grade_e_fim(outra, clubes, indice, ultima,
+                                            encerrada)
+            if grade_st != grade or fim_st != fim:
+                edicao["grade_st"] = grade_st
+                edicao["fim_st"] = fim_st
+
+        series.setdefault(str(serie), {})[str(int(ano))] = edicao
 
     return {
         "campos": ["indice_do_clube", "pontos"],
-        "campos_fluxo": ["queimados_no_empate", "retidos_em_jogo_por_disputar"],
+        "campos_fluxo": ["queimados_no_empate", "retidos_em_jogo_por_disputar",
+                         "tirados_no_tapetao"],
         "series": series,
     }
+
+
+def _grade_e_fim(grupo, clubes, indice, ultima, encerrada):
+    """A grade de uma edição e o desfecho dela, no formato publicado."""
+    fim = [None] * len(clubes)
+    if encerrada:
+        final = grupo[grupo["etapa"] == ultima]
+        for linha in final.itertuples():
+            fim[indice[linha.equipe]] = [int(linha.pos), int(linha.pts)]
+
+    grade = []
+    for etapa in range(1, ultima + 1):
+        da_rodada = grupo[grupo["etapa"] == etapa].sort_values("pos")
+        grade.append([[indice[l.equipe], int(l.pts)] for l in da_rodada.itertuples()])
+    return grade, fim
+
+
+def pontos_no_tapetao(tapetao: pd.DataFrame) -> dict:
+    """
+    As punições, para o navegador poder desfazê-las e explicá-las.
+
+    O site calcula a tabela com elas por padrão; quem quiser ver o campeonato
+    como ele foi jogado desliga o tapetão, e aí é esta lista que o motor do
+    navegador soma de volta.
+    """
+    series: dict[str, dict[str, list]] = {}
+    recorte = tapetao[(tapetao["ano"] >= cfg.ANO_INICIO_BI)
+                      & (tapetao["serie"].isin(cfg.SERIES))
+                      & (tapetao["fase"] == cfg.FASE_UNICA)]
+
+    for linha in recorte.sort_values(["serie", "ano", "rodada"]).itertuples():
+        series.setdefault(str(linha.serie), {}) \
+              .setdefault(str(int(linha.ano)), []) \
+              .append([linha.equipe, int(linha.rodada), int(linha.pontos)])
+
+    return {"campos": ["equipe", "rodada", "pontos"], "series": series}
+
+
+def _campanhas_sem_tapetao(jogos: pd.DataFrame) -> dict:
+    """Só as edições em que a punição muda alguma campanha."""
+    com = campanhas_por_jogo(jogos, criterio="CT")["series"]
+    sem = campanhas_por_jogo(jogos, criterio="ST")["series"]
+
+    series: dict[str, dict[str, list]] = {}
+    for serie, anos in sem.items():
+        for ano, clubes in anos.items():
+            if com.get(serie, {}).get(ano) != clubes:
+                series.setdefault(serie, {})[ano] = clubes
+    return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
 
 
 def construir(jogos: pd.DataFrame | None = None,
@@ -390,6 +458,12 @@ def construir(jogos: pd.DataFrame | None = None,
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
     _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
     _gravar(DESTINO / "posicoes.json", posicoes_por_rodada(jogos))
+    _gravar(DESTINO / "tapetao.json",
+            pontos_no_tapetao(canonico.carregar_tapetao()))
+    # A variante sem tapetão vai em arquivo à parte, e só com as edições em que
+    # ela difere: quem desliga a punição baixa um arquivo pequeno, e quem não
+    # desliga não baixa nada.
+    _gravar(DESTINO / "campanhas_st.json", _campanhas_sem_tapetao(jogos))
 
     tamanho = sum(p.stat().st_size for p in DESTINO.rglob("*.json"))
     print(f"  {len(edicoes)} edições, {len(dados_clubes)} clubes"

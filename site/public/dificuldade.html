@@ -26,6 +26,13 @@ try { document.documentElement.dataset.marca =
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
+      <div class="chaves chaves-marca" id="chave-tapetao" role="group"
+           aria-label="Pontos tirados no tapetão">
+        <button type="button" class="chave" data-tapetao="com"
+                aria-pressed="true">com tapetão</button>
+        <button type="button" class="chave" data-tapetao="sem"
+                aria-pressed="false">sem</button>
+      </div>
       <div class="chaves chaves-marca" id="chave-marca" role="group"
            aria-label="Marca dos cards">
         <button type="button" class="chave" data-marca="ecbahia"
@@ -133,6 +140,7 @@ try { document.documentElement.dataset.marca =
 </main>
 
 <script type="module" src="/js/marca.js"></script>
+<script type="module" src="/js/tapetao.js"></script>
 <script type="module" src="/js/dificuldade.js"></script>
 </body>
 </html>

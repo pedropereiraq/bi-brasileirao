@@ -8,6 +8,7 @@
  *
  * Tudo sai de `posicoes.json`, varrendo a grade de cada edição atrás do clube.
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_historico.js";
 import { POSICOES_POR_SERIE } from "/js/posicoes_historicas.js";
@@ -22,6 +23,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -64,9 +68,9 @@ async function inicializar() {
 
   const url = daUrl();
   if (url.modo === "final" || url.modo === "rodadas") estado.modo = url.modo;
-  if (url.serie) escolherSerie(url.serie, { semDesenhar: true });
-  estado.equipe = todosOsClubes().includes(url.equipe) ? url.equipe
-    : (todosOsClubes().includes("BAHIA (BA)") ? "BAHIA (BA)" : todosOsClubes()[0]);
+  escolherSerie(url.serie ?? "A", { semDesenhar: true });
+  const querida = url.equipe ?? "BAHIA (BA)";
+  estado.equipe = todosOsClubes().includes(querida) ? querida : todosOsClubes()[0];
   el("equipe").value = estado.equipe;
   if (url.alvo) estado.alvo = url.alvo;
   if (url.ignorar !== null) estado.ignorar = url.ignorar;
@@ -133,13 +137,16 @@ function trajetoria(serie, ano) {
              final: null };
   }
 
-  const posicoes = edicao.grade.map((linha) => {
+  const semTapetao = !tapetaoLigado();
+  const grade = semTapetao && edicao.grade_st ? edicao.grade_st : edicao.grade;
+  const fim = semTapetao && edicao.fim_st ? edicao.fim_st : edicao.fim;
+  const posicoes = grade.map((linha) => {
     const lugar = linha.findIndex(([i]) => i === indice);
     return lugar < 0 ? null : lugar + 1;
   });
   return {
     ano: Number(ano), serie, posicoes, encerrada: edicao.encerrada,
-    final: edicao.encerrada ? (edicao.fim[indice]?.[0] ?? null)
+    final: edicao.encerrada ? (fim[indice]?.[0] ?? null)
                             : (posicoes.at(-1) ?? null),
   };
 }

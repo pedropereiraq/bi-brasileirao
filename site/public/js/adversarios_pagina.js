@@ -13,6 +13,9 @@
 import {
   RODADA, DATA, MANDANTE, VISITANTE, GOLS_M, GOLS_V, STATUS, tabela,
 } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_adversarios.js";
 import { ladosDosJogos } from "/js/adversarios.js";
@@ -34,8 +37,16 @@ const estado = {
   },
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -122,7 +133,7 @@ async function trocarAno(apelido, url = {}) {
     .sort();
 
   Object.assign(estado, {
-    edicao, jogos, classificacao: tabela(jogos, clubes, {}),
+    edicao, jogos, classificacao: tabela(jogos, clubes, {}, descontos()),
   });
 
   el("equipe").innerHTML = clubes

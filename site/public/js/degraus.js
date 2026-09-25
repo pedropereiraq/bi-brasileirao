@@ -10,6 +10,7 @@
  * desempates do motor, que é o que faz "a equipe de baixo" ser a de baixo
  * mesmo quando as duas têm os mesmos pontos.
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_degraus.js";
 import {
@@ -24,6 +25,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -115,11 +119,13 @@ function aplicar() {
   el("campo-rodada").hidden = estado.modo === "serie";
   el("valor-rodada").textContent = rodada;
 
-  estado.coluna = colunaDaEdicao(estado.posicoes, { serie, ano, rodada })
+  estado.coluna = colunaDaEdicao(estado.posicoes,
+    { serie, ano, rodada, semTapetao: !tapetaoLigado() })
     ?.celulas ?? null;
   estado.colunas = estado.modo !== "serie" || !edicao ? []
     : Array.from({ length: edicao.rodadas }, (_, i) => {
-      const coluna = colunaDaEdicao(estado.posicoes, { serie, ano, rodada: i + 1 });
+      const coluna = colunaDaEdicao(estado.posicoes,
+        { serie, ano, rodada: i + 1, semTapetao: !tapetaoLigado() });
       return coluna ? { rodada: i + 1, celulas: coluna.celulas } : null;
     }).filter(Boolean);
 

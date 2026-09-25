@@ -43,6 +43,53 @@ def ler_corrente() -> pd.DataFrame:
     return pd.concat(partes, ignore_index=True)
 
 
+def carregar_tapetao() -> pd.DataFrame:
+    """Os pontos tirados no tapetão, da aba própria da planilha."""
+    return historico.ler_tapetao()
+
+
+def aplicar_tapetao(jogos: pd.DataFrame, tapetao: pd.DataFrame) -> pd.DataFrame:
+    """
+    Pendura cada punição num jogo do clube na rodada em que ela vale.
+
+    O motor acumula por jogo, e é por isso que a punição precisa de um jogo
+    para viajar — mas ela não é do jogo: não entra em placar, em vitória nem em
+    saldo, só na coluna de tapetão. Escolher o jogo daquela rodada é o que faz
+    a punição aparecer na etapa certa tanto na ordem de rodada quanto na
+    cronológica.
+
+    A aba manda: o que estiver nas colunas da aba `Jogos` é sobrescrito, para
+    as duas fontes nunca divergirem em silêncio.
+    """
+    jogos = jogos.copy()
+    jogos["tapetao_m"] = 0
+    jogos["tapetao_v"] = 0
+    if tapetao is None or tapetao.empty:
+        return jogos
+
+    for punicao in tapetao.itertuples():
+        mesma = ((jogos["ano"] == punicao.ano) & (jogos["serie"] == punicao.serie)
+                 & (jogos["fase"] == punicao.fase))
+        como_mandante = mesma & (jogos["mandante"] == punicao.equipe)
+        como_visitante = mesma & (jogos["visitante"] == punicao.equipe)
+
+        # O jogo da rodada marcada; se o clube não jogou nela, o primeiro que
+        # vier depois — a punição não pode ficar sem casa.
+        da_rodada = (como_mandante | como_visitante) & (jogos["rodada"] == punicao.rodada)
+        candidatos = jogos[da_rodada]
+        if candidatos.empty:
+            depois = (como_mandante | como_visitante) & (jogos["rodada"] >= punicao.rodada)
+            candidatos = jogos[depois].sort_values("rodada")
+        if candidatos.empty:
+            continue
+
+        indice = candidatos.index[0]
+        coluna = "tapetao_m" if bool(como_mandante.loc[indice]) else "tapetao_v"
+        jogos.loc[indice, coluna] = jogos.loc[indice, coluna] + punicao.pontos
+
+    return jogos
+
+
 def montar_jogos() -> pd.DataFrame:
     """Excel + coleta corrente, com a coleta prevalecendo sobre o ano repetido."""
     do_excel = historico.ler_jogos()
@@ -55,6 +102,9 @@ def montar_jogos() -> pd.DataFrame:
 
     jogos = pd.concat([do_excel, da_api], ignore_index=True)
     jogos = jogos.reindex(columns=COLUNAS_JOGOS)
+    # A aba `Tapetão` é a fonte: vale para o histórico e para a edição em
+    # andamento, que o coletor não tem como saber.
+    jogos = aplicar_tapetao(jogos, carregar_tapetao())
     jogos = jogos.sort_values(
         ["ano", "serie", "rodada", "data", "id_jogo"], na_position="last"
     ).reset_index(drop=True)

@@ -177,6 +177,35 @@ def test_as_campanhas_publicadas_batem_com_o_canonico(jogos):
     assert publicado == publicacao.campanhas_por_jogo(jogos)
 
 
+def test_o_tapetao_publicado_bate_com_a_aba(jogos):
+    """
+    A aba `Tapetão` é a fonte: o que o site publica tem de ser exatamente ela,
+    e a punição tem de aparecer na grade da rodada em que vale.
+    """
+    from bi import canonico, publicacao
+
+    aba = canonico.carregar_tapetao()
+    publicado = publicacao.pontos_no_tapetao(aba)
+
+    linhas = [(s, a, equipe, rodada, pontos)
+              for s, anos in publicado["series"].items()
+              for a, casos in anos.items()
+              for equipe, rodada, pontos in casos]
+    assert linhas, "a aba tem casos e o publicado está vazio"
+
+    posicoes = publicacao.posicoes_por_rodada(jogos)
+    for serie, ano, equipe, rodada, pontos in linhas:
+        edicao = posicoes["series"][serie][ano]
+        indice = edicao["clubes"].index(equipe)
+        antes = dict((i, p) for i, p in edicao["grade"][rodada - 2])
+        depois = dict((i, p) for i, p in edicao["grade"][rodada - 1])
+        # Da rodada anterior para a da punição, o clube não pode ter ganhado
+        # mais do que os três pontos do jogo somados ao desconto.
+        assert depois[indice] - antes[indice] <= 3 + pontos, (
+            f"{equipe} {serie}{ano}: a punição não entrou na rodada {rodada}"
+        )
+
+
 def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
     """
     A edição em andamento entra no arquivo — é dela que sai o ponto de partida
@@ -189,6 +218,9 @@ def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
     dados = publicacao.campanhas_por_jogo(jogos)
     completas = derivadas.edicoes_completas(jogos)
     disputados = _jogos_disputados(jogos)
+
+    punidos = {(p.equipe, p.serie, int(p.ano))
+               for p in canonico.carregar_tapetao().itertuples()}
 
     for serie, anos in dados["series"].items():
         for ano, clubes in anos.items():
@@ -208,15 +240,21 @@ def test_campanha_sem_desfecho_nao_tem_posicao_final(jogos):
                     assert pos_fim is None, (
                         f"{equipe} {serie}{ano} tem posição final numa edição aberta"
                     )
-                # O acumulado nunca cai, e nunca sobe mais de 3 por jogo.
+                # O acumulado nunca sobe mais de 3 por jogo. Cair, ele só
+                # cai no tapetão — e só em quem levou punição.
+                punido = (equipe, serie, int(ano)) in punidos
                 for antes, depois in zip(pontos, pontos[1:]):
-                    assert 0 <= depois - antes <= 3, f"{equipe} {serie}{ano}"
+                    assert depois - antes <= 3, f"{equipe} {serie}{ano}"
+                    assert depois >= antes or punido, (
+                        f"{equipe} {serie}{ano} perdeu ponto sem tapetão"
+                    )
 
 
 def test_o_fluxo_fecha_com_a_grade_em_toda_rodada(jogos):
     """
     A identidade que sustenta a última linha do card de médias: o que a rodada
-    tinha para dar é o que chegou à tabela mais o que ficou pelo caminho.
+    tinha para dar é o que chegou à tabela mais o que ficou pelo caminho —
+    queimado no empate, retido em jogo por disputar ou tirado no tapetão.
 
     Se ela abrir, o card passa a explicar uma diferença para a média com uma
     conta que não fecha — que é pior do que não explicar nada.
@@ -227,10 +265,11 @@ def test_o_fluxo_fecha_com_a_grade_em_toda_rodada(jogos):
     for serie, anos in dados["series"].items():
         for ano, edicao in anos.items():
             por_rodada = len(edicao["clubes"]) // 2
-            for i, (rodada, (queimados, retidos)) in enumerate(
+            for i, (rodada, (queimados, retidos, tapetao)) in enumerate(
                     zip(edicao["grade"], edicao["fluxo"]), start=1):
                 distribuidos = sum(pts for _, pts in rodada)
-                assert distribuidos + queimados + retidos == por_rodada * i * 3, (
+                assert (distribuidos + queimados + retidos + tapetao
+                        == por_rodada * i * 3), (
                     f"{serie}{ano} rodada {i}: a conta dos pontos não fecha"
                 )
 

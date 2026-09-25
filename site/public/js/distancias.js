@@ -9,6 +9,7 @@
  * A rodada começa na do campeonato em andamento: a pergunta do dia é como
  * esta edição se compara às outras, e não como era a de 2006.
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_distancias.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -30,6 +31,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;

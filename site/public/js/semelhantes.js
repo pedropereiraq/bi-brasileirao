@@ -11,6 +11,9 @@
  * tela de graça.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_semelhantes.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -24,8 +27,16 @@ const estado = {
   jogos: 20, pontos: 30, faixa: { ...PADRAO },
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 let trilha = null;
 
 inicializar().catch((erro) => {
@@ -121,7 +132,7 @@ async function carregarEdicao(apelido) {
   estado.edicao = edicao;
 
   const jogos = await fetch(`/dados/jogos/${apelido}.json`).then((r) => r.json());
-  const classificados = tabela(jogos, clubesDaEdicao(jogos), {});
+  const classificados = tabela(jogos, clubesDaEdicao(jogos), {}, descontos());
   desenharClubes(classificados);
   el("rotulo-clubes").firstChild.textContent =
     `Classificação da Série ${estado.serie} ${edicao.ano} `;

@@ -11,10 +11,22 @@
  * "como está o campeonato na rodada 10" é sobre o campeonato, que anda por
  * rodada, enquanto "o clube depois de 10 jogos" é sobre a campanha dele.
  *
+ * O tapetão vem resolvido do publicador: a grade padrão já traz os pontos
+ * tirados, e as edições em que a punição mudou alguma coisa carregam uma
+ * segunda grade, `grade_st`. `semTapetao` escolhe entre as duas — reordenar no
+ * navegador exigiria os critérios de desempate, que esta grade não carrega.
+ *
  * Módulo sem dependência nenhuma de propósito: assim `site/testes` carrega no
  * Node e cobra a regra.
  */
 export const POSICOES = 20;
+
+/** A grade em vigor, conforme a chave do tapetão. */
+const gradeDaEdicao = (edicao, semTapetao) =>
+  (semTapetao && edicao?.grade_st ? edicao.grade_st : edicao?.grade);
+
+const fimDaEdicao = (edicao, semTapetao) =>
+  (semTapetao && edicao?.fim_st ? edicao.fim_st : edicao?.fim);
 
 /** Os anos da série que já chegaram àquela rodada, do mais antigo ao mais novo. */
 export function anosComRodada(dados, { serie, rodada }) {
@@ -47,15 +59,17 @@ export function rodadaCorrente(dados, { serie }) {
  * Edição que ainda não chegou à rodada devolve `null` — a coluna dela não
  * existe, e preencher com o que ela tem hoje seria inventar.
  */
-export function colunaDaEdicao(dados, { serie, ano, rodada }) {
+export function colunaDaEdicao(dados, { serie, ano, rodada, semTapetao }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   if (!edicao || edicao.rodadas < rodada) return null;
+  const grade = gradeDaEdicao(edicao, semTapetao);
+  const desfecho = fimDaEdicao(edicao, semTapetao);
 
   return {
     ano: Number(ano),
     encerrada: edicao.encerrada,
-    celulas: edicao.grade[rodada - 1].map(([indice, pontos], i) => {
-      const fim = edicao.fim[indice];
+    celulas: grade[rodada - 1].map(([indice, pontos], i) => {
+      const fim = desfecho[indice];
       return {
         posicao: i + 1,
         equipe: edicao.clubes[indice],
@@ -123,8 +137,9 @@ export function resumoDaDistancia(linhas) {
  * O que não chegou à tabela até aquela rodada, naquela edição.
  *
  * Toda rodada põe em disputa três pontos por jogo, e a tabela quase nunca
- * recebe os três: o empate distribui dois e queima o terceiro para sempre, e o
- * jogo por disputar retém os três até acontecer.
+ * recebe os três: o empate distribui dois e queima o terceiro para sempre, o
+ * jogo por disputar retém os três até acontecer, e o tapetão tira da tabela
+ * pontos que já tinham sido conquistados em campo.
  *
  * É o que impede de ler uma coluna inteira abaixo da média como campeonato
  * fraco — pode ser só ponto que não foi distribuído.
@@ -133,13 +148,13 @@ export function perdaDaTabela(dados, { serie, ano, rodada }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   if (!edicao || edicao.rodadas < rodada) return null;
 
-  const [queimados, retidos] = edicao.fluxo?.[rodada - 1] ?? [];
+  const [queimados, retidos, tapetao = 0] = edicao.fluxo?.[rodada - 1] ?? [];
   if (queimados === undefined) return null;
 
   const possiveis = (edicao.clubes.length / 2) * rodada * 3;
-  const faltando = queimados + retidos;
+  const faltando = queimados + retidos + tapetao;
   return {
-    queimados, retidos, possiveis, faltando,
+    queimados, retidos, tapetao, possiveis, faltando,
     distribuidos: possiveis - faltando,
     fracao: possiveis > 0 ? faltando / possiveis : 0,
   };
@@ -154,13 +169,13 @@ export function perdaDaTabela(dados, { serie, ano, rodada }) {
  *
  * Edição em andamento devolve uma lista de `null`: não terminou nada ainda.
  */
-export function desfechoDaEdicao(dados, { serie, ano }) {
+export function desfechoDaEdicao(dados, { serie, ano, semTapetao }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   const vazio = Array.from({ length: POSICOES }, () => null);
   if (!edicao?.encerrada) return vazio;
 
   const porPosicao = [...vazio];
-  edicao.fim.forEach((desfecho, indice) => {
+  fimDaEdicao(edicao, semTapetao).forEach((desfecho, indice) => {
     if (!desfecho) return;
     const [posicao, pontos] = desfecho;
     if (posicao >= 1 && posicao <= POSICOES) {
@@ -171,9 +186,9 @@ export function desfechoDaEdicao(dados, { serie, ano }) {
 }
 
 /** A grade inteira: uma coluna por edição que chegou àquela rodada. */
-export function grade(dados, { serie, rodada }) {
+export function grade(dados, { serie, rodada, semTapetao }) {
   return anosComRodada(dados, { serie, rodada })
-    .map((ano) => colunaDaEdicao(dados, { serie, ano, rodada }))
+    .map((ano) => colunaDaEdicao(dados, { serie, ano, rodada, semTapetao }))
     .filter(Boolean);
 }
 

@@ -13,6 +13,9 @@
  * para todo mundo que abrir o card depois.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_classificacao.js";
 import { faixasDaSerie, limitesPadrao, limitesValidos } from "/js/vagas.js";
@@ -34,8 +37,16 @@ const estado = {
   recorte: {},
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -290,7 +301,7 @@ function aplicar() {
   if (form.dataDe) filtros.dataDe = form.dataDe;
   if (form.dataAte) filtros.dataAte = form.dataAte;
 
-  estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), filtros);
+  estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), filtros, descontos());
   estado.recorte = filtros;
   resumir(filtros);
   atualizarUrl();

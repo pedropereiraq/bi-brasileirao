@@ -9,6 +9,7 @@
  * nasce: quem está em cada posição hoje costuma acelerar ou frear daqui para
  * a frente?
  */
+import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_ritmo.js";
 import {
@@ -27,6 +28,9 @@ const estado = {
 
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -96,10 +100,12 @@ function colunasDaRodada(serie, rodada) {
   const saida = [];
   for (const [ano, edicao] of Object.entries(anos)) {
     if (!edicao.encerrada || edicao.rodadas < rodada) continue;
-    const coluna = colunaDaEdicao(estado.posicoes, { serie, ano, rodada });
+    const coluna = colunaDaEdicao(estado.posicoes,
+      { serie, ano, rodada, semTapetao: !tapetaoLigado() });
     if (!coluna) continue;
 
-    const fim = desfechoDaEdicao(estado.posicoes, { serie, ano });
+    const fim = desfechoDaEdicao(estado.posicoes,
+      { serie, ano, semTapetao: !tapetaoLigado() });
     saida.push({
       ano: Number(ano), rodadas: edicao.rodadas,
       celulas: coluna.celulas.map((celula, i) => ({
@@ -129,7 +135,8 @@ function pontosPorRodada(serie, posicao) {
     const rodada = i + 1;
     const pontos = [];
     for (const [ano] of anos) {
-      const coluna = colunaDaEdicao(estado.posicoes, { serie, ano, rodada });
+      const coluna = colunaDaEdicao(estado.posicoes,
+        { serie, ano, rodada, semTapetao: !tapetaoLigado() });
       const celula = coluna?.celulas?.[posicao - 1];
       if (celula) pontos.push(celula.pontos);
     }

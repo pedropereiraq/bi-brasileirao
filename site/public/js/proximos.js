@@ -6,6 +6,9 @@
  * escolhe os concorrentes diretos cujo calendário se quer comparar.
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
+import {
+  aoMudarTapetao, descontosDe,
+} from "/js/tapetao.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_proximos.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
@@ -21,8 +24,16 @@ const estado = {
   faixa: { ...PADRAO },
 };
 
+// Os descontos de tapetão da edição em foco, vazios quando a chave está
+// desligada. É o mesmo ajudante em todas as páginas que montam tabela.
+const descontos = () =>
+  descontosDe(estado.serie, estado.edicao?.ano ?? estado.ano);
+
 const el = (id) => document.getElementById(id);
 let redesenhar = () => {};
+
+// Virar a chave do tapetão muda a tabela: a página inteira se redesenha.
+aoMudarTapetao(() => aplicar());
 
 inicializar().catch((erro) => {
   el("aviso-card").hidden = false;
@@ -82,7 +93,7 @@ async function trocarSerie(serie) {
   const jogos = await fetch(`/dados/jogos/${edicao.apelido}.json`)
     .then((r) => r.json());
   estado.jogos = jogos;
-  estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), {});
+  estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), {}, descontos());
 
   el("rodape-edicao").textContent =
     `Série ${serie} ${edicao.ano} · ${edicao.realizados} de ${edicao.jogos} `

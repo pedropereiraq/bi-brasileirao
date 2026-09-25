@@ -96,7 +96,7 @@ function comparaCronologico(a, b) {
  * tabela, mesmo sem nenhum jogo no recorte — senão um filtro estreito faria
  * clube sumir em vez de aparecer zerado.
  */
-export function classificar(longo, clubes) {
+export function classificar(longo, clubes, descontos = []) {
   const porClube = new Map();
   for (const nome of clubes) porClube.set(nome, zerado(nome));
 
@@ -110,6 +110,15 @@ export function classificar(longo, clubes) {
     else c.d += 1;
     c.gp += l.gp;
     c.gc += l.gc;
+  }
+
+  // O tapetão entra depois da soma dos jogos: ele não é jogo, não muda
+  // triunfo, saldo nem gols pró — só tira pontos da tabela. Por isso também
+  // não desempata: dois clubes empatados em pontos, um deles punido, seguem
+  // separados pelos mesmos critérios de sempre.
+  for (const desconto of descontos) {
+    const clube = porClube.get(desconto.equipe);
+    if (clube) clube.pts += desconto.pontos;
   }
 
   const tabela = [...porClube.values()];
@@ -137,9 +146,24 @@ function comparaClassificacao(a, b) {
       || (a._alfabetica < b._alfabetica ? -1 : a._alfabetica > b._alfabetica ? 1 : 0);
 }
 
-/** Atalho: dos jogos crus à tabela, com filtros. */
-export function tabela(jogos, clubes, filtros = {}) {
-  return classificar(filtrar(formatoLongo(jogos), filtros), clubes);
+/**
+ * Atalho: dos jogos crus à tabela, com filtros.
+ *
+ * `descontos` é a lista de punições de tapetão da edição — `{equipe, rodada,
+ * pontos}`, com pontos negativos. Cada uma entra quando a rodada dela cabe no
+ * recorte, que é a mesma regra dos jogos: quem filtra da 16ª à 20ª rodada
+ * exclui o que aconteceu na 15ª, punição inclusive.
+ */
+export function tabela(jogos, clubes, filtros = {}, descontos = []) {
+  return classificar(filtrar(formatoLongo(jogos), filtros), clubes,
+                     descontosNoRecorte(descontos, filtros));
+}
+
+/** As punições cuja rodada cabe no recorte. */
+export function descontosNoRecorte(descontos, { rodadaDe, rodadaAte } = {}) {
+  return (descontos ?? []).filter((d) =>
+    (rodadaDe == null || d.rodada >= rodadaDe)
+    && (rodadaAte == null || d.rodada <= rodadaAte));
 }
 
 /** Todos os clubes da edição, inclusive os de jogos ainda não realizados. */
