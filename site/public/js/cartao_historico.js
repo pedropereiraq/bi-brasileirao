@@ -2,8 +2,10 @@
  * Card: as posições históricas de um clube.
  *
  * **Rodada a rodada**: uma linha por edição, uma coluna por rodada, e a
- * posição do clube em cada casa. Azul dentro do recorte marcado, vermelho
- * fora. O que se vê de longe é o retrato de vinte anos — onde o clube morou na
+ * posição do clube em cada casa. Dentro do recorte marcado sai na cor da
+ * marca, fora sai na secundária — azul e vermelho no ECBahia, preto e dourado
+ * no Podcast45. É o par da identidade, e não o de positivo e negativo: estar
+ * no 8º lugar não é um erro, é só estar fora do recorte que se marcou. O que se vê de longe é o retrato de vinte anos — onde o clube morou na
  * tabela, quanto tempo ficou e quando mudou de faixa.
  *
  * As primeiras rodadas podem sair da conta. No começo de campeonato a posição
@@ -108,7 +110,7 @@ function cartaoRodadas(estado) {
           const dentro = posicao <= alvo;
 
           caixa(ctx, x + .5, yLinha + .5, largura - 1, alturaLinha - 2,
-                fora ? COR.cinzaClaro : dentro ? COR.azul : COR.negativo, 2);
+                fora ? COR.cinzaClaro : dentro ? COR.azul : COR.vermelho, 2);
           texto(ctx, posicao, x + largura / 2, meio + 4,
                 { tamanho: 10, peso: 700, alinha: "center",
                   cor: fora ? COR.cinzaEscuro : COR.branco });
@@ -122,7 +124,7 @@ function cartaoRodadas(estado) {
               texto: fora ? "rodada fora da conta"
                 : dentro ? `dentro do recorte até o ${ordinal(alvo)}`
                          : `abaixo do ${ordinal(alvo)}`,
-              cor: fora ? COR.cinzaEscuro : dentro ? COR.azul : COR.negativo,
+              cor: fora ? COR.cinzaEscuro : dentro ? COR.azul : COR.vermelho,
             },
           });
         }
@@ -131,7 +133,7 @@ function cartaoRodadas(estado) {
         const xr = x1 + 14;
         const larguraBarra = resumo - 62;
         const fracao = doAno.total ? doAno.acima / doAno.total : 0;
-        caixa(ctx, xr, meio - 6, larguraBarra, 12, COR.negativo, 3);
+        caixa(ctx, xr, meio - 6, larguraBarra, 12, COR.vermelho, 3);
         if (fracao > 0) {
           caixa(ctx, xr, meio - 6, Math.max(2, larguraBarra * fracao), 12,
                 COR.azul, 3);

@@ -579,6 +579,12 @@ table.mini-classificacao {
 .chave[aria-pressed="true"] {
   background: var(--azul); border-color: var(--azul); color: var(--branco);
 }
+/* Escolha que não existe naquele modo: fica à vista, para o filtro não mudar
+   de tamanho, mas sem convidar ao clique. */
+.chave:disabled {
+  opacity: .38; cursor: not-allowed;
+}
+.chave:disabled:hover { border-color: var(--linha); color: var(--cinza-texto); }
 
 .painel-situacao { display: flex; flex-direction: column; gap: 22px; margin-top: 18px; }
 

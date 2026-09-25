@@ -40,7 +40,7 @@ async function inicializar() {
 
   montarChaves("modo", [
     ["rodadas", "Rodada a rodada"], ["final", "Posição final"],
-  ], (valor) => { estado.modo = valor; aplicar(); });
+  ], trocarModo);
 
   montarChaves("serie", [
     ["A", "Série A"], ["B", "Série B"], ["AB", "Ambas"],
@@ -85,9 +85,20 @@ function montarChaves(id, itens, aoEscolher) {
   });
 }
 
+/**
+ * Trocar de pergunta troca o que a série pode ser.
+ *
+ * "Ambas" só existe no desfecho: rodada a rodada compara posições dentro de
+ * uma série, e misturar as duas ali não diria nada. A escolha de "ambas" fica
+ * guardada em `series` e volta a valer quando se volta ao desfecho — o modo
+ * rodada a rodada simplesmente não a enxerga, e desenha `serie`.
+ */
+function trocarModo(valor) {
+  estado.modo = valor;
+  aplicar();
+}
+
 function escolherSerie(valor, { semDesenhar = false } = {}) {
-  // "Ambas" só existe no gráfico de desfecho: rodada a rodada compara
-  // posições dentro de uma série, e misturar as duas ali não diria nada.
   if (valor === "AB" && estado.modo !== "final") return;
   estado.series = valor === "AB" ? ["A", "B"] : [valor];
   estado.serie = valor === "AB" ? "A" : valor;
@@ -138,18 +149,18 @@ const anosDaSerie = (serie) =>
     .sort((a, b) => a - b);
 
 function aplicar() {
+  const noFinal = estado.modo === "final";
   for (const id of ["modo", "serie"]) {
     const escolhido = id === "modo" ? estado.modo
-      : (estado.series.length > 1 ? "AB" : estado.serie);
+      : (noFinal && estado.series.length > 1 ? "AB" : estado.serie);
     for (const botao of el(id).children) {
       const ligado = botao.dataset.valor === escolhido;
       botao.setAttribute("aria-pressed", String(ligado));
       // "Ambas" fica fora de alcance no modo rodada a rodada.
-      botao.disabled = botao.dataset.valor === "AB" && estado.modo !== "final";
+      botao.disabled = botao.dataset.valor === "AB" && !noFinal;
     }
   }
 
-  const noFinal = estado.modo === "final";
   el("campo-ignorar").hidden = noFinal;
   const maximo = noFinal && estado.series.length > 1
     ? POSICOES_POR_SERIE * 2 : POSICOES_POR_SERIE;
@@ -200,7 +211,8 @@ function daUrl() {
 function atualizarUrl() {
   const p = new URLSearchParams();
   p.set("modo", estado.modo);
-  p.set("serie", estado.series.length > 1 ? "AB" : estado.serie);
+  p.set("serie", estado.modo === "final" && estado.series.length > 1
+    ? "AB" : estado.serie);
   if (estado.equipe) p.set("equipe", estado.equipe);
   p.set("alvo", estado.alvo);
   if (estado.modo !== "final") p.set("ignorar", estado.ignorar);
