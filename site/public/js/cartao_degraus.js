@@ -6,19 +6,17 @@
  * mesma linha da tabela e não são a mesma situação. As duas visões desta tela
  * atacam isso por lados diferentes:
  *
- * **Régua** (uma rodada): o eixo é a pontuação, e cada clube fica no ponto em
- * que está. A distância deixa de ser número e vira espaço — quem está isolado
- * aparece sozinho, quem está no pelotão aparece na pilha. Os empatados dividem
- * o mesmo ponto do eixo, e a altura da pilha passa a dizer onde a tabela está
- * cheia, que é uma segunda leitura de graça.
+ * **Escada** (uma rodada): posição no eixo x, pontuação no y, cada clube num
+ * degrau na altura do que tem. A distância deixa de ser número e vira queda, e
+ * degrau plano é empate de pontos.
  *
- * O líder fica à esquerda e a pontuação cai para a direita: é a ordem em que a
- * classificação se lê, e "a equipe de baixo" passa a ser a que está adiante na
- * linha, no mesmo sentido da leitura.
+ * O lanterna fica à esquerda e o líder à direita, com a escada subindo: é o
+ * sentido em que se sobe uma escada, e a altura passa a valer o que vale na
+ * tabela — quem está mais alto está melhor.
  *
  * **Matriz** (a edição inteira): uma linha por degrau, uma coluna por rodada.
- * Mostra quando cada vão se abriu e se o campeonato foi se espalhando ou se
- * fechando — o que nenhuma tabela de uma rodada só pode dizer.
+ * Mostra quando cada vão se abriu — o que nenhuma tabela de uma rodada só
+ * pode dizer.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
@@ -55,7 +53,7 @@ function cartaoDaRegua(estado) {
   const spec = {
     titulo: `Distâncias na tabela da Série ${serie} ${edicao.ano} na `
           + `${rodada}ª rodada`,
-    subtitulo: "A tabela como escada: a altura de cada queda é a distância "
+    subtitulo: "A tabela como escada: a altura de cada degrau é a distância "
              + "para a equipe de baixo",
     arquivo: `degraus-${serie}-${edicao.ano}-r${rodada}`,
     numeros: [
@@ -85,7 +83,8 @@ function cartaoDaRegua(estado) {
       const yBase = base - 56;
       const yDe = (pontos) => yBase - ((pontos - baixo) / vao) * (yBase - yTopo);
 
-      const centro = (i) => x0 + (i + 0.5) * passo;
+      // O primeiro colocado à direita, no alto da escada.
+      const centro = (i) => x1 - (i + 0.5) * passo;
 
       // A régua de pontos à esquerda: sem ela a escada é uma silhueta bonita
       // sem escala, e o degrau de um ponto parece igual ao de oito.
@@ -95,12 +94,14 @@ function cartaoDaRegua(estado) {
         texto(ctx, marca, x0 - 14, ym + 4,
               { tamanho: 10, peso: 700, alinha: "right", cor: COR.cinzaEscuro });
       }
+      void 0;
 
       const alvos = [];
       for (const [i, clube] of coluna.entries()) {
         const xc = centro(i);
         const yc = yDe(clube.pontos);
         const de = xc - passo / 2;
+        const xq = de; // a queda para o próximo acontece na borda esquerda
 
         // O piso do degrau, da borda da coluna à outra: é ele que faz a
         // escada, e é sobre ele que o escudo se apoia.
@@ -127,7 +128,6 @@ function cartaoDaRegua(estado) {
         const abaixo = coluna[i + 1];
         if (abaixo) {
           const yProximo = yDe(abaixo.pontos);
-          const xq = de + passo;
           ctx.save();
           ctx.strokeStyle = COR.cinza;
           ctx.lineWidth = 1.5;
@@ -215,11 +215,7 @@ function cartaoDaSerie(estado) {
   const linhas = serieDeDegraus(colunas);
   const maior = maiorDaSerie(linhas);
   const ultima = linhas.at(-1);
-  const amplitudes = linhas.map((l) => l.amplitude ?? 0);
-  // A amplitude do meio da edição contra a do fim: é o par que conta a
-  // história do campeonato — quanto ele se esticou da metade para cá.
-  const metade = linhas[Math.floor(linhas.length / 2) - 1] ?? linhas[0];
-
+  const agora = maiorDegrau(ultima?.degraus ?? []);
   const posicoes = Math.max(...linhas.map((l) => l.degraus.length));
 
   const spec = {
@@ -227,15 +223,10 @@ function cartaoDaSerie(estado) {
     subtitulo: "Uma linha por degrau da tabela, uma coluna por rodada: a cor é "
              + "a distância para a equipe de baixo",
     arquivo: `degraus-${serie}-${edicao.ano}-serie`,
-    numeros: [
-      { valor: `${maior?.distancia ?? 0}`, destaque: "azul",
-        nome: maior ? `maior degrau · ${ordinal(maior.posicao)} na `
-                    + `${maior.rodada}ª rodada` : "maior degrau" },
-      { valor: `${ultima?.amplitude ?? 0}`,
-        nome: `do líder ao lanterna na ${ultima?.rodada ?? 0}ª rodada` },
-      { valor: `${metade?.amplitude ?? 0}`,
-        nome: `do líder ao lanterna na ${metade?.rodada ?? 0}ª rodada` },
-    ],
+    // Sem faixa de números: os dois degraus que importam estão desenhados
+    // com nome e pontuação no painel da direita, e repeti-los em caixa
+    // grande só tiraria altura da grade.
+    numeros: [],
     nota: `Cada casa é a distância daquela posição para a de baixo ao fim `
         + `daquela rodada. Quanto mais forte, maior o vão; a casa clara é `
         + `empate de pontos.`,
@@ -246,9 +237,8 @@ function cartaoDaSerie(estado) {
       const x1 = CARD.largura - MARGEM - 170;
       const largura = (x1 - x0) / linhas.length;
 
-      const alturaFaixa = 96;
       const topo = y + 26;
-      const alturaGrade = base - alturaFaixa - 30 - topo;
+      const alturaGrade = base - topo;
       const alturaLinha = alturaGrade / posicoes;
 
       const extremo = Math.max(1, ...linhas.flatMap(
@@ -301,13 +291,14 @@ function cartaoDaSerie(estado) {
         }
       }
 
-      alvos.push(...faixaDaAmplitude(ctx, {
-        linhas, amplitudes, x0, largura,
-        y: topo + alturaGrade + 30, altura: alturaFaixa,
-      }));
-
       await painel(ctx, {
-        maior, ultima, clubes, x: x1 + 18, y: topo, largura: 152,
+        titulo: "maior degrau da edição", degrau: maior, clubes,
+        x: x1 + 18, y: topo, largura: 152,
+      });
+      await painel(ctx, {
+        titulo: `maior degrau na ${ultima?.rodada ?? 0}ª rodada`,
+        degrau: agora ? { ...agora, rodada: ultima.rodada } : null, clubes,
+        x: x1 + 18, y: topo + 214, largura: 152,
       });
 
       spec.hover = {
@@ -321,82 +312,54 @@ function cartaoDaSerie(estado) {
 }
 
 /**
- * A amplitude rodada a rodada: o campeonato inteiro numa linha só.
+ * Um degrau em destaque, com os dois clubes que o formam.
  *
- * A matriz acima diz onde a tabela se partiu; esta faixa diz se ela está
- * esticando ou se fechando como um todo, que é a pergunta que se faz quando se
- * olha a edição de longe.
+ * Sem a pontuação dos dois o número do degrau fica no ar: seis pontos entre o
+ * 4º e o 5º é uma coisa a 60 pontos e outra a 30, e é a dupla de números que
+ * diz qual delas.
  */
-function faixaDaAmplitude(ctx, { linhas, amplitudes, x0, largura, y, altura }) {
-  texto(ctx, "amplitude da tabela: do líder ao lanterna", MARGEM, y - 6,
-        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
-          cor: COR.cinzaEscuro });
-
-  const maximo = Math.max(1, ...amplitudes);
-  const base = y + altura;
-  const escala = (v) => (v / maximo) * (altura - 18);
-
-  linhaH(ctx, x0, x0 + linhas.length * largura, base, COR.linha);
-
-  const alvos = [];
-  for (const [i, linha] of linhas.entries()) {
-    const x = x0 + i * largura;
-    const alturaBarra = escala(linha.amplitude ?? 0);
-    caixa(ctx, x + 2, base - alturaBarra, largura - 4, alturaBarra,
-          COR.azulMedio, 2);
-
-    // O número em uma rodada a cada três: com 38 colunas, todos viram ruído.
-    if (i === 0 || i === linhas.length - 1 || (i + 1) % 3 === 0) {
-      texto(ctx, linha.amplitude, x + largura / 2, base - alturaBarra - 5,
-            { tamanho: 9.5, peso: 700, alinha: "center", cor: COR.azulEscuro });
-    }
-
-    alvos.push({
-      n: `${linha.rodada}ª rodada`,
-      x, y: y - 10, l: largura, a: altura + 10,
-      itens: [],
-      diferenca: {
-        rotulo: `${linha.amplitude}`,
-        texto: "pontos entre o líder e o lanterna",
-        cor: COR.azul,
-      },
-    });
-  }
-  return alvos;
-}
-
-async function painel(ctx, { maior, ultima, clubes, x, y, largura }) {
-  if (!maior) return;
-
-  caixa(ctx, x, y, largura, 188, COR.branco, 8);
+async function painel(ctx, { titulo, degrau, clubes, x, y, largura }) {
+  const altura = 196;
+  caixa(ctx, x, y, largura, altura, COR.branco, 8);
   ctx.save();
   ctx.strokeStyle = COR.linha;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(x + .5, y + .5, largura - 1, 187, 8);
+  ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 8);
   ctx.stroke();
   ctx.restore();
 
-  texto(ctx, "maior degrau da edição", x + 12, y + 20,
+  texto(ctx, titulo, x + 12, y + 20,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
           cor: COR.cinzaEscuro });
-  texto(ctx, maior.distancia, x + 12, y + 58,
-        { tamanho: 32, peso: 800, cor: COR.azul });
-  texto(ctx, `do ${ordinal(maior.posicao)} para o ${ordinal(maior.posicao + 1)}`,
-        x + 12, y + 78, { tamanho: 11, cor: COR.cinzaEscuro });
-  texto(ctx, `na ${maior.rodada}ª rodada`, x + 12, y + 94,
-        { tamanho: 11, cor: COR.cinzaEscuro });
+  if (!degrau) {
+    texto(ctx, "—", x + 12, y + 56, { tamanho: 32, peso: 800, cor: COR.cinza });
+    return;
+  }
 
-  const lado = 26;
-  desenharEscudo(ctx, await imagem(clubes?.[maior.equipe]?.escudo),
-                 x + 12, y + 110, lado);
-  texto(ctx, cortar(ctx, nomeBonito(maior.equipe), largura - 52, 11.5, 700),
-        x + 46, y + 128, { tamanho: 11.5, peso: 700, cor: COR.azulEscuro });
+  texto(ctx, degrau.distancia, x + 12, y + 60,
+        { tamanho: 34, peso: 800, cor: COR.azul });
+  texto(ctx, `do ${ordinal(degrau.posicao)} para o `
+           + `${ordinal(degrau.posicao + 1)}`,
+        x + 12, y + 80, { tamanho: 11, cor: COR.cinzaEscuro });
+  if (degrau.rodada) {
+    texto(ctx, `na ${degrau.rodada}ª rodada`, x + 12, y + 96,
+          { tamanho: 11, cor: COR.cinzaEscuro });
+  }
 
-  desenharEscudo(ctx, await imagem(clubes?.[maior.abaixo.equipe]?.escudo),
-                 x + 12, y + 146, lado);
-  texto(ctx, cortar(ctx, nomeBonito(maior.abaixo.equipe), largura - 52, 11.5, 400),
-        x + 46, y + 164, { tamanho: 11.5, cor: COR.cinzaTexto });
-
-  void ultima;
+  const lado = 24;
+  const linhas = [
+    { equipe: degrau.equipe, pontos: degrau.pontos, peso: 700 },
+    { equipe: degrau.abaixo.equipe, pontos: degrau.abaixo.pontos, peso: 400 },
+  ];
+  for (const [i, linha] of linhas.entries()) {
+    const yl = y + 116 + i * 38;
+    desenharEscudo(ctx, await imagem(clubes?.[linha.equipe]?.escudo),
+                   x + 12, yl, lado);
+    texto(ctx, cortar(ctx, nomeBonito(linha.equipe), largura - 82, 11, linha.peso),
+          x + 42, yl + 10,
+          { tamanho: 11, peso: linha.peso, cor: COR.azulEscuro });
+    texto(ctx, `${linha.pontos} pts`, x + 42, yl + 23,
+          { tamanho: 11.5, peso: 800, cor: COR.cinzaEscuro });
+  }
 }
