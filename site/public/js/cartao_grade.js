@@ -16,7 +16,7 @@
  * a lista é uma pergunta a mais, e não o assunto.
  */
 import {
-  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
+  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo, ligacaoEmS,
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import {
@@ -100,6 +100,7 @@ export function montarCartao(estado) {
       const caminho = destaque
         ? new Map(caminhoDoClube(grade, destaque)
             .map((p) => [p.rodada, p.posicao])) : null;
+      const ladoDoEscudo = Math.min(largura - 8, alturaLinha - 7);
 
       for (const { rodada, casas } of grade) {
         const x = x0 + (rodada - 1) * largura;
@@ -125,8 +126,10 @@ export function montarCartao(estado) {
         }
       }
 
-      if (caminho) fioDoCaminho(ctx, { caminho, grade, x0, largura, topo,
-                                       alturaLinha });
+      if (caminho) {
+        fioDoCaminho(ctx, { caminho, grade, x0, largura, topo, alturaLinha,
+                            lado: ladoDoEscudo });
+      }
 
       spec.hover = {
         pontos: alvos, eixo: "caixa", unidade: "",
@@ -156,25 +159,31 @@ function cabecalhoDasRodadas(ctx, { grade, x0, largura, y }) {
  *
  * O escudo aceso já diz onde ele estava; o fio diz o movimento entre uma
  * rodada e outra, que é o que a grade sozinha obriga a montar de cabeça.
+ *
+ * Ele sai do meio da lateral de um quadro e entra no meio da lateral do
+ * seguinte, em degrau de canto reto no vão entre as duas casas — e assim
+ * nunca passa por cima de escudo nenhum, nem do dele.
  */
-function fioDoCaminho(ctx, { caminho, grade, x0, largura, topo, alturaLinha }) {
+function fioDoCaminho(ctx, { caminho, grade, x0, largura, topo, alturaLinha,
+                             lado }) {
   const pontos = grade
     .map(({ rodada }) => ({ rodada, posicao: caminho.get(rodada) }))
     .filter((p) => p.posicao);
   if (pontos.length < 2) return;
 
-  ctx.save();
-  ctx.strokeStyle = COR.marca;
-  ctx.lineWidth = 2;
-  ctx.globalAlpha = .55;
-  ctx.beginPath();
-  pontos.forEach((p, i) => {
-    const x = x0 + (p.rodada - 0.5) * largura;
-    const y = topo + (p.posicao - 1) * alturaLinha + alturaLinha / 2;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  ctx.restore();
+  const centroX = (rodada) => x0 + (rodada - 0.5) * largura;
+  const centroY = (posicao) =>
+    topo + (posicao - 1) * alturaLinha + alturaLinha / 2;
+  const folga = lado / 2 + 3;
+
+  for (let i = 1; i < pontos.length; i++) {
+    const antes = pontos[i - 1], agora = pontos[i];
+    ligacaoEmS(ctx, {
+      x0: centroX(antes.rodada) + folga, y0: centroY(antes.posicao),
+      x1: centroX(agora.rodada) - folga, y1: centroY(agora.posicao),
+      cor: COR.marca, espessura: 1.5, tracejado: [3, 3],
+    });
+  }
 }
 
 /* ---------------------------------------------------------------- painel */

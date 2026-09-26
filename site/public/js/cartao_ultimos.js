@@ -26,7 +26,7 @@ import {
 import { nomeBonito } from "/js/nomes.js";
 import { posicoesDoClube, resumoDoRecorte } from "/js/ultimos.js";
 
-const VAO = 14;
+const VAO = 22;
 
 const ordinal = (n) => `${n}º`;
 const percentual = (v) =>
@@ -62,6 +62,20 @@ export function montarCartao(estado) {
       const alturaCabecalho = 26;
       const alturaLinha = (base - topo - alturaCabecalho) / total;
       const xDaColuna = (i) => MARGEM + i * (largura + VAO);
+
+      // Um fio entre as colunas: onze tabelas coladas viram uma parede de
+      // números, e o olho precisa de onde parar entre uma e outra.
+      for (let i = 1; i < colunas.length; i++) {
+        const meio = xDaColuna(i) - VAO / 2;
+        ctx.save();
+        ctx.strokeStyle = COR.linha;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(meio, topo);
+        ctx.lineTo(meio, base);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       const alvos = [];
       for (const [i, coluna] of colunas.entries()) {
