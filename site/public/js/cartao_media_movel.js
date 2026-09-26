@@ -13,6 +13,11 @@
  * cada uma daquelas posições costuma terminar a série. Elas respondem a
  * pergunta que a curva sozinha não responde — "esta fase, mantida até o fim,
  * daria que lugar?".
+ *
+ * A dica do mouse abre a janela: os X jogos que formam aquele ponto, com o
+ * adversário, o local e o placar, na ordem em que aconteceram. Um ponto baixo
+ * pode ser um time que jogou mal ou um time que pegou os quatro primeiros, e
+ * a média sozinha não separa os dois casos.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, polilinha,
@@ -202,6 +207,22 @@ function reguaDaPosicao(ctx, { referencia, yDe, x0, x1, escrever }) {
 }
 
 /* ------------------------------------------------------------------ dica */
+// Uma janela muito longa viraria uma lista maior que a tela; o resto vira
+// uma linha de resumo, que é o que se lê mesmo quando são vinte jogos.
+const MOSTRAR = 16;
+
+const corDoResultado = (resultado) => (resultado === "T" ? COR.positivo
+  : resultado === "E" ? COR.cinzaEscuro : COR.negativo);
+
+const plural = (n, um, muitos) => `${n} ${n === 1 ? um : muitos}`;
+
+/**
+ * A janela por dentro: os jogos que formam o ponto.
+ *
+ * Na ordem em que aconteceram, e não na ordem do placar: a pergunta é como a
+ * fase se construiu — três derrotas no começo e dois triunfos no fim dão a
+ * mesma média que o contrário, e não são a mesma coisa.
+ */
 function dicaDaJanela(ponto, { escrever, janela }) {
   const marca = marcaAtual();
   const conta = ponto.jogos.reduce((acc, j) => {
@@ -209,17 +230,28 @@ function dicaDaJanela(ponto, { escrever, janela }) {
     return acc;
   }, {});
 
+  const itens = ponto.jogos.slice(0, MOSTRAR).map(({ jogo }) => ({
+    rotulo: `${jogo?.mando === "casa" ? "casa" : "fora"} · `
+          + `${nomeBonito(jogo?.adversario ?? "")}`,
+    cor: corDoResultado(jogo?.resultado),
+    pontos: null,
+    texto: `${jogo?.gp ?? "—"}×${jogo?.gc ?? "—"}`,
+    detalhe: "",
+  }));
+  if (ponto.jogos.length > MOSTRAR) {
+    itens.push({ rotulo: `e mais ${ponto.jogos.length - MOSTRAR} jogos`,
+                 cor: COR.cinzaClaro, pontos: null, texto: "", detalhe: "" });
+  }
+
   return {
     n: `jogos ${ponto.de} a ${ponto.ate}`,
-    itens: [{
-      rotulo: `${conta.T ?? 0} ${marca.triunfos}, ${conta.E ?? 0} empates e `
-            + `${conta.D ?? 0} derrotas`,
-      cor: COR.azul, pontos: ponto.pontos,
-      detalhe: `em ${janela} jogos`,
-    }],
+    itens,
     diferenca: {
       rotulo: escrever(ponto.media),
-      texto: "na janela que termina neste jogo",
+      texto: `${plural(conta.T ?? 0, marca.triunfo, marca.triunfos)}, `
+           + `${plural(conta.E ?? 0, "empate", "empates")} e `
+           + `${plural(conta.D ?? 0, "derrota", "derrotas")} `
+           + `em ${janela} jogos`,
       cor: COR.azul,
     },
   };
