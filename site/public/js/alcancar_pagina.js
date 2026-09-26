@@ -15,7 +15,8 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_alcancar.js";
 import { ligarTrilha } from "/js/seletor_posicoes.js";
 import {
-  METRICAS, alvoPadrao, maiorTotal, marcosDoClube, situacaoAtual,
+  METRICAS, alvoPadrao, edicoesDoClube, maiorTotal, marcosDoClube,
+  situacaoAtual,
 } from "/js/alcancar.js";
 import { marcaAtual, aoMudarMarca } from "/js/marca.js";
 import { nomeComUf } from "/js/nomes.js";
@@ -26,6 +27,9 @@ const estado = {
   // A edição em curso da série, que é a lista de clubes da tela e a marca que
   // cada um deles traz de casa.
   atual: { ano: null, clubes: [] },
+  // A lista deitada mostra os clubes de hoje; quem já jogou a série em outros
+  // anos fica atrás deste botão, para a fila não virar oitenta escudos.
+  outras: false,
 };
 
 const el = (id) => document.getElementById(id);
@@ -86,9 +90,15 @@ async function inicializar() {
     const botao = evento.target.closest(".clube");
     if (!botao) return;
     // Clicar num clube leva a marca para o que ele tem hoje: é a comparação
-    // que a tela existe para fazer — "em que jogo eu chegava a isto".
+    // que a tela existe para fazer — "em que jogo eu chegava a isto". Quem não
+    // está na edição em curso não tem hoje, e cai na mediana das edições dele.
     const atual = estado.atual.clubes.find((c) => c.equipe === botao.dataset.equipe);
-    trocarEquipe(botao.dataset.equipe, { alvoDaUrl: atual?.valor });
+    trocarEquipe(botao.dataset.equipe, { alvoDaUrl: atual?.valor ?? null });
+  });
+
+  el("outras").addEventListener("click", () => {
+    estado.outras = !estado.outras;
+    montarListaDeClubes();
   });
 
   pintarChaves("ordem", estado.ordem);
@@ -175,16 +185,52 @@ function montarListaDeClubes() {
   estado.atual = situacaoAtual(estado.campanhas,
     { serie: estado.serie, metrica: estado.metrica });
   const nome = METRICAS[estado.metrica]?.nome ?? "";
+  const lista = estado.outras ? outrasEquipes() : estado.atual.clubes;
 
-  el("clubes").innerHTML = estado.atual.clubes.map((c, i) => `
+  el("clubes").innerHTML = lista.map((c, i) => `
     <button type="button" class="clube" data-equipe="${c.equipe}"
-            title="${nomeComUf(c.equipe)} · ${c.valor} ${nome} em ${c.jogos} jogos">
-      <span class="clube-pos">${i + 1}</span>
+            title="${nomeComUf(c.equipe)} · ${c.titulo}">
+      <span class="clube-pos">${estado.outras ? "" : i + 1}</span>
       <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="${nomeComUf(c.equipe)}">
-      <span class="clube-pts">${c.valor}</span>
-      <span class="clube-situacao">${nome}</span>
+      <span class="clube-pts">${c.valor ?? "—"}</span>
+      <span class="clube-situacao">${estado.outras ? c.rodape : nome}</span>
     </button>`).join("");
+
+  el("outras").setAttribute("aria-pressed", String(estado.outras));
+  el("outras").textContent = estado.outras
+    ? `Equipes de ${estado.atual.ano ?? "hoje"}` : "Outras equipes";
+  el("rotulo-clubes-dica").textContent = estado.outras
+    ? "quem já jogou a série em outros anos · a marca abre na mediana das "
+      + "edições do clube"
+    : "clube da edição em curso, com o que ele tem hoje — clicar leva a marca "
+      + "para esse número";
   pintarListaDeClubes();
+}
+
+/**
+ * Os clubes que já jogaram a série mas não estão na edição em curso.
+ *
+ * Eles não têm um "hoje" para mostrar, então trazem quantas edições têm na
+ * série: é o que diz se vale a pena olhar a comparação.
+ */
+function outrasEquipes() {
+  const deHoje = new Set(estado.atual.clubes.map((c) => c.equipe));
+  const nomes = new Set();
+  for (const clubes of Object.values(estado.campanhas.series?.[estado.serie] ?? {})) {
+    for (const [equipe] of clubes) if (!deHoje.has(equipe)) nomes.add(equipe);
+  }
+
+  return [...nomes]
+    .map((equipe) => {
+      const edicoes = edicoesDoClube(estado.campanhas,
+        { serie: estado.serie, equipe }).length;
+      return {
+        equipe, valor: null,
+        rodape: `${edicoes} ${edicoes === 1 ? "edição" : "edições"}`,
+        titulo: `${edicoes} ${edicoes === 1 ? "edição" : "edições"} na série`,
+      };
+    })
+    .sort((a, b) => nomeComUf(a.equipe).localeCompare(nomeComUf(b.equipe), "pt-BR"));
 }
 
 function pintarListaDeClubes() {
