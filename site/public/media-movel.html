@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recortes iniciais · Cards ECBahia Números</title>
+<title>Média móvel · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Recortes iniciais</h1>
-      <p class="subtitulo">A largada de um clube, edição por edição.</p>
+      <h1>Média móvel em X jogos</h1>
+      <p class="subtitulo">Como o time está agora, e não como ele está no acumulado.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -53,7 +53,7 @@ try { document.documentElement.dataset.marca =
     <a href="/ultimos.html">Últimos X jogos</a>
     <a href="/grade.html">Classificação por rodada</a>
     <a href="/desfechos.html">Posição final por pontos</a>
-    <a href="/media-movel.html">Média móvel</a>
+    <a href="/media-movel.html" aria-current="page">Média móvel</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
@@ -65,7 +65,7 @@ try { document.documentElement.dataset.marca =
     <a href="/diferenca.html">Diferença entre dois pontos</a>
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
-    <a href="/recortes.html" aria-current="page">Recortes iniciais</a>
+    <a href="/recortes.html">Recortes iniciais</a>
     <a href="/alcancar.html">Jogos para alcançar X</a>
     <a href="/medias.html">Média por posição e rodada</a>
     <a href="/degraus.html">Distâncias para a equipe de baixo</a>
@@ -79,46 +79,53 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-serie">Divisão</label>
+        <label id="rotulo-modo">Ver</label>
+        <div class="chaves" id="modo" role="group" aria-labelledby="rotulo-modo"></div>
+      </div>
+      <div class="campo">
+        <label id="rotulo-serie">Série</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
+      </div>
+      <div class="campo">
+        <label for="ano">Ano</label>
+        <select id="ano"></select>
       </div>
       <div class="campo campo-equipe">
         <label for="equipe">Equipe</label>
-        <div class="equipe-com-escudo">
-          <img id="escudo-equipe" alt="">
-          <select id="equipe"></select>
-        </div>
+        <select id="equipe"></select>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="coluna-controles">
-      <div class="campo campo-deslizante">
-        <label for="jogos">Jogos <output id="valor-jogos">—</output>
-          <span class="dica-campo">escolher a equipe leva o corte para os jogos
-            que ela tem hoje</span>
+    <div class="filtros-linha trilhas">
+      <div class="campo campo-trilha">
+        <label id="rotulo-janela">Jogos na janela
+          <span class="dica-campo" id="valor-janela">—</span>
         </label>
-        <input type="range" id="jogos" min="1" max="38" step="1" value="20">
+        <div id="janela" aria-labelledby="rotulo-janela"></div>
       </div>
-      <div class="campo campo-posicoes">
-        <label id="rotulo-posicoes">Destacar posições
-          <span class="dica-campo">quem terminou nesta faixa sai em cinza; melhor,
-            em verde; pior, em vermelho</span>
+      <div class="campo campo-trilha">
+        <label id="rotulo-posicoes">Posições de referência
+          <span class="dica-campo">a linha verde e a vermelha são a média por
+            jogo com que cada uma costuma terminar a série</span>
         </label>
         <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
       </div>
     </div>
-    <p class="nota-ordem"><b>Ordem cronológica, não a da rodada.</b> O
-      eixo é o n-ésimo jogo de cada clube, na ordem em que ele foi
-      disputado. Rodada não é tempo: um jogo adiado da 4ª disputado em
-      agosto poria o acumulado de agosto lá atrás. É a leitura certa quando
-      a pergunta é sobre a campanha.</p>
+
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>A janela anda um jogo por vez, na ordem
+      cronológica.</b> O ponto mais à direita são os últimos jogos da equipe; o
+      anterior, a mesma janela terminando um jogo antes. Todas têm o mesmo
+      tamanho, e é isso que as deixa comparáveis — por isso a linha só começa no
+      X-ésimo jogo. Jogo adiado entra na janela em que foi disputado, que é
+      quando ele mudou a fase do time.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de recortes iniciais"></canvas>
+            aria-label="card de média móvel"></canvas>
   </section>
 
   <footer class="rodape">
@@ -131,6 +138,6 @@ try { document.documentElement.dataset.marca =
 
 <script type="module" src="/js/marca.js"></script>
 <script type="module" src="/js/tapetao.js"></script>
-<script type="module" src="/js/recortes.js"></script>
+<script type="module" src="/js/media_movel_pagina.js"></script>
 </body>
 </html>
