@@ -394,15 +394,19 @@ function cartaoDoRanking(estado) {
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
       const larguraMembros = 620;
+      // A classificação vem primeiro, à esquerda: é a resposta da tela. O que
+      // cada clube do bloco entregou é o detalhe que a explica, e detalhe se
+      // lê depois.
+      const larguraRanking = CARD.largura - MARGEM * 2 - larguraMembros - VAO;
 
-      const alvos = await painelDosMembros(ctx, {
-        membros, clubes, posicaoDe, mando,
-        x: MARGEM, largura: larguraMembros, y, base,
+      const alvos = await tabelaDoRanking(ctx, {
+        ranking, clubes, bloco,
+        x: MARGEM, largura: larguraRanking, y, base,
       });
 
-      const x0 = MARGEM + larguraMembros + VAO;
-      alvos.push(...await tabelaDoRanking(ctx, {
-        ranking, clubes, bloco,
+      const x0 = MARGEM + larguraRanking + VAO;
+      alvos.push(...await painelDosMembros(ctx, {
+        membros, clubes, posicaoDe, mando,
         x: x0, largura: CARD.largura - MARGEM - x0, y, base,
       }));
 
@@ -520,8 +524,11 @@ async function tabelaDoRanking(ctx, { ranking, clubes, bloco,
     const meio = yl + alturaLinha / 2;
     const doBloco = membros.has(linha.equipe);
 
+    // Quem é do bloco leva a etiqueta, e só ela: pintar a linha inteira
+    // sugeria uma hierarquia que não existe — o clube está ali pelo mesmo
+    // motivo que os outros, por quanto pontuou contra o bloco.
     caixa(ctx, x, yl, largura, alturaLinha - 2,
-          doBloco ? COR.cinzaClaro : i % 2 ? COR.fundo : COR.branco, 4);
+          i % 2 ? COR.fundo : COR.branco, 4);
 
     texto(ctx, i + 1, x + 22, meio + 4,
           { tamanho: 11.5, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
