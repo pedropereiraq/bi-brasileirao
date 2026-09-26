@@ -280,6 +280,28 @@ function ligarHover(geometria) {
  * fala de pontos. Quando o número é outra coisa (gols, jogos, gols por jogo),
  * o card manda `texto` já escrito, com a unidade dele.
  */
+/**
+ * Um gráfico de barras dentro da dica.
+ *
+ * Três números resumem uma distribuição; a forma dela é outra coisa — se as
+ * campanhas se apertam em torno da média ou se espalham. Cabe numa fileira de
+ * barrinhas, e só existe na tela: a dica nunca entra no PNG.
+ */
+function faixasDaDica(faixas) {
+  if (!faixas?.barras?.length) return "";
+  const maior = Math.max(...faixas.barras.map((b) => b.quantidade), 1);
+  const barras = faixas.barras.map((b) => `
+    <i style="height:${Math.round((b.quantidade / maior) * 100)}%"
+       title="${b.rotulo}: ${b.quantidade}"></i>`).join("");
+  const pontas = `<span>${faixas.barras[0].rotulo}</span>`
+               + `<span>${faixas.barras[faixas.barras.length - 1].rotulo}</span>`;
+  return `<div class="dica-faixas">
+      <div class="dica-faixas-titulo">${faixas.titulo ?? ""}</div>
+      <div class="dica-spark">${barras}</div>
+      <div class="dica-faixas-pontas">${pontas}</div>
+    </div>`;
+}
+
 function conteudoDaDica(ponto, g) {
   const linhas = ponto.itens.map((item) => `
     <div class="dica-time">
@@ -307,5 +329,6 @@ function conteudoDaDica(ponto, g) {
   // Sem unidade — numa lista de anos, o ano já é o título — não sobra espaço
   // em branco antes do número.
   const titulo = [g.unidade, ponto.n].filter(Boolean).join(" ");
-  return `<div class="dica-titulo">${titulo}</div>${linhas}${diferenca}`;
+  return `<div class="dica-titulo">${titulo}</div>${linhas}`
+       + `${faixasDaDica(ponto.faixas)}${diferenca}`;
 }

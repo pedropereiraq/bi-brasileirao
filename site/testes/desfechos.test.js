@@ -11,8 +11,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  campanhasEncerradas, casa, cruzarPontosEPosicao, resumoDaPontuacao,
-  resumoDaPosicao,
+  campanhasEncerradas, casa, cruzarPontosEPosicao, distribuicaoDaPosicao,
+  resumoDaPontuacao, resumoDaPosicao,
 } from "../public/js/desfechos.js";
 
 const dados = {
@@ -97,4 +97,22 @@ test("o resumo responde pelas duas pontas", () => {
 
   assert.equal(resumoDaPosicao(campanhas, 19), null);
   assert.equal(resumoDaPontuacao(campanhas, 99), null);
+});
+
+test("a distribuição de uma posição vai do mínimo ao máximo, com os vazios", () => {
+  const campanhas = [
+    { ano: 2020, equipe: "A", posicao: 2, pontos: 64 },
+    { ano: 2021, equipe: "B", posicao: 2, pontos: 64 },
+    { ano: 2022, equipe: "C", posicao: 2, pontos: 67 },
+    { ano: 2023, equipe: "D", posicao: 1, pontos: 80 },
+  ];
+
+  assert.deepEqual(distribuicaoDaPosicao(campanhas, 2), [
+    { pontos: 64, quantidade: 2 },
+    { pontos: 65, quantidade: 0 },
+    { pontos: 66, quantidade: 0 },
+    { pontos: 67, quantidade: 1 },
+  ]);
+  assert.deepEqual(distribuicaoDaPosicao(campanhas, 1), [{ pontos: 80, quantidade: 1 }]);
+  assert.deepEqual(distribuicaoDaPosicao(campanhas, 9), []);
 });

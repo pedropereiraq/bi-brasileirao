@@ -100,6 +100,29 @@ export function resumoDaPosicao(campanhas, posicao) {
   };
 }
 
+/**
+ * Quantas campanhas de cada pontuação naquela posição.
+ *
+ * Vai do mínimo ao máximo da própria posição, com zero onde não houve
+ * ninguém: é a forma da distribuição que interessa — se ela é apertada, a
+ * posição tem preço quase fixo; se é larga, o mesmo lugar já custou coisas
+ * muito diferentes.
+ */
+export function distribuicaoDaPosicao(campanhas, posicao) {
+  const daPosicao = (campanhas ?? []).filter((c) => c.posicao === posicao);
+  if (!daPosicao.length) return [];
+
+  const pontos = daPosicao.map((c) => c.pontos);
+  const minimo = Math.min(...pontos), maximo = Math.max(...pontos);
+  const conta = new Map();
+  for (const p of pontos) conta.set(p, (conta.get(p) ?? 0) + 1);
+
+  return Array.from({ length: maximo - minimo + 1 }, (_, i) => {
+    const valor = minimo + i;
+    return { pontos: valor, quantidade: conta.get(valor) ?? 0 };
+  });
+}
+
 /** O mesmo resumo, pela outra ponta: o que cada pontuação já rendeu. */
 export function resumoDaPontuacao(campanhas, pontos) {
   const daPontuacao = (campanhas ?? []).filter((c) => c.pontos === pontos);
