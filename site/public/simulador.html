@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador · Cards ECBahia Números</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+<script>
+// Antes da primeira pintura: sem isto a página nasce clara e pisca para o
+// preto quando o módulo da marca carrega.
+try { document.documentElement.dataset.marca =
+        localStorage.getItem("bi-marca") || "ecbahia"; } catch (e) {}
+</script>
+</head>
+<body>
+
+<main class="pagina larga">
+
+  <header class="topo">
+    <div>
+      <h1>Simulador</h1>
+      <p class="subtitulo">Os jogos que faltam, um palpite de cada vez.</p>
+    </div>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
+      <div class="chaves chaves-marca" id="chave-tapetao" role="group"
+           aria-label="Pontos tirados no tapetão">
+        <button type="button" class="chave" data-tapetao="com"
+                aria-pressed="true">com tapetão</button>
+        <button type="button" class="chave" data-tapetao="sem"
+                aria-pressed="false">sem</button>
+      </div>
+      <div class="chaves chaves-marca" id="chave-marca" role="group"
+           aria-label="Marca dos cards">
+        <button type="button" class="chave" data-marca="ecbahia"
+                aria-pressed="true">ecbn</button>
+        <button type="button" class="chave" data-marca="podcast45"
+                aria-pressed="false">45</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao">
+    <a href="/">Telas</a>
+    <a href="/classificacao.html">Classificação</a>
+    <a href="/jogos.html">Jogos</a>
+    <a href="/gols.html">Gols</a>
+    <a href="/ultimos.html">Últimos X jogos</a>
+    <a href="/grade.html">Classificação por rodada</a>
+    <a href="/desfechos.html">Pontuação final por posição</a>
+    <a href="/resultados.html">Distribuição de resultados</a>
+    <a href="/media-movel.html">Média móvel</a>
+    <a href="/mando.html">Mando de campo</a>
+    <a href="/dificuldade.html">Dificuldade de tabela</a>
+    <a href="/fmi.html">FMI</a>
+    <a href="/turnos.html">Comparativo de turnos</a>
+    <a href="/adversarios.html">Resultados por adversário</a>
+    <a href="/ondas.html">Distribuição de pontos</a>
+    <a href="/comparativo.html">Comparativo de campanhas</a>
+    <a href="/evolucao.html">Evolução da campanha</a>
+    <a href="/diferenca.html">Diferença entre dois pontos</a>
+    <a href="/blocos.html">Blocos de 6 jogos</a>
+    <a href="/semelhantes.html">Campanhas semelhantes</a>
+    <a href="/recortes.html">Recortes iniciais</a>
+    <a href="/alcancar.html">Jogos para alcançar X</a>
+    <a href="/medias.html">Média por posição e rodada</a>
+    <a href="/degraus.html">Distâncias para a equipe de baixo</a>
+    <a href="/ritmo.html">Aceleração por posição</a>
+    <a href="/historico.html">Posições históricas</a>
+    <a href="/distancias.html">Distância entre posições</a>
+    <a href="/proximos.html">Próximos jogos</a>
+    <a href="/simulador.html" aria-current="page">Simulador</a>
+    <a href="/atualizar.html">Atualizar dados</a>
+  </nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
+      </div>
+      <div class="campo">
+        <label id="rotulo-palpites">Palpites
+          <span class="dica-campo" id="resumo-palpites"></span>
+        </label>
+        <button type="button" class="chave" id="limpar" hidden>Limpar palpites</button>
+      </div>
+      <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>Cada etiqueta é um jogo que ainda vem</b> — C de
+      casa, F de fora, e o escudo do adversário. Clique nela para girar o
+      palpite: vitória, empate, derrota e de volta ao branco. O resultado é
+      sempre 1 a 0, ou 0 a 0 no empate: o simulador decide pontos, não placar.
+      O mesmo jogo aparece nas duas linhas, e o palpite vale nos dois lugares.
+      A tela vale para a edição em andamento e só a partir do segundo turno.</p>
+  </section>
+
+  <section class="palco-card">
+    <p id="aviso-card" class="aviso-card" hidden></p>
+    <canvas id="card" width="2400" height="1350"
+            aria-label="card do simulador"></canvas>
+  </section>
+
+  <footer class="rodape">
+    <p>O que está na tela é exatamente a imagem que o botão salva: 2400 × 1350,
+       no padrão dos cards do ECBahia Números.</p>
+    <p data-assinatura><b>ecbahia</b>numeros</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/marca.js"></script>
+<script type="module" src="/js/tapetao.js"></script>
+<script type="module" src="/js/simulador_pagina.js"></script>
+</body>
+</html>

@@ -8,6 +8,11 @@
  * As duas classificações são o motor do navegador com um filtro de rodada,
  * e não uma tabela pronta: "só o primeiro turno" é um recorte como qualquer
  * outro, e é assim que o BI inteiro funciona.
+ *
+ * A tela só vale a partir do segundo turno. Com o primeiro ainda correndo não
+ * há o que comparar — a coluna da volta está vazia, e o card compararia uma
+ * campanha com o nada. Vale para qualquer edição, e não só para a atual: o
+ * espelho de 2015 é tão comparável quanto o de agora.
  */
 import {
   RODADA, DATA, MANDANTE, VISITANTE, GOLS_M, GOLS_V, STATUS, tabela,
@@ -21,11 +26,13 @@ import {
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_turnos.js";
 import { RODADAS_POR_TURNO } from "/js/turnos.js";
+import { avisoDoSegundoTurno } from "/js/segundo_turno.js";
 import { nomeBonito } from "/js/nomes.js";
 
 const estado = {
   edicoes: [], clubes: {},
   serie: null, edicao: null, equipe: "", jogos: [], agenda: [], tabelas: null,
+  aviso: null,
   aoEscolher: (equipe) => {
     if (!equipe || equipe === estado.equipe) return;
     estado.equipe = equipe;
@@ -51,8 +58,8 @@ inicializar().catch((erro) => {
 });
 
 async function inicializar() {
-  definirMensagemSemCard("esta edição ainda não tem primeiro turno para comparar");
-  redesenhar = ligarPaginaDeCard(() => montarCartao(estado));
+  redesenhar = ligarPaginaDeCard(
+    () => (estado.aviso ? null : montarCartao(estado)));
 
   const [edicoes, clubes] = await Promise.all([
     fetch("/dados/edicoes.json").then((r) => r.json()),
@@ -159,6 +166,13 @@ function aplicar() {
   estado.agenda = agendaDoClube(estado.jogos, estado.equipe);
 
   const { edicao } = estado;
+  estado.aviso = avisoDoSegundoTurno({
+    jogos: estado.jogos, rodadas: edicao?.rodadas,
+    tela: "O comparativo de turnos",
+  });
+  definirMensagemSemCard(estado.aviso
+    ?? "esta edição ainda não tem primeiro turno para comparar");
+
   el("rodape-edicao").textContent = edicao
     ? `Série ${estado.serie} ${edicao.ano} · ${edicao.realizados} de `
       + `${edicao.jogos} jogos disputados`
