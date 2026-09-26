@@ -109,6 +109,11 @@ function descreverRecorte({ criterio, recorte, edicao }) {
     partes.push(de > 1 ? `da ${ordinal(de)} à ${ordinal(ate)} rodada`
                        : `até a ${ordinal(ate)} rodada`);
   }
+  // Os últimos X são cronológicos e por equipe: dizer só "últimos 5 jogos"
+  // deixaria o leitor achar que são as 5 últimas rodadas.
+  if (recorte?.ultimos) {
+    partes.push(`últimos ${recorte.ultimos} jogos de cada equipe`);
+  }
   if (recorte?.dataDe || recorte?.dataAte) {
     partes.push(recorte.dataDe && recorte.dataAte
       ? `de ${dataBr(recorte.dataDe)} a ${dataBr(recorte.dataAte)}`

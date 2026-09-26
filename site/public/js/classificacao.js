@@ -22,6 +22,9 @@ import {
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_classificacao.js";
 import { faixasDaSerie, limitesPadrao, limitesValidos } from "/js/vagas.js";
+import {
+  ligarSeletorDeRodadas, ligarSeletorDeUltimos,
+} from "/js/seletor_posicoes.js";
 
 const COR_DA_FAIXA = {
   verdeEscuro: "#38761D",
@@ -36,9 +39,14 @@ const estado = {
   criterio: "pontos",
   limites: {},
   // `form` é o que está nos campos; `recorte`, só o que de fato corta.
-  form: { rodadaDe: 1, rodadaAte: null, dataDe: "", dataAte: "" },
+  form: { rodadaDe: 1, rodadaAte: null, ultimos: null, dataDe: "", dataAte: "" },
   recorte: {},
 };
+
+// As trilhas são refeitas a cada edição: o número de rodadas é o tamanho
+// delas, e uma Série B de 38 não é a mesma régua de um Brasileirão de 46.
+let trilhaRodadas = null;
+let trilhaUltimos = null;
 
 // Os descontos de tapetão da edição em foco, vazios quando a chave está
 // desligada. É o mesmo ajudante em todas as páginas que montam tabela.
@@ -142,9 +150,12 @@ async function trocarAno(apelido, url = {}) {
   estado.form = {
     rodadaDe: url.rodadaDe ?? 1,
     rodadaAte: url.rodadaAte ?? edicao.rodadas,
+    // No fim da trilha, "últimos X" é a edição inteira — nasce desligado.
+    ultimos: url.ultimos ?? edicao.rodadas,
     dataDe: url.dataDe ?? "",
     dataAte: url.dataAte ?? "",
   };
+  montarTrilhas();
   ajustarLimitesDoRecorte();
   aplicar();
 }
@@ -208,12 +219,39 @@ function pintarVagas() {
 
 /* -------------------------------------------------------------- recorte */
 function ligarRecorte() {
-  for (const id of ["rodada-de", "rodada-ate", "data-de", "data-ate"]) {
+  for (const id of ["data-de", "data-ate"]) {
     el(id).addEventListener("change", lerRecorte);
   }
   el("turno").addEventListener("click", (evento) => {
     const botao = evento.target.closest(".chave");
     if (botao) escolherTurno(Number(botao.dataset.turno));
+  });
+}
+
+/**
+ * As duas trilhas do recorte, refeitas quando a edição muda.
+ *
+ * A de rodadas tem duas pontas porque o recorte é um trecho: dizer só "até a
+ * 12ª" esconde que existe um começo. A de últimos jogos tem uma ponta e nasce
+ * no fim dela, onde "últimos 38 de 38" quer dizer recorte nenhum.
+ */
+function montarTrilhas() {
+  const { edicao, form } = estado;
+  trilhaRodadas = ligarSeletorDeRodadas({
+    raiz: el("rodadas"), total: edicao.rodadas,
+    de: form.rodadaDe, ate: form.rodadaAte,
+    aoMudar: ({ de, ate }) => {
+      estado.form = { ...estado.form, rodadaDe: de, rodadaAte: ate };
+      pintarTurno();
+      aplicar();
+    },
+  });
+  trilhaUltimos = ligarSeletorDeUltimos({
+    raiz: el("ultimos"), total: edicao.rodadas, valor: form.ultimos,
+    aoMudar: (ultimos) => {
+      estado.form = { ...estado.form, ultimos };
+      aplicar();
+    },
   });
 }
 
@@ -254,39 +292,29 @@ function pintarTurno() {
 
 function ajustarLimitesDoRecorte() {
   const { edicao, form } = estado;
-  for (const id of ["rodada-de", "rodada-ate"]) {
-    el(id).min = 1;
-    el(id).max = edicao.rodadas;
-  }
   for (const id of ["data-de", "data-ate"]) {
     el(id).min = edicao.primeira_data;
     el(id).max = edicao.ultima_data;
   }
-  el("rodada-de").value = form.rodadaDe;
-  el("rodada-ate").value = form.rodadaAte;
+  trilhaRodadas?.definir({ de: form.rodadaDe, ate: form.rodadaAte });
+  trilhaUltimos?.definir({ ultimos: form.ultimos });
   pintarTurno();
   el("data-de").value = form.dataDe;
   el("data-ate").value = form.dataAte;
 }
 
 function lerRecorte() {
-  const inteiro = (id, padrao) => {
-    const v = Number(el(id).value);
-    return Number.isInteger(v) && v >= 1 ? Math.min(v, estado.edicao.rodadas) : padrao;
-  };
-  const de = inteiro("rodada-de", 1);
-  const ate = Math.max(de, inteiro("rodada-ate", estado.edicao.rodadas));
   estado.form = {
-    rodadaDe: de, rodadaAte: ate,
+    ...estado.form,
     dataDe: el("data-de").value, dataAte: el("data-ate").value,
   };
-  ajustarLimitesDoRecorte();
   aplicar();
 }
 
 function limparRecorte() {
   estado.form = {
-    rodadaDe: 1, rodadaAte: estado.edicao.rodadas, dataDe: "", dataAte: "",
+    rodadaDe: 1, rodadaAte: estado.edicao.rodadas,
+    ultimos: estado.edicao.rodadas, dataDe: "", dataAte: "",
   };
   ajustarLimitesDoRecorte();
   aplicar();
@@ -304,6 +332,9 @@ function aplicar() {
   if (form.rodadaAte < edicao.rodadas) filtros.rodadaAte = form.rodadaAte;
   if (form.dataDe) filtros.dataDe = form.dataDe;
   if (form.dataAte) filtros.dataAte = form.dataAte;
+  // `ultimos` age por último e por clube: os X jogos mais recentes de cada um
+  // entre os que sobraram dos outros filtros. No fim da trilha não corta nada.
+  if (form.ultimos < edicao.rodadas) filtros.ultimos = form.ultimos;
 
   estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), filtros, descontos());
   estado.recorte = filtros;
@@ -314,14 +345,22 @@ function aplicar() {
 
 function resumir(filtros) {
   const cortado = Object.keys(filtros).length > 0;
-  el("resumo-recorte").textContent = cortado
-    ? `${jogosNoRecorte()} jogos no recorte`
-    : `edição inteira · ${estado.edicao.realizados} de ${estado.edicao.jogos} jogos disputados`;
+  // Com "últimos X" o jogo de um clube pode não ser o jogo do adversário, e
+  // somar participações e dividir por dois daria meio jogo. Nesse recorte o
+  // que se conta é por equipe.
+  el("resumo-recorte").textContent = !cortado
+    ? `edição inteira · ${estado.edicao.realizados} de ${estado.edicao.jogos} jogos disputados`
+    : filtros.ultimos
+      ? `últimos ${filtros.ultimos} jogos de cada equipe`
+        + ` · ${participacoesNoRecorte()} participações`
+      : `${jogosNoRecorte()} jogos no recorte`;
   el("limpar").hidden = !cortado;
 }
 
-const jogosNoRecorte = () =>
-  estado.classificacao.reduce((soma, c) => soma + c.j, 0) / 2;
+const participacoesNoRecorte = () =>
+  estado.classificacao.reduce((soma, c) => soma + c.j, 0);
+
+const jogosNoRecorte = () => participacoesNoRecorte() / 2;
 
 function daUrl() {
   const p = new URLSearchParams(location.hash.slice(1));
@@ -338,6 +377,7 @@ function daUrl() {
   return {
     serie: p.get("serie"), ano: p.get("ano"), criterio: p.get("criterio"),
     rodadaDe: inteiro("rodadaDe"), rodadaAte: inteiro("rodadaAte"),
+    ultimos: inteiro("ultimos"),
     dataDe: p.get("dataDe") ?? "", dataAte: p.get("dataAte") ?? "",
     limites,
   };

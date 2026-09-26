@@ -50,6 +50,7 @@ try { document.documentElement.dataset.marca =
     <a href="/classificacao.html" aria-current="page">Classificação</a>
     <a href="/jogos.html">Jogos</a>
     <a href="/gols.html">Gols</a>
+    <a href="/ultimos.html">Últimos X jogos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
@@ -95,15 +96,22 @@ try { document.documentElement.dataset.marca =
       <div class="vagas" id="vagas" aria-labelledby="rotulo-vagas"></div>
     </div>
 
+    <div class="filtros-linha trilhas">
+      <div class="campo campo-trilha">
+        <label id="rotulo-rodadas">Rodadas
+          <span class="dica-campo">o trecho do campeonato que entra na conta</span>
+        </label>
+        <div id="rodadas" aria-labelledby="rotulo-rodadas"></div>
+      </div>
+      <div class="campo campo-trilha">
+        <label id="rotulo-ultimos">Últimos jogos
+          <span class="dica-campo">os últimos de cada equipe, na ordem cronológica</span>
+        </label>
+        <div id="ultimos" aria-labelledby="rotulo-ultimos"></div>
+      </div>
+    </div>
+
     <div class="filtros-linha recorte">
-      <div class="campo">
-        <label for="rodada-de">Da rodada</label>
-        <input type="number" id="rodada-de" min="1" max="38" step="1" value="1">
-      </div>
-      <div class="campo">
-        <label for="rodada-ate">até a rodada</label>
-        <input type="number" id="rodada-ate" min="1" max="38" step="1" value="38">
-      </div>
       <div class="campo">
         <label id="rotulo-turno">Atalho
           <span class="dica-campo">parte a edição ao meio</span>
@@ -130,7 +138,10 @@ try { document.documentElement.dataset.marca =
     <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> O recorte por
       rodada pega os jogos que pertencem àquelas rodadas, e não os que foram
       disputados naquele período — jogo adiado conta na rodada dele. Para cortar
-      por quando o jogo aconteceu, use o filtro de data.</p>
+      por quando o jogo aconteceu, use o filtro de data. Já os
+      <b>últimos jogos</b> são cronológicos e valem por equipe: com 5, cada
+      clube entra com os 5 jogos mais recentes dele, que podem ser de rodadas
+      diferentes dos 5 do vizinho.</p>
   </section>
 
   <section class="palco-card">

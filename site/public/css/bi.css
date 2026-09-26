@@ -521,7 +521,14 @@ table.mini-classificacao {
   text-transform: none; color: var(--cinza-escuro);
 }
 
-.trilha-posicoes {
+/* Duas trilhas lado a lado: cada uma pede largura para os números caberem,
+   e numa tela estreita elas passam a uma por linha. */
+.filtros-linha.trilhas { margin-top: 14px; gap: 30px; }
+.campo-trilha { flex: 1 1 380px; min-width: 280px; }
+.campo-trilha > label { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+/* A trilha serve às posições e ao que cresce — rodadas, jogos. */
+.trilha {
   position: relative; height: 56px; margin: 10px 14px 0;
   touch-action: none;
 }

@@ -1,15 +1,16 @@
 /**
- * Trilha de posições: a tabela deitada, do 20º à esquerda ao 1º à direita.
+ * Trilha de números com uma ou duas alças.
  *
- * Serve a duas telas com exigências diferentes. A evolução da pontuação usa
- * duas alças — a vermelha na posição pior, a verde na melhor — e o que
- * interessa ali é o intervalo entre elas. Os blocos de 6 jogos usam uma alça
- * só, a posição que vira meta.
+ * Nasceu para posições — a tabela deitada, do 20º à esquerda ao 1º à direita —
+ * e serve também ao que cresce da esquerda para a direita: rodadas, jogos.
+ * A diferença entre os dois casos é só a direção, e ela cabe num parâmetro:
+ * por dentro tudo anda em **ordem visual**, o passo 1 é sempre o da ponta
+ * esquerda, e cada trilha traduz esse passo no valor que ela mostra.
  *
  * Por que uma trilha e não `<select>`: num par de listas o usuário não vê que
  * 4 e 17 são as bordas do G4 e do Z4; na trilha isso é a própria distância
- * entre as alças. Com uma alça só, ele vê de imediato quantos lugares separam
- * a meta do título e do rebaixamento.
+ * entre as alças. Num par de campos numéricos ele também não vê que a 19ª
+ * rodada é o meio do campeonato.
  *
  * Com duas alças, a da esquerda nunca passa da direita. Em vez de trocar as
  * duas de papel no meio do arrasto — o que faria a cor saltar debaixo do dedo
@@ -17,16 +18,30 @@
  */
 const MIN_DISTANCIA = 1;
 
+/** Quantos números cabem legíveis na trilha antes de virarem risco. */
+const MARCAS_VISIVEIS = 20;
+
 /**
- * `alcas` vai da esquerda para a direita, ou seja, da pior posição para a
- * melhor. Cada uma é `{ nome, classe, descricao, valor }`; `aoMudar` recebe um
- * objeto com o valor de cada alça pelo nome.
+ * `alcas` vai da esquerda para a direita. Cada uma é `{ nome, classe,
+ * descricao, valor }`; `aoMudar` recebe um objeto com o valor de cada alça
+ * pelo nome.
+ *
+ * `crescente` põe o menor valor à esquerda; sem ele, a trilha desce — que é
+ * como uma classificação se lê.
  */
-export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
+export function ligarTrilha({ raiz, total = 20, alcas, aoMudar,
+                              crescente = false, descrever, minimo = 1 }) {
   const estado = Object.fromEntries(alcas.map((a) => [a.nome, a.valor]));
   const nomes = alcas.map((a) => a.nome);
+  const passos = Math.max(1, total - minimo);
+  const rotular = descrever ?? ((v) => `${v}º lugar`);
 
-  raiz.classList.add("trilha-posicoes");
+  // Ordem visual: 1 é sempre a ponta esquerda, seja ela o 20º lugar ou a 1ª
+  // rodada. Todo o resto do módulo pensa aqui dentro.
+  const paraOrdem = (v) => (crescente ? v - minimo + 1 : total - v + 1);
+  const daOrdem = (o) => (crescente ? o + minimo - 1 : total - o + 1);
+
+  raiz.classList.add("trilha");
   raiz.innerHTML = `
     <div class="trilha-fundo"></div>
     <div class="trilha-faixa"></div>
@@ -34,21 +49,27 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
     + alcas.map((a) => `
     <button type="button" class="alca ${a.classe}" data-nome="${a.nome}"
             role="slider" aria-label="${a.descricao}"
-            aria-valuemin="1" aria-valuemax="${total}"></button>`).join("");
+            aria-valuemin="${minimo}" aria-valuemax="${total}"></button>`).join("");
 
   const faixa = raiz.querySelector(".trilha-faixa");
   const marcas = raiz.querySelector(".trilha-marcas");
   const elemento = Object.fromEntries(
     nomes.map((nome) => [nome, raiz.querySelector(`[data-nome="${nome}"]`)]));
 
-  // Da posição para a fração da trilha: o 20º em 0, o 1º em 1.
-  const fracao = (posicao) => (total - posicao) / (total - 1);
-  const posicaoDe = (f) =>
-    Math.min(total, Math.max(1, total - Math.round(f * (total - 1))));
+  const fracao = (valor) => (paraOrdem(valor) - 1) / passos;
+  const valorDaFracao = (f) => daOrdem(
+    Math.min(passos + 1, Math.max(1, Math.round(f * passos) + 1)));
 
-  marcas.innerHTML = Array.from({ length: total }, (_, i) => total - i)
-    .map((posicao) => `<button type="button" class="trilha-numero" data-posicao="${posicao}"
-            style="left:${fracao(posicao) * 100}%">${posicao}</button>`)
+  // Numa trilha de 38 rodadas os números se encostam: escreve-se um a cada
+  // tantos, e as pontas sempre — elas são o que se procura primeiro.
+  const salto = Math.ceil((passos + 1) / MARCAS_VISIVEIS);
+  const escritos = Array.from({ length: passos + 1 }, (_, i) => daOrdem(i + 1))
+    .filter((valor, i, lista) =>
+      i === 0 || i === lista.length - 1 || i % salto === 0);
+
+  marcas.innerHTML = escritos
+    .map((valor) => `<button type="button" class="trilha-numero" data-valor="${valor}"
+            style="left:${fracao(valor) * 100}%">${valor}</button>`)
     .join("");
 
   function pintar() {
@@ -57,39 +78,42 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
       alca.style.left = `${fracao(estado[nome]) * 100}%`;
       alca.textContent = estado[nome];
       alca.setAttribute("aria-valuenow", estado[nome]);
-      alca.setAttribute("aria-valuetext", `${estado[nome]}º lugar`);
+      alca.setAttribute("aria-valuetext", rotular(estado[nome]));
     }
 
-    // Com duas alças a faixa é o intervalo entre elas; com uma, é dela para a
-    // frente — a meta e tudo que é melhor que a meta.
-    const valores = nomes.map((nome) => estado[nome]);
-    const daEsquerda = Math.max(...valores);
-    const aDireita = nomes.length > 1 ? Math.min(...valores) : 1;
-    const a = fracao(daEsquerda) * 100, b = fracao(aDireita) * 100;
-    faixa.style.left = `${a}%`;
-    faixa.style.width = `${b - a}%`;
+    // Com duas alças a faixa é o intervalo entre elas; com uma, é dela até a
+    // ponta em que está o "tudo" — o 1º lugar nas posições, a origem nas
+    // trilhas que crescem.
+    const pontos = nomes.map((nome) => fracao(estado[nome]));
+    const de = nomes.length > 1 ? Math.min(...pontos)
+                                : (crescente ? 0 : Math.min(...pontos));
+    const ate = nomes.length > 1 ? Math.max(...pontos)
+                                 : (crescente ? Math.max(...pontos) : 1);
+    faixa.style.left = `${de * 100}%`;
+    faixa.style.width = `${(ate - de) * 100}%`;
 
     for (const marca of marcas.children) {
-      const posicao = Number(marca.dataset.posicao);
-      marca.classList.toggle("dentro", posicao <= daEsquerda && posicao >= aDireita);
+      const f = fracao(Number(marca.dataset.valor));
+      marca.classList.toggle("dentro", f >= de - 1e-9 && f <= ate + 1e-9);
     }
   }
 
   /** Os limites de uma alça são as vizinhas, quando existem. */
-  function definir(nome, posicao, avisar = true) {
+  function definir(nome, valor, avisar = true) {
     const i = nomes.indexOf(nome);
-    const piso = i > 0 ? estado[nomes[i - 1]] - MIN_DISTANCIA : total;
-    const teto = i < nomes.length - 1 ? estado[nomes[i + 1]] + MIN_DISTANCIA : 1;
-    const limitada = Math.min(piso, Math.max(teto, posicao));
+    const piso = i > 0 ? paraOrdem(estado[nomes[i - 1]]) + MIN_DISTANCIA : 1;
+    const teto = i < nomes.length - 1
+      ? paraOrdem(estado[nomes[i + 1]]) - MIN_DISTANCIA : passos + 1;
+    const limitada = daOrdem(Math.min(Math.max(paraOrdem(valor), piso), teto));
     if (limitada === estado[nome]) return;
     estado[nome] = limitada;
     pintar();
     if (avisar) aoMudar({ ...estado });
   }
 
-  const posicaoDoEvento = (evento) => {
+  const valorDoEvento = (evento) => {
     const caixa = raiz.getBoundingClientRect();
-    return posicaoDe((evento.clientX - caixa.left) / caixa.width);
+    return valorDaFracao((evento.clientX - caixa.left) / caixa.width);
   };
 
   for (const nome of nomes) {
@@ -104,7 +128,7 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
     });
     alca.addEventListener("pointermove", (evento) => {
       if (!alca.hasPointerCapture(evento.pointerId)) return;
-      definir(nome, posicaoDoEvento(evento));
+      definir(nome, valorDoEvento(evento));
     });
     const soltar = (evento) => {
       alca.classList.remove("arrastando");
@@ -115,13 +139,14 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
     alca.addEventListener("pointerup", soltar);
     alca.addEventListener("pointercancel", soltar);
 
-    // Teclado: a seta para a direita anda na direção do 1º lugar, que é para
-    // onde a trilha cresce visualmente.
+    // Teclado: a seta para a direita anda para a direita da trilha, seja qual
+    // for o valor que more lá.
     alca.addEventListener("keydown", (evento) => {
-      const passo = { ArrowRight: -1, ArrowUp: -1, ArrowLeft: 1, ArrowDown: 1 }[evento.key];
+      const passo = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[evento.key];
       if (passo === undefined) return;
       evento.preventDefault();
-      definir(nome, estado[nome] + passo * (evento.shiftKey ? 5 : 1));
+      const andar = passo * (evento.shiftKey ? 5 : 1);
+      definir(nome, daOrdem(paraOrdem(estado[nome]) + andar));
     });
   }
 
@@ -131,11 +156,11 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
   marcas.addEventListener("click", (evento) => {
     const marca = evento.target.closest(".trilha-numero");
     if (!marca) return;
-    const posicao = Number(marca.dataset.posicao);
+    const valor = Number(marca.dataset.valor);
     const nome = nomes.reduce((melhor, atual) =>
-      Math.abs(posicao - estado[atual]) < Math.abs(posicao - estado[melhor])
+      Math.abs(valor - estado[atual]) < Math.abs(valor - estado[melhor])
         ? atual : melhor, nomes[0]);
-    definir(nome, posicao);
+    definir(nome, valor);
     elemento[nome].focus();
   });
 
@@ -145,20 +170,24 @@ export function ligarTrilhaDePosicoes({ raiz, total = 20, alcas, aoMudar }) {
     // Todas de uma vez: aplicar uma e depois a outra faria a primeira esbarrar
     // no limite que a segunda ainda ia mudar.
     definir: (valores) => {
-      let teto = 1;
-      for (const nome of [...nomes].reverse()) {
-        const querido = valores[nome] ?? estado[nome];
-        estado[nome] = Math.min(total, Math.max(teto, querido));
-        teto = estado[nome] + MIN_DISTANCIA;
+      let piso = 1;
+      for (const nome of nomes) {
+        const querido = paraOrdem(valores[nome] ?? estado[nome]);
+        const ordem = Math.min(passos + 1, Math.max(piso, querido));
+        estado[nome] = daOrdem(ordem);
+        piso = ordem + MIN_DISTANCIA;
       }
       pintar();
     },
   };
 }
 
+/** Nome antigo, de quando a trilha só sabia de posições. */
+export const ligarTrilhaDePosicoes = ligarTrilha;
+
 /** Duas alças: a posição pior em vermelho e a melhor em verde. */
 export const ligarSeletorDePosicoes = ({ raiz, total, pior, melhor, aoMudar }) =>
-  ligarTrilhaDePosicoes({
+  ligarTrilha({
     raiz, total, aoMudar,
     alcas: [
       { nome: "pior", classe: "alca-pior", valor: pior,
@@ -170,9 +199,44 @@ export const ligarSeletorDePosicoes = ({ raiz, total, pior, melhor, aoMudar }) =
 
 /** Uma alça só: a posição que vira meta. */
 export const ligarSeletorDePosicao = ({ raiz, total, posicao, aoMudar }) =>
-  ligarTrilhaDePosicoes({
+  ligarTrilha({
     raiz, total,
     aoMudar: ({ meta }) => aoMudar(meta),
     alcas: [{ nome: "meta", classe: "alca-meta", valor: posicao,
               descricao: "posição usada como meta" }],
+  });
+
+/**
+ * Duas alças numa trilha que cresce: o intervalo de rodadas.
+ *
+ * O recorte por rodada é um trecho contínuo do campeonato, e a trilha mostra
+ * de uma vez onde ele começa, onde termina e quanto ficou de fora — coisa que
+ * dois campos numéricos lado a lado não mostram.
+ */
+export const ligarSeletorDeRodadas = ({ raiz, total, de, ate, aoMudar }) =>
+  ligarTrilha({
+    raiz, total, crescente: true, aoMudar,
+    descrever: (v) => `${v}ª rodada`,
+    alcas: [
+      { nome: "de", classe: "alca-meta", valor: de,
+        descricao: "primeira rodada do recorte" },
+      { nome: "ate", classe: "alca-melhor", valor: ate,
+        descricao: "última rodada do recorte" },
+    ],
+  });
+
+/**
+ * Uma alça numa trilha que cresce: quantos jogos de cada equipe entram.
+ *
+ * A ponta direita é o total, e é lá que ela nasce: "os últimos 38 jogos" de
+ * uma edição de 38 rodadas são a edição inteira, ou seja, recorte nenhum. Não
+ * é preciso um botão de desligar — a própria trilha tem o lugar do "todos".
+ */
+export const ligarSeletorDeUltimos = ({ raiz, total, valor, aoMudar }) =>
+  ligarTrilha({
+    raiz, total, crescente: true,
+    aoMudar: ({ ultimos }) => aoMudar(ultimos),
+    descrever: (v) => (v >= total ? "todos os jogos" : `últimos ${v} jogos`),
+    alcas: [{ nome: "ultimos", classe: "alca-meta", valor,
+              descricao: "quantos jogos de cada equipe entram" }],
   });
