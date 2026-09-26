@@ -145,8 +145,10 @@ async function trocarAno(apelido, url = {}) {
     agendas: montarAgendas(jogos, clubes),
     tabelas: {
       geral: porNome(tabela(jogos, clubes, {}, descontos())),
-      casa: porNome(tabela(jogos, clubes, { mando: "casa" }, descontos())),
-      fora: porNome(tabela(jogos, clubes, { mando: "fora" }, descontos())),
+      // A punição não tem mando: ela pesa na força geral do adversário, e as
+      // duas metades seguem medindo o que ele faz em cada lado do mando.
+      casa: porNome(tabela(jogos, clubes, { mando: "casa" })),
+      fora: porNome(tabela(jogos, clubes, { mando: "fora" })),
     },
   });
 

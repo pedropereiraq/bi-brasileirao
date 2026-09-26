@@ -32,6 +32,18 @@ export function edicaoDe(dados, { serie, ano }) {
   return dados?.series?.[serie]?.[String(ano)] ?? null;
 }
 
+/**
+ * A edição com a grade que a chave do tapetão escolheu.
+ *
+ * `posicoes.json` só publica a segunda grade onde ela difere, então não ter
+ * `grade_st` significa "as duas são iguais". Trocar aqui, na página, deixa o
+ * resto do módulo e os cards sem precisar saber que a chave existe.
+ */
+export function gradeQueVale(edicao, semTapetao) {
+  if (!edicao || !semTapetao || !edicao.grade_st) return edicao ?? null;
+  return { ...edicao, grade: edicao.grade_st, fim: edicao.fim_st ?? edicao.fim };
+}
+
 /** Quem estava em cada posição ao fim daquela rodada, do 1º ao último. */
 export function colunaDaRodada(edicao, rodada) {
   const linha = edicao?.grade?.[rodada - 1];

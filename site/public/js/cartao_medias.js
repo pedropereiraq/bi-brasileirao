@@ -67,10 +67,11 @@ function mistura(de, para, t) {
 }
 
 export function montarCartao(estado) {
-  const { serie, rodada, faixa, anoEscolhido, clubes, posicoes } = estado;
+  const { serie, rodada, faixa, anoEscolhido, clubes, posicoes,
+          semTapetao } = estado;
   if (!posicoes || !rodada) return null;
 
-  const colunas = grade(posicoes, { serie, rodada });
+  const colunas = grade(posicoes, { serie, rodada, semTapetao });
   if (!colunas.length) return null;
 
   const estatisticas = estatisticasPorPosicao(colunas);
@@ -78,9 +79,10 @@ export function montarCartao(estado) {
   const cores = coresDasZonas(faixa);
   const escolhida = colunas.find((c) => c.ano === anoEscolhido) ?? colunas.at(-1);
   const comparada = comparacaoComAMedia(escolhida, estatisticas);
-  const desfecho = desfechoDaEdicao(posicoes, { serie, ano: escolhida?.ano });
+  const desfecho = desfechoDaEdicao(posicoes,
+    { serie, ano: escolhida?.ano, semTapetao });
   const perdas = colunas.map((coluna) =>
-    perdaDaTabela(posicoes, { serie, ano: coluna.ano, rodada }));
+    perdaDaTabela(posicoes, { serie, ano: coluna.ano, rodada, semTapetao }));
 
   const spec = {
     titulo: `Média de pontuação por posição na ${rodada}ª rodada `
@@ -296,6 +298,10 @@ function linhaDaPerda(ctx, { colunas, perdas, rodada, xDaColuna, larguraAno,
           pontos: perda.queimados, detalhe: "não voltam mais" },
         { rotulo: "retidos em jogo por disputar", cor: COR.negativo,
           pontos: perda.retidos, detalhe: "voltam quando o jogo sair" },
+        ...(perda.tapetao > 0 ? [
+          { rotulo: "tirados no tapetão", cor: COR.azulEscuro,
+            pontos: perda.tapetao, detalhe: "decisão de tribunal" },
+        ] : []),
       ],
       diferenca: {
         rotulo: `${num(perda.fracao * 100)}%`,
@@ -308,7 +314,10 @@ function linhaDaPerda(ctx, { colunas, perdas, rodada, xDaColuna, larguraAno,
   const xTexto = x + largura + 20;
   texto(ctx, "pontos que não chegaram à tabela",
         xTexto, y + 12, { tamanho: 11.5, peso: 700, cor: COR.azulEscuro });
-  texto(ctx, "o empate queima um ponto; o jogo por disputar retém três",
+  const houveTapetao = perdas.some((p) => p?.tapetao > 0);
+  texto(ctx, houveTapetao
+          ? "o empate queima um; o jogo por disputar retém três; o tapetão tira"
+          : "o empate queima um ponto; o jogo por disputar retém três",
         xTexto, y + 26, { tamanho: 10.5, cor: COR.cinzaEscuro });
 
   return alvos;

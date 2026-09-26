@@ -12,7 +12,7 @@
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
-  aoMudarTapetao, descontosDe,
+  aoMudarTapetao, descontosDe, tapetaoLigado,
 } from "/js/tapetao.js";
 import {
   lembrarSerie, serieLembrada,
@@ -20,7 +20,7 @@ import {
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_comparativo.js";
 import { nomeComUf } from "/js/nomes.js";
-import { edicaoDe } from "/js/diferenca_pontos.js";
+import { edicaoDe, gradeQueVale } from "/js/diferenca_pontos.js";
 
 const estado = {
   edicoes: [], clubes: {}, posicoes: null, serie: null, modo: "pontuacao",
@@ -178,10 +178,12 @@ function inverter() {
 
 function aplicar() {
   for (const lado of ["a", "b"]) {
-    estado[lado].grade = estado[lado].edicao
-      ? edicaoDe(estado.posicoes,
-                 { serie: estado.serie, ano: estado[lado].edicao.ano })
-      : null;
+    estado[lado].grade = gradeQueVale(
+      estado[lado].edicao
+        ? edicaoDe(estado.posicoes,
+                   { serie: estado.serie, ano: estado[lado].edicao.ano })
+        : null,
+      !tapetaoLigado());
   }
   explicarOrdem();
   atualizarUrl();

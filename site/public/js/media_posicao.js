@@ -92,13 +92,15 @@ export function colunaDaEdicao(dados, { serie, ano, rodada, semTapetao }) {
  * A diferença nunca é negativa — as posições saem de uma tabela ordenada, e
  * quem está acima tem pelo menos tantos pontos quanto quem está abaixo.
  */
-export function distanciaEntrePosicoes(dados, { serie, rodada, melhor, pior }) {
+export function distanciaEntrePosicoes(dados,
+                                       { serie, rodada, melhor, pior,
+                                         semTapetao }) {
   const cima = Math.min(melhor, pior);
   const baixo = Math.max(melhor, pior);
 
   const linhas = [];
   for (const ano of anosComRodada(dados, { serie, rodada })) {
-    const coluna = colunaDaEdicao(dados, { serie, ano, rodada });
+    const coluna = colunaDaEdicao(dados, { serie, ano, rodada, semTapetao });
     const de = coluna?.celulas[cima - 1];
     const ate = coluna?.celulas[baixo - 1];
     if (!de || !ate) continue;
@@ -144,13 +146,16 @@ export function resumoDaDistancia(linhas) {
  * É o que impede de ler uma coluna inteira abaixo da média como campeonato
  * fraco — pode ser só ponto que não foi distribuído.
  */
-export function perdaDaTabela(dados, { serie, ano, rodada }) {
+export function perdaDaTabela(dados, { serie, ano, rodada, semTapetao }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   if (!edicao || edicao.rodadas < rodada) return null;
 
-  const [queimados, retidos, tapetao = 0] = edicao.fluxo?.[rodada - 1] ?? [];
+  const [queimados, retidos, punidos = 0] = edicao.fluxo?.[rodada - 1] ?? [];
   if (queimados === undefined) return null;
 
+  // Com a chave desligada o tapetão não é perda: aquele ponto está na tabela
+  // que a tela está desenhando, e contá-lo aqui abriria a identidade.
+  const tapetao = semTapetao ? 0 : punidos;
   const possiveis = (edicao.clubes.length / 2) * rodada * 3;
   const faltando = queimados + retidos + tapetao;
   return {
@@ -246,16 +251,16 @@ export function comparacaoComAMedia(coluna, estatisticas) {
  * rodada, e sempre sem a que está sendo desenhada: comparar uma edição com uma
  * média que a inclui é comparar um número com ele mesmo diluído.
  */
-export function evolucaoDaDiferenca(dados, { serie, ano }) {
+export function evolucaoDaDiferenca(dados, { serie, ano, semTapetao }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   if (!edicao) return [];
 
   const saida = [];
   for (let rodada = 1; rodada <= edicao.rodadas; rodada++) {
-    const colunas = grade(dados, { serie, rodada })
+    const colunas = grade(dados, { serie, rodada, semTapetao })
       .filter((coluna) => coluna.ano !== Number(ano));
     const estatisticas = estatisticasPorPosicao(colunas);
-    const coluna = colunaDaEdicao(dados, { serie, ano, rodada });
+    const coluna = colunaDaEdicao(dados, { serie, ano, rodada, semTapetao });
     saida.push({ rodada, celulas: comparacaoComAMedia(coluna, estatisticas) });
   }
   return saida;

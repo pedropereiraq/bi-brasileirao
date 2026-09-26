@@ -108,6 +108,7 @@ function trocarSerie(serie, url = {}) {
 }
 
 function aplicar() {
+  estado.semTapetao = !tapetaoLigado();
   el("valor-rodada").textContent = estado.rodada;
   for (const botao of el("alinhamento").children) {
     botao.setAttribute("aria-pressed",

@@ -129,8 +129,11 @@ async function trocarAno(apelido, url = {}) {
     edicao,
     partidas: converter(jogos),
     classificacao: tabela(jogos, clubes, {}, descontos()),
-    casa: tabela(jogos, clubes, { mando: "casa" }, descontos()),
-    fora: tabela(jogos, clubes, { mando: "fora" }, descontos()),
+    // O índice é ponto ganho fora menos ponto perdido em casa, e a punição de
+    // tribunal não é nem uma coisa nem outra: ela fica fora das duas metades,
+    // que assim continuam batendo com o detalhe jogo a jogo.
+    casa: tabela(jogos, clubes, { mando: "casa" }),
+    fora: tabela(jogos, clubes, { mando: "fora" }),
   });
 
   el("destaque").innerHTML = '<option value="">nenhuma</option>'

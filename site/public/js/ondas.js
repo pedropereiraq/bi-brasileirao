@@ -10,7 +10,7 @@
 import {
   RODADA, DATA, MANDANTE, VISITANTE, GOLS_M, GOLS_V, STATUS,
 } from "/js/motor.js";
-import { aoMudarTapetao, tapetaoLigado } from "/js/tapetao.js";
+import { aoMudarTapetao, descontosDe, tapetaoLigado } from "/js/tapetao.js";
 import {
   lembrarSerie, serieLembrada,
 } from "/js/preferencias.js";
@@ -112,6 +112,10 @@ async function trocarAno(apelido) {
 
 function aplicar() {
   const { edicao } = estado;
+  // A faixa do pé da grade conta ponto que não chegou à tabela, e o tapetão é
+  // um deles: sem os descontos aqui a conta fecharia errado.
+  estado.semTapetao = !tapetaoLigado();
+  estado.descontos = descontosDe(estado.serie, edicao?.ano);
   el("rodape-edicao").textContent = edicao
     ? `Série ${estado.serie} ${edicao.ano} · ${edicao.realizados} de `
       + `${edicao.jogos} jogos disputados`

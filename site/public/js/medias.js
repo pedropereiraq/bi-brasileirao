@@ -105,6 +105,7 @@ function trocarSerie(serie, url = {}) {
 }
 
 function aplicar() {
+  estado.semTapetao = !tapetaoLigado();
   el("valor-rodada").textContent = estado.rodada;
   atualizarUrl();
   redesenhar();

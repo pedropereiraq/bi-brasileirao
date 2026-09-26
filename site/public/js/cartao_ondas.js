@@ -16,8 +16,8 @@
  * **toda** a grade abaixo do normal sem que ninguém tenha jogado mal — o
  * empate distribui dois em vez de três, e o ponto que sobra some. Um jogo
  * adiado não distribui nada até acontecer, e deixa uma região inteira
- * artificialmente baixa. Sem essa faixa ao pé da grade, as duas coisas
- * viravam "campeonato fraco".
+ * artificialmente baixa. O tapetão tira ponto que já estava somado. Sem essa
+ * faixa ao pé da grade, as três coisas viravam "campeonato fraco".
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH,
@@ -40,15 +40,17 @@ const inteiroComSinal = (v) => {
 };
 
 export function montarCartao(estado) {
-  const { serie, edicao, posicoes, partidas } = estado;
+  const { serie, edicao, posicoes, partidas, descontos = [],
+          semTapetao } = estado;
   if (!edicao || !posicoes) return null;
 
-  const matriz = evolucaoDaDiferenca(posicoes, { serie, ano: edicao.ano });
+  const matriz = evolucaoDaDiferenca(posicoes,
+    { serie, ano: edicao.ano, semTapetao });
   if (!matriz.length) return null;
 
   // A faixa acompanha a grade: rodada que ainda não começou reteria os três
   // pontos de cada jogo dela e esmagaria a escala das que já aconteceram.
-  const fluxo = fluxoDePontos(partidas)
+  const fluxo = fluxoDePontos(partidas, descontos)
     .filter((linha) => linha.rodada <= matriz.length);
   const ultima = fluxo.at(-1);
 
@@ -208,9 +210,13 @@ function desenharGrade(ctx, o) {
 /**
  * Os pontos que não chegaram à tabela, acumulados.
  *
- * Duas parcelas empilhadas, porque elas têm naturezas diferentes: o que o
- * empate queimou não volta nunca, e o que o jogo adiado retém volta quando ele
- * acontecer. Uma cor só diria que são a mesma coisa.
+ * Parcelas empilhadas, porque elas têm naturezas diferentes: o que o empate
+ * queimou não volta nunca, o que o jogo adiado retém volta quando ele
+ * acontecer, e o que o tapetão tirou saiu por decisão de tribunal, fora de
+ * campo. Uma cor só diria que são a mesma coisa.
+ *
+ * A terceira só aparece na edição que teve punição: nas outras ela seria uma
+ * legenda de zero.
  */
 function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
   texto(ctx, "% dos pontos em disputa que não chegaram à tabela", MARGEM,
@@ -228,11 +234,14 @@ function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
 
   linhaH(ctx, x0, x0 + RODADAS * largura, base, COR.linha);
 
+  const houveTapetao = fluxo.some((l) => l.tapetao > 0);
   const alvos = [];
   for (const linha of fluxo) {
     const x = x0 + (linha.rodada - 1) * largura;
     const alturaEmpate = escala(fracao(linha, "queimados"));
     const alturaRetido = escala(fracao(linha, "retidos"));
+    const alturaTirado = escala(fracao(linha, "tapetao"));
+    const topoPilha = base - alturaEmpate - alturaRetido - alturaTirado;
 
     caixa(ctx, x + 2, base - alturaEmpate, largura - 4, alturaEmpate,
           COR.cinzaEscuro, 2);
@@ -240,8 +249,12 @@ function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
       caixa(ctx, x + 2, base - alturaEmpate - alturaRetido, largura - 4,
             alturaRetido, COR.negativo, 2);
     }
+    if (alturaTirado > 0) {
+      caixa(ctx, x + 2, topoPilha, largura - 4, alturaTirado,
+            COR.azulEscuro, 2);
+    }
     texto(ctx, `${Math.round(fracao(linha, "faltando") * 100)}%`,
-          x + largura / 2, base - alturaEmpate - alturaRetido - 6,
+          x + largura / 2, topoPilha - 6,
           { tamanho: 9.5, peso: 800, alinha: "center", cor: COR.azulEscuro });
 
     alvos.push({
@@ -255,6 +268,12 @@ function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
           pontos: linha.retidos,
           detalhe: `${num(fracao(linha, "retidos") * 100)}% · voltam quando o `
                  + `jogo sair` },
+        ...(houveTapetao ? [
+          { rotulo: "tirados no tapetão", cor: COR.azulEscuro,
+            pontos: linha.tapetao,
+            detalhe: `${num(fracao(linha, "tapetao") * 100)}% · decisão de `
+                   + `tribunal` },
+        ] : []),
       ],
       diferenca: {
         rotulo: `${Math.round(aproveitamentoDaTabela(linha) * 100)}%`,
@@ -270,12 +289,14 @@ function faixaDoFluxo(ctx, { fluxo, x0, largura, y, altura }) {
 function painelDaDireita(ctx, { x, y, largura, ultima }) {
   if (!ultima) return;
 
-  caixa(ctx, x, y, largura, 168, COR.branco, 8);
+  // A terceira parcela só existe na edição punida, e o painel cresce com ela.
+  const altura = ultima.tapetao > 0 ? 200 : 168;
+  caixa(ctx, x, y, largura, altura, COR.branco, 8);
   ctx.save();
   ctx.strokeStyle = COR.linha;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(x + .5, y + .5, largura - 1, 167, 8);
+  ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 8);
   ctx.stroke();
   ctx.restore();
 
@@ -290,6 +311,8 @@ function painelDaDireita(ctx, { x, y, largura, ultima }) {
   const linhas = [
     ["queimados no empate", ultima.queimados, COR.cinzaEscuro],
     ["retidos em jogo por disputar", ultima.retidos, COR.negativo],
+    ...(ultima.tapetao > 0
+      ? [["tirados no tapetão", ultima.tapetao, COR.azulEscuro]] : []),
   ];
   linhas.forEach(([rotulo, valor, cor], i) => {
     const yLinha = y + 104 + i * 32;

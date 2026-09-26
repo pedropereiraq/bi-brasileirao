@@ -17,7 +17,9 @@ import {
 } from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_diferenca.js";
-import { MODOS, colunaDaRodada, edicaoDe } from "/js/diferenca_pontos.js";
+import {
+  MODOS, colunaDaRodada, edicaoDe, gradeQueVale,
+} from "/js/diferenca_pontos.js";
 import {
   ligarSeletorDePosicao, ligarSeletorDePosicoes,
 } from "/js/seletor_posicoes.js";
@@ -135,7 +137,9 @@ async function trocarAno(apelido, url = {}) {
   if (!edicao) return;
   el("ano").value = apelido;
 
-  const grade = edicaoDe(estado.posicoes, { serie: edicao.serie, ano: edicao.ano });
+  const grade = gradeQueVale(
+    edicaoDe(estado.posicoes, { serie: edicao.serie, ano: edicao.ano }),
+    !tapetaoLigado());
   const jogos = await fetch(`/dados/jogos/${apelido}.json`).then((r) => r.json());
   Object.assign(estado, { edicao, grade, jogos });
 

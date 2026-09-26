@@ -2,8 +2,9 @@
  * Os pontos que a tabela não recebeu.
  *
  * O que precisa de guarda é a identidade: possíveis = distribuídos + queimados
- * no empate + retidos em jogo por disputar. Se ela abrir, o card estará
- * explicando uma diferença para a média com uma conta que não fecha.
+ * no empate + retidos em jogo por disputar + tirados no tapetão. Se ela abrir,
+ * o card estará explicando uma diferença para a média com uma conta que não
+ * fecha.
  *
  *     node --test site/testes/
  */
@@ -38,10 +39,39 @@ test("a conta fecha em toda rodada", () => {
     jogo(2, 1, 1), jogo(2), jogo(2, 2, 0),
     jogo(3), jogo(3), jogo(3, 1, 0),
   ];
-  for (const linha of fluxoDePontos(partidas)) {
-    assert.equal(linha.distribuidos + linha.queimados + linha.retidos,
+  const descontos = [{ rodada: 2, pontos: -4 }];
+  for (const linha of fluxoDePontos(partidas, descontos)) {
+    assert.equal(
+      linha.distribuidos + linha.queimados + linha.retidos + linha.tapetao,
       linha.possiveis, `rodada ${linha.rodada}`);
   }
+});
+
+test("o tapetão tira ponto que a tabela já tinha recebido", () => {
+  // Dois triunfos: seis pontos em disputa, seis distribuídos em campo. O
+  // tribunal tira quatro, e eles passam a faltar na tabela.
+  const partidas = [jogo(1, 2, 1), jogo(1, 1, 0)];
+  const [linha] = fluxoDePontos(partidas, [{ rodada: 1, pontos: -4 }]);
+
+  assert.equal(linha.possiveis, 6);
+  assert.equal(linha.queimados, 0);
+  assert.equal(linha.retidos, 0);
+  assert.equal(linha.tapetao, 4);
+  assert.equal(linha.faltando, 4);
+  assert.equal(linha.distribuidos, 2);
+  assert.equal(aproveitamentoDaTabela(linha), 2 / 6);
+});
+
+test("o desconto só conta da rodada dele em diante, e não volta", () => {
+  const partidas = [jogo(1, 2, 1), jogo(2, 2, 1), jogo(3, 2, 1)];
+  const fluxo = fluxoDePontos(partidas, [{ rodada: 2, pontos: -3 }]);
+
+  assert.deepEqual(fluxo.map((l) => l.tapetao), [0, 3, 3]);
+});
+
+test("sem desconto nenhum a terceira parcela é zero, e não undefined", () => {
+  const [linha] = fluxoDePontos([jogo(1, 1, 1)]);
+  assert.equal(linha.tapetao, 0);
 });
 
 test("o acumulado cresce rodada a rodada", () => {

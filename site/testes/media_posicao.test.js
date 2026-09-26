@@ -171,6 +171,29 @@ test("sem chegar à rodada, e sem fluxo, não há perda que contar", () => {
   assert.equal(perdaDaTabela(dados, { serie: "A", ano: 2020, rodada: 2 }), null);
 });
 
+test("com a chave desligada, o tapetão deixa de ser perda", () => {
+  // Terceira parcela do fluxo: dois pontos tirados no tribunal até a 2ª.
+  const comFluxo = {
+    series: {
+      A: {
+        2020: { ...dados.series.A[2020], fluxo: [[1, 0, 0], [1, 3, 2]] },
+      },
+    },
+  };
+  const alvo = { serie: "A", ano: 2020, rodada: 2 };
+
+  const com = perdaDaTabela(comFluxo, alvo);
+  assert.equal(com.tapetao, 2);
+  assert.equal(com.faltando, 6, "1 queimado, 3 retidos, 2 no tapetão");
+
+  // Sem tapetão aquele ponto está na tabela que a tela desenha: contá-lo como
+  // perda abriria a identidade do card.
+  const sem = perdaDaTabela(comFluxo, { ...alvo, semTapetao: true });
+  assert.equal(sem.tapetao, 0);
+  assert.equal(sem.faltando, 4);
+  assert.equal(sem.distribuidos, 8);
+});
+
 /* ------------------------------------------ distância entre duas posições */
 test("a distância sai da tabela de cada edição, e nunca é negativa", () => {
   const linhas = distanciaEntrePosicoes(dados,

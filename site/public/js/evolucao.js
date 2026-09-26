@@ -12,7 +12,7 @@
  */
 import { clubesDaEdicao, tabela } from "/js/motor.js";
 import {
-  aoMudarTapetao, descontosDe,
+  aoMudarTapetao, descontosDe, tapetaoLigado,
 } from "/js/tapetao.js";
 import {
   lembrarSerie, serieLembrada,
@@ -21,7 +21,7 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_evolucao.js";
 import { ligarSeletorDePosicoes } from "/js/seletor_posicoes.js";
 import { nomeComUf } from "/js/nomes.js";
-import { edicaoDe } from "/js/diferenca_pontos.js";
+import { edicaoDe, gradeQueVale } from "/js/diferenca_pontos.js";
 
 const PADRAO = { pior: 17, melhor: 4 };
 
@@ -191,9 +191,12 @@ async function trocarAno(apelido, clubeDesejado, { silencioso = false } = {}) {
 }
 
 function aplicar() {
-  estado.grade = estado.edicao
-    ? edicaoDe(estado.posicoes, { serie: estado.serie, ano: estado.edicao.ano })
-    : null;
+  estado.grade = gradeQueVale(
+    estado.edicao
+      ? edicaoDe(estado.posicoes,
+                 { serie: estado.serie, ano: estado.edicao.ano })
+      : null,
+    !tapetaoLigado());
   explicarOrdem();
   atualizarUrl();
   redesenhar();

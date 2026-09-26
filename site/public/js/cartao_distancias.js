@@ -58,13 +58,13 @@ const ALINHAMENTOS = {
 };
 
 export function montarCartao(estado) {
-  const { serie, rodada, faixa, alinhamento, posicoes } = estado;
+  const { serie, rodada, faixa, alinhamento, posicoes, semTapetao } = estado;
   if (!posicoes || !rodada) return null;
 
   const cima = Math.min(faixa.melhor, faixa.pior);
   const baixo = Math.max(faixa.melhor, faixa.pior);
   const linhas = distanciaEntrePosicoes(posicoes,
-    { serie, rodada, melhor: cima, pior: baixo });
+    { serie, rodada, melhor: cima, pior: baixo, semTapetao });
   if (linhas.length < 2 || cima === baixo) return null;
 
   const resumo = resumoDaDistancia(linhas);

@@ -128,8 +128,11 @@ async function trocarAno(apelido, url = {}) {
   Object.assign(estado, {
     edicao, jogos,
     geral: tabela(jogos, clubes, {}, descontos()),
-    casa: tabela(jogos, clubes, { mando: "casa" }, descontos()),
-    fora: tabela(jogos, clubes, { mando: "fora" }, descontos()),
+    // A punição não tem mando: ela sai da tabela geral, e as duas metades
+    // seguem somando o que aconteceu em campo. Descontar nas duas cobraria a
+    // mesma punição duas vezes.
+    casa: tabela(jogos, clubes, { mando: "casa" }),
+    fora: tabela(jogos, clubes, { mando: "fora" }),
   });
 
   // O destaque é por clube, e um clube não joga toda edição: some quando a
