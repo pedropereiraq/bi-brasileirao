@@ -315,6 +315,47 @@ def campanhas_detalhadas(jogos: pd.DataFrame) -> dict:
     }
 
 
+def distribuicao_de_resultados(jogos: pd.DataFrame) -> dict:
+    """
+    Quantos jogos cada rodada deu ao mandante, ao empate e ao visitante.
+
+    É a pergunta sobre o campeonato, e não sobre um clube: se jogar em casa
+    ainda vale o que valia, se a edição de agora está mais ou menos equilibrada
+    que as anteriores. Responder isso no navegador exigiria baixar as 21
+    edições de uma série inteira — meio megabyte — para contar três números por
+    rodada, então os três números vêm prontos.
+
+    `encerrada` vai junto porque a média histórica não pode incluir uma edição
+    que ainda está acontecendo: metade de um ano não é um ano.
+    """
+    from . import derivadas
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    feitos = recorte[recorte["status"] == cfg.STATUS_REALIZADO]
+
+    series: dict[str, dict[str, dict]] = {}
+    for (ano, serie), grupo in feitos.groupby(["ano", "serie"], sort=True,
+                                              observed=True):
+        ultima = int(grupo["rodada"].max())
+        rodadas = []
+        for etapa in range(1, ultima + 1):
+            da_rodada = grupo[grupo["rodada"] == etapa]
+            casa = int((da_rodada["gols_m"] > da_rodada["gols_v"]).sum())
+            empate = int((da_rodada["gols_m"] == da_rodada["gols_v"]).sum())
+            fora = int((da_rodada["gols_m"] < da_rodada["gols_v"]).sum())
+            rodadas.append([casa, empate, fora])
+
+        total = [sum(linha[i] for linha in rodadas) for i in range(3)]
+        series.setdefault(str(serie), {})[str(int(ano))] = {
+            "rodadas": rodadas,
+            "total": total,
+            "encerrada": (ano, serie) in completas,
+        }
+
+    return {"campos": ["mandante", "empate", "visitante"], "series": series}
+
+
 def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int,
                      punicoes: pd.DataFrame | None = None) -> list[list[int]]:
     """
@@ -510,6 +551,7 @@ def construir(jogos: pd.DataFrame | None = None,
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
     _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
     _gravar(DESTINO / "campanhas_detalhe.json", campanhas_detalhadas(jogos))
+    _gravar(DESTINO / "resultados.json", distribuicao_de_resultados(jogos))
     _gravar(DESTINO / "posicoes.json", posicoes_por_rodada(jogos))
     _gravar(DESTINO / "tapetao.json",
             pontos_no_tapetao(canonico.carregar_tapetao()))

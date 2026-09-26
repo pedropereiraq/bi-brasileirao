@@ -214,6 +214,33 @@ def test_o_detalhe_da_campanha_fecha_com_a_pontuacao(jogos):
                     assert all(b >= a for a, b in zip(serie_gols, serie_gols[1:]))
 
 
+def test_a_distribuicao_de_resultados_fecha_com_os_jogos(jogos):
+    """
+    Todo jogo realizado cai em exatamente uma das três colunas: vitória do
+    mandante, empate ou vitória do visitante. Se a conta não fechar, a tela de
+    distribuição estará dizendo que o campeonato teve mais — ou menos — jogos
+    do que teve.
+    """
+    from bi import publicacao
+
+    publicado = _dados_do_site("resultados.json")
+    assert publicado == publicacao.distribuicao_de_resultados(jogos)
+
+    recorte = jogos[(jogos["ano"] >= cfg.ANO_INICIO_BI)
+                    & (jogos["serie"].isin(cfg.SERIES))
+                    & (jogos["fase"] == cfg.FASE_UNICA)
+                    & (jogos["status"] == cfg.STATUS_REALIZADO)]
+
+    for serie, anos in publicado["series"].items():
+        for ano, edicao in anos.items():
+            na_base = len(recorte[(recorte["serie"] == serie)
+                                  & (recorte["ano"] == int(ano))])
+            assert sum(edicao["total"]) == na_base, f"{serie}{ano}"
+            # O total é a soma das rodadas, coluna a coluna.
+            for i in range(3):
+                assert sum(linha[i] for linha in edicao["rodadas"])                     == edicao["total"][i], f"{serie}{ano} coluna {i}"
+
+
 def test_o_tapetao_publicado_bate_com_a_aba(jogos):
     """
     A aba `Tapetão` é a fonte: o que o site publica tem de ser exatamente ela,
