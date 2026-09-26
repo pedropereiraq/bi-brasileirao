@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Classificação · Cards ECBahia Números</title>
+<title>Posição final por pontos · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Classificação</h1>
-      <p class="subtitulo">A tabela da edição, com as vagas pintadas.</p>
+      <h1>Posição final por pontos</h1>
+      <p class="subtitulo">No que deu cada pontuação, em todas as edições da série.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -47,12 +47,12 @@ try { document.documentElement.dataset.marca =
 
   <nav class="navegacao">
     <a href="/">Telas</a>
-    <a href="/classificacao.html" aria-current="page">Classificação</a>
+    <a href="/classificacao.html">Classificação</a>
     <a href="/jogos.html">Jogos</a>
     <a href="/gols.html">Gols</a>
     <a href="/ultimos.html">Últimos X jogos</a>
     <a href="/grade.html">Classificação por rodada</a>
-    <a href="/desfechos.html">Posição final por pontos</a>
+    <a href="/desfechos.html" aria-current="page">Posição final por pontos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
@@ -78,79 +78,29 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-criterio">Classificar por</label>
-        <div class="chaves" id="criterio" role="group" aria-labelledby="rotulo-criterio"></div>
+        <label id="rotulo-modo">Ver</label>
+        <div class="chaves" id="modo" role="group" aria-labelledby="rotulo-modo"></div>
       </div>
       <div class="campo">
         <label id="rotulo-serie">Série</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
-      <div class="campo">
-        <label for="ano">Edição</label>
-        <select id="ano"></select>
-      </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="campo">
-      <label id="rotulo-vagas">Vagas
-        <span class="dica-campo">até que posição vai cada faixa naquele regulamento</span>
-      </label>
-      <div class="vagas" id="vagas" aria-labelledby="rotulo-vagas"></div>
-    </div>
-
-    <div class="filtros-linha trilhas">
-      <div class="campo campo-trilha">
-        <label id="rotulo-rodadas">Rodadas
-          <span class="dica-campo">o trecho do campeonato que entra na conta</span>
-        </label>
-        <div id="rodadas" aria-labelledby="rotulo-rodadas"></div>
-      </div>
-      <div class="campo campo-trilha">
-        <label id="rotulo-ultimos">Últimos jogos
-          <span class="dica-campo">os últimos de cada equipe, na ordem cronológica</span>
-        </label>
-        <div id="ultimos" aria-labelledby="rotulo-ultimos"></div>
-      </div>
-    </div>
-
-    <div class="filtros-linha recorte">
-      <div class="campo">
-        <label id="rotulo-turno">Atalho
-          <span class="dica-campo">parte a edição ao meio</span>
-        </label>
-        <div class="chaves" id="turno" role="group" aria-labelledby="rotulo-turno">
-          <button type="button" class="chave" data-turno="1"
-                  aria-pressed="false">1º turno</button>
-          <button type="button" class="chave" data-turno="2"
-                  aria-pressed="false">2º turno</button>
-        </div>
-      </div>
-      <div class="campo">
-        <label for="data-de">De</label>
-        <input type="date" id="data-de">
-      </div>
-      <div class="campo">
-        <label for="data-ate">até</label>
-        <input type="date" id="data-ate">
-      </div>
-      <button type="button" class="chave" id="limpar" hidden>Limpar recorte</button>
-    </div>
-
-    <p class="resumo-meta" id="resumo-recorte"></p>
-    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> O recorte por
-      rodada pega os jogos que pertencem àquelas rodadas, e não os que foram
-      disputados naquele período — jogo adiado conta na rodada dele. Para cortar
-      por quando o jogo aconteceu, use o filtro de data. Já os
-      <b>últimos jogos</b> são cronológicos e valem por equipe: com 5, cada
-      clube entra com os 5 jogos mais recentes dele, que podem ser de rodadas
-      diferentes dos 5 do vizinho.</p>
+    <p class="dica-campo" id="rodape-edicao"></p>
+    <p class="nota-ordem"><b>Cada casa é um cruzamento de pontuação e posição
+      final.</b> O tom conta quantas campanhas terminaram ali: quanto mais
+      escuro, mais vezes aquilo aconteceu. Por pontos, a pontuação fica em pé e
+      as posições correm na horizontal — é a leitura de quem tem um número na
+      cabeça. Por posição, o contrário, que é a leitura de quem tem uma meta e
+      quer saber quanto ela custa. Só entram edições encerradas.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de classificação"></canvas>
+            aria-label="card de posição final por pontos"></canvas>
   </section>
 
   <footer class="rodape">
@@ -163,6 +113,6 @@ try { document.documentElement.dataset.marca =
 
 <script type="module" src="/js/marca.js"></script>
 <script type="module" src="/js/tapetao.js"></script>
-<script type="module" src="/js/classificacao.js"></script>
+<script type="module" src="/js/desfechos_pagina.js"></script>
 </body>
 </html>
