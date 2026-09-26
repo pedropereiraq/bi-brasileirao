@@ -12,8 +12,10 @@
  * ultrapassou.
  *
  * Escolhida uma faixa de posições, a lista da esquerda conta quantas rodadas
- * cada clube passou nela. Sem faixa escolhida, a grade ocupa o card inteiro:
- * a lista é uma pergunta a mais, e não o assunto.
+ * cada clube passou nela. Com um clube aceso, a coluna da esquerda ganha o
+ * gráfico dele: uma barra por posição, encostada na própria linha da grade, com
+ * quantas rodadas ele dormiu ali. Sem nada escolhido, a grade ocupa o card
+ * inteiro — os painéis são perguntas a mais, e não o assunto.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo, ligacaoEmS,
@@ -21,11 +23,12 @@ import {
 import { nomeBonito } from "/js/nomes.js";
 import {
   caminhoDoClube, faixaOrdenada, gradeDePosicoes, resumoDaFaixa,
-  rodadasNasPosicoes,
+  rodadasNasPosicoes, rodadasPorPosicao,
 } from "/js/grade_posicoes.js";
 
 const CALHA = 46;
 const LARGURA_PAINEL = 210;
+const LARGURA_CLUBE = 132;
 const VAO_PAINEL = 22;
 
 const ordinal = (n) => `${n}º`;
@@ -54,14 +57,25 @@ export function montarCartao(estado) {
     corpo: async (ctx, y) => {
       const topo = y + 28;
       const base = CARD.altura - 84;
-      const x0 = MARGEM + (limites ? LARGURA_PAINEL + VAO_PAINEL : 0) + CALHA;
+      // Os dois painéis são independentes: quem acende um clube e escolhe uma
+      // faixa está fazendo duas perguntas, e as duas cabem lado a lado.
+      const calhaEsquerda = (destaque ? LARGURA_CLUBE + VAO_PAINEL : 0)
+                          + (limites ? LARGURA_PAINEL + VAO_PAINEL : 0);
+      const x0 = MARGEM + calhaEsquerda + CALHA;
       const largura = (CARD.largura - MARGEM - x0) / grade.length;
       const alturaLinha = (base - topo) / posicoes;
 
+      if (destaque) {
+        painelDoClube(ctx, {
+          linhas: rodadasPorPosicao(grade, destaque),
+          x: MARGEM, largura: LARGURA_CLUBE, topo, alturaLinha,
+        });
+      }
       if (limites) {
         painelDaFaixa(ctx, {
-          ranking, limites, clubes, x: MARGEM, largura: LARGURA_PAINEL,
-          y: topo - 28, base,
+          ranking, limites, clubes,
+          x: MARGEM + (destaque ? LARGURA_CLUBE + VAO_PAINEL : 0),
+          largura: LARGURA_PAINEL, y: topo - 28, base,
         });
       }
 
@@ -110,7 +124,8 @@ export function montarCartao(estado) {
           const marcado = destaque && casa.equipe === destaque;
 
           if (marcado) {
-            caixa(ctx, x + 1, yLinha, largura - 2, alturaLinha - 2, COR.marca, 4);
+            caixa(ctx, x + 1, yLinha, largura - 2, alturaLinha - 2,
+                  COR.destaque, 4);
           }
 
           const lado = Math.min(largura - 8, alturaLinha - 7);
@@ -181,8 +196,41 @@ function fioDoCaminho(ctx, { caminho, grade, x0, largura, topo, alturaLinha,
     ligacaoEmS(ctx, {
       x0: centroX(antes.rodada) + folga, y0: centroY(antes.posicao),
       x1: centroX(agora.rodada) - folga, y1: centroY(agora.posicao),
-      cor: COR.marca, espessura: 1.5, tracejado: [3, 3],
+      cor: COR.destaque, espessura: 1.5, tracejado: [3, 3],
     });
+  }
+}
+
+/* -------------------------------------------------------- painel do clube */
+/**
+ * Quantas rodadas o clube passou em cada posição.
+ *
+ * Encostado na grade e alinhado linha a linha: a barra da 4ª está na altura da
+ * 4ª, e a leitura é de lado, sem procurar rótulo. O que aparece é a forma da
+ * temporada — a barra longa é o lugar onde ele morou, as curtas são passagem.
+ */
+function painelDoClube(ctx, { linhas, x, largura, topo, alturaLinha }) {
+  texto(ctx, "rodadas por posição", x, topo - 10,
+        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
+          cor: COR.cinzaEscuro });
+
+  const maior = Math.max(1, ...linhas.map((l) => l.rodadas));
+  const espaco = largura - 22;
+
+  for (const linha of linhas) {
+    if (!linha.rodadas) continue;
+    const meio = topo + (linha.posicao - 1) * alturaLinha + alturaLinha / 2;
+    const altura = Math.min(alturaLinha - 6, 18);
+
+    // A barra é a cor do destaque diluída: é do clube aceso que ela fala, e um
+    // cinza qualquer ali não se ligaria aos quadros da grade.
+    const comprimento = (linha.rodadas / maior) * espaco;
+    ctx.save();
+    ctx.globalAlpha = .28;
+    caixa(ctx, x, meio - altura / 2, comprimento, altura, COR.destaque, 3);
+    ctx.restore();
+    texto(ctx, linha.rodadas, x + comprimento + 7, meio + 4,
+          { tamanho: 11.5, peso: 800, cor: COR.destaque });
   }
 }
 

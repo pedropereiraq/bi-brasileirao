@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 import {
   caminhoDoClube, faixaOrdenada, gradeDePosicoes, resumoDaFaixa,
-  rodadasNasPosicoes,
+  rodadasNasPosicoes, rodadasPorPosicao,
 } from "../public/js/grade_posicoes.js";
 
 /**
@@ -99,4 +99,29 @@ test("o resumo da faixa conta clubes e rodadas", () => {
   const ranking = rodadasNasPosicoes(gradeDePosicoes(edicao), { de: 1, ate: 2 });
   assert.deepEqual(resumoDaFaixa(ranking), { clubes: 3, rodadas: 6 });
   assert.deepEqual(resumoDaFaixa([]), { clubes: 0, rodadas: 0 });
+});
+
+test("o gráfico do clube conta uma entrada por posição, zeros inclusive", () => {
+  const grade = gradeDePosicoes(edicao);
+  const alfa = rodadasPorPosicao(grade, "ALFA (SP)");
+
+  assert.equal(alfa.length, 3, "uma entrada por lugar da tabela");
+  assert.deepEqual(alfa, [
+    { posicao: 1, rodadas: 1 },
+    { posicao: 2, rodadas: 1 },
+    { posicao: 3, rodadas: 1 },
+  ]);
+
+  // BETA nunca foi 3º: a entrada existe zerada, para a barra ficar na altura
+  // da linha certa da grade.
+  assert.deepEqual(rodadasPorPosicao(grade, "BETA (RJ)"), [
+    { posicao: 1, rodadas: 2 },
+    { posicao: 2, rodadas: 1 },
+    { posicao: 3, rodadas: 0 },
+  ]);
+
+  assert.deepEqual(rodadasPorPosicao(grade, "NINGUEM (SP)"),
+    [{ posicao: 1, rodadas: 0 }, { posicao: 2, rodadas: 0 },
+     { posicao: 3, rodadas: 0 }]);
+  assert.deepEqual(rodadasPorPosicao([], "ALFA (SP)"), []);
 });

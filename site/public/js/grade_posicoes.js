@@ -85,6 +85,27 @@ export function caminhoDoClube(grade, equipe) {
 }
 
 /**
+ * Quantas rodadas o clube passou em cada posição da tabela.
+ *
+ * Uma entrada por lugar, inclusive os zeros: o gráfico que sai daqui fica
+ * encostado na grade, linha a linha, e pular as posições vazias
+ * desalinharia tudo — além de esconder justamente o que se quer ver, que é
+ * até onde o clube subiu e até onde desceu.
+ */
+export function rodadasPorPosicao(grade, equipe) {
+  if (!grade?.length) return [];
+  const posicoes = grade[0].casas.length;
+  const conta = new Array(posicoes).fill(0);
+
+  for (const { casas } of grade) {
+    for (const casa of casas) {
+      if (casa.equipe === equipe) conta[casa.posicao - 1] += 1;
+    }
+  }
+  return conta.map((rodadas, i) => ({ posicao: i + 1, rodadas }));
+}
+
+/**
  * Quantas posições diferentes a faixa viu, e quantas trocas de dono.
  *
  * Serve ao texto que explica a lista: "sete clubes passaram pelo G4" é mais

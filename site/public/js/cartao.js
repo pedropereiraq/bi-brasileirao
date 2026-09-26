@@ -80,6 +80,9 @@ const PALETAS = {
     // azul contra o vermelho: o azul já é o lado bom em toda a identidade.
     positivo: "#0B5394",
     negativo: "#CC4125",
+    // A cor de acender um clube no meio dos outros. No ECBahia é o azul da
+    // marca; no 45 ela não pode ser o preto da marca — ver a paleta de baixo.
+    destaque: "#0B5394",
   },
   podcast45: {
     // O fundo é o mesmo do ECBahia: o que muda é o par da identidade.
@@ -114,6 +117,9 @@ const PALETAS = {
     // cima dele continuar legível.
     positivo: "#58913F",
     negativo: "#CC4125",
+    // Dourado, e não o preto da marca: o destaque fica atrás do escudo, e
+    // preto atrás de escudo escuro não acende nada — some com ele.
+    destaque: "#B8912F",
   },
 };
 
