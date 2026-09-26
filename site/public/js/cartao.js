@@ -130,13 +130,20 @@ const imagens = new Map();
 /* ------------------------------------------------------------ pincéis */
 function texto(ctx, conteudo, x, y, {
   tamanho = 18, peso = 400, cor = COR.cinzaTexto, familia = "Assistant",
-  alinha = "left", maiuscula = false, espaco = 0,
+  alinha = "left", maiuscula = false, espaco = 0, contorno = null,
 } = {}) {
   ctx.save();
   ctx.font = `${peso} ${tamanho}px "${familia}", sans-serif`;
   ctx.fillStyle = cor;
   ctx.textAlign = alinha;
   ctx.textBaseline = "alphabetic";
+  // Contorno na cor do fundo: é o que deixa um rótulo de dados pousar em cima
+  // de uma linha sem sumir nela nem obrigar a desviar do ponto.
+  if (contorno) {
+    ctx.strokeStyle = contorno;
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = "round";
+  }
   const t = maiuscula ? String(conteudo).toUpperCase() : String(conteudo);
   if (espaco) {
     // Canvas não tem letter-spacing em todo navegador; desenha letra a letra.
@@ -144,8 +151,13 @@ function texto(ctx, conteudo, x, y, {
     for (const c of t) largura += ctx.measureText(c).width + espaco;
     let cx = alinha === "right" ? x - largura : alinha === "center" ? x - largura / 2 : x;
     ctx.textAlign = "left";
-    for (const c of t) { ctx.fillText(c, cx, y); cx += ctx.measureText(c).width + espaco; }
+    for (const c of t) {
+      if (contorno) ctx.strokeText(c, cx, y);
+      ctx.fillText(c, cx, y);
+      cx += ctx.measureText(c).width + espaco;
+    }
   } else {
+    if (contorno) ctx.strokeText(t, x, y);
     ctx.fillText(t, x, y);
   }
   ctx.restore();

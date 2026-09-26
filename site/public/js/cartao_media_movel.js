@@ -23,14 +23,13 @@ import {
   mediaMovel, pontosPorJogo, resumoDaSerie,
 } from "/js/media_movel.js";
 
-const CALHA = 58;
+const CALHA = 104;
 const ordinal = (n) => `${n}º`;
 const num = (v) => v.toFixed(2).replace(".", ",");
 const pct = (v) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
 
 export function montarCartao(estado) {
-  const { serie, edicao, equipe, campanha, janela, modo, referencias,
-          clubes } = estado;
+  const { serie, edicao, equipe, campanha, janela, modo, referencias } = estado;
   if (!edicao || !equipe || !campanha?.length) return null;
 
   const jogos = pontosPorJogo(campanha);
@@ -43,24 +42,15 @@ export function montarCartao(estado) {
   const nome = nomeBonito(equipe);
 
   const spec = {
-    titulo: `Média móvel ${artigoDefinido(equipe) === "a" ? "da" : "do"} `
-          + `${nome} em ${janela} ${janela === 1 ? "jogo" : "jogos"} na Série `
-          + `${serie} ${edicao.ano}`,
-    subtitulo: porAproveitamento
-      ? "Cada ponto é o aproveitamento da janela que termina naquele jogo"
-      : "Cada ponto é a média de pontos da janela que termina naquele jogo",
-    escudo: clubes?.[equipe]?.escudo,
+    // O que a linha mede vai no título: "média móvel" sozinho não diz se o
+    // eixo é de pontos por jogo ou de aproveitamento.
+    titulo: `Média móvel de ${porAproveitamento ? "aproveitamento" : "pontos por jogo"}`
+          + ` ${artigoDefinido(equipe) === "a" ? "da" : "do"} ${nome} em `
+          + `${janela} ${janela === 1 ? "jogo" : "jogos"} na Série ${serie} `
+          + `${edicao.ano}`,
+    subtitulo: "",
     arquivo: `media-movel-${nome}-${serie}-${edicao.ano}-${janela}`,
-    numeros: [
-      { valor: escrever(resumo.atual.media), destaque: "azul",
-        nome: `nos últimos ${janela} jogos` },
-      { valor: escrever(resumo.melhor.media),
-        nome: `melhor janela · até o ${resumo.melhor.ate}º jogo` },
-      { valor: escrever(resumo.pior.media),
-        nome: `pior janela · até o ${resumo.pior.ate}º jogo` },
-      { valor: escrever(resumo.media), destaque: "cinza",
-        nome: "média das janelas" },
-    ],
+    numeros: [],
     nota: `As linhas pontilhadas são a média por jogo com que cada posição `
         + `costuma terminar a Série ${serie}, nas edições encerradas.`,
     corpo: async (ctx, y) => {
@@ -99,16 +89,23 @@ export function montarCartao(estado) {
         if (!ultimo) ctx.stroke();
         ctx.restore();
 
+        // Rótulo em todos os pontos: a curva conta o movimento, o número
+        // conta o tamanho dele. Ele vai para o lado em que os dois vizinhos
+        // não estão — acima num pico, abaixo num vale — e leva contorno na
+        // cor do fundo para os casos em que não há lado livre.
+        const antes = pontos[i - 1]?.media ?? ponto.media;
+        const depois = pontos[i + 1]?.media ?? ponto.media;
+        const acima = ponto.media >= (antes + depois) / 2;
+        texto(ctx, escrever(ponto.media), x, yp + (acima ? -11 : 18),
+              { tamanho: ultimo ? 14 : 10.5, peso: ultimo ? 800 : 700,
+                alinha: "center", cor: ultimo ? COR.azul : COR.cinzaTexto,
+                contorno: COR.fundo });
+
         alvos.push({
           x: x - 10, y: topo, l: 20, a: base - topo,
           ...dicaDaJanela(ponto, { escrever, janela }),
         });
       }
-
-      // O número da janela de hoje, na ponta da linha.
-      const fim = pontos.at(-1);
-      texto(ctx, escrever(fim.media), xDe(fim.ate) - 12, yDe(fim.media) - 16,
-            { tamanho: 17, peso: 800, alinha: "right", cor: COR.azul });
 
       rotulosDoEixoX(ctx, { pontos, xDe, base });
       texto(ctx, `jogo em que a janela de ${janela} termina →`,
@@ -154,7 +151,7 @@ function eixos(ctx, { teto, porAproveitamento, x0, x1, topo, base }) {
     const y = base - (v / teto) * (base - topo);
     linhaH(ctx, x0, x1, y, COR.linha);
     texto(ctx, porAproveitamento ? `${Math.round((v / 3) * 100)}%` : num(v),
-          x0 - 10, y + 4,
+          x0 - 12, y + 4,
           { tamanho: 10.5, alinha: "right", cor: COR.cinzaEscuro });
   }
   linhaH(ctx, x0, x1, base, COR.cinza);
@@ -180,19 +177,28 @@ function reguaDaPosicao(ctx, { referencia, yDe, x0, x1, escrever }) {
   const y = yDe(referencia.media);
   ctx.save();
   ctx.strokeStyle = referencia.cor;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([7, 5]);
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 5]);
   ctx.beginPath();
   ctx.moveTo(x0, y);
   ctx.lineTo(x1, y);
   ctx.stroke();
   ctx.restore();
 
-  const rotulo = `${ordinal(referencia.posicao)} · ${escrever(referencia.media)}`;
-  const largura = rotulo.length * 6.4 + 16;
-  caixa(ctx, x1 - largura, y - 20, largura, 17, referencia.cor, 4);
-  texto(ctx, rotulo, x1 - largura / 2, y - 8,
-        { tamanho: 10.5, peso: 800, alinha: "center", cor: COR.branco });
+  // A etiqueta mora fora do gráfico, na calha da esquerda: dentro dele ela
+  // cobriria a curva justamente onde a curva cruza a régua.
+  const traco = MARGEM + 4;
+  ctx.save();
+  ctx.strokeStyle = referencia.cor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(traco, y);
+  ctx.lineTo(traco + 14, y);
+  ctx.stroke();
+  ctx.restore();
+  texto(ctx, `${ordinal(referencia.posicao)} ${escrever(referencia.media)}`,
+        traco + 20, y + 4,
+        { tamanho: 10.5, peso: 700, cor: referencia.cor });
 }
 
 /* ------------------------------------------------------------------ dica */
