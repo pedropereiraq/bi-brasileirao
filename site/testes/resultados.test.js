@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 import {
   acumuladoDaSerie, diferencaEmPontos, edicaoDe, edicoesDaSerie, fracoes,
-  rodadasExtremas,
+  maiorNumeroDeRodadas, rodadasExtremas, totalNoIntervalo,
 } from "../public/js/resultados.js";
 
 const dados = {
@@ -70,4 +70,37 @@ test("as rodadas extremas ignoram as que ainda não aconteceram", () => {
   assert.equal(extremos.maior.rodada, 1, "80% de mandante");
   assert.equal(extremos.menor.rodada, 2, "20% de mandante");
   assert.equal(rodadasExtremas([[0, 0, 0]], 0), null);
+});
+
+test("o recorte de rodadas soma só o trecho pedido", () => {
+  const rodadas = [[6, 2, 2], [4, 4, 2], [1, 1, 8]];
+
+  assert.deepEqual(totalNoIntervalo(rodadas, { de: 1, ate: 2 }), [10, 6, 4]);
+  assert.deepEqual(totalNoIntervalo(rodadas, { de: 3, ate: 3 }), [1, 1, 8]);
+  assert.deepEqual(totalNoIntervalo(rodadas, { de: 1, ate: 9 }), [11, 7, 12],
+    "intervalo maior que a edição simplesmente acaba antes");
+  assert.deepEqual(totalNoIntervalo(rodadas), [11, 7, 12]);
+  assert.deepEqual(totalNoIntervalo([], { de: 1, ate: 2 }), [0, 0, 0]);
+});
+
+test("o recorte atravessa a edição e o acumulado", () => {
+  const intervalo = { de: 1, ate: 1 };
+
+  const so2024 = edicaoDe(dados, { serie: "A", ano: 2024, intervalo });
+  assert.deepEqual(so2024.total, [6, 2, 2], "só a 1ª rodada");
+  assert.equal(so2024.rodadas.length, 2,
+    "as rodadas vêm inteiras: a coluna vazia é a resposta, não a lista curta");
+
+  const acumulado = acumuladoDaSerie(dados, { serie: "A", intervalo });
+  assert.deepEqual(acumulado.total, [11, 7, 2], "2024 e 2025, só a 1ª rodada");
+  assert.equal(acumulado.edicoes, 2, "2026 continua fora: ainda acontece");
+
+  assert.deepEqual(
+    edicoesDaSerie(dados, { serie: "A", intervalo }).map((e) => e.total),
+    [[6, 2, 2], [5, 5, 0], [8, 1, 1]]);
+});
+
+test("a trilha é do tamanho da edição mais longa da série", () => {
+  assert.equal(maiorNumeroDeRodadas(dados, { serie: "A" }), 2);
+  assert.equal(maiorNumeroDeRodadas(dados, { serie: "C" }), 0);
 });

@@ -33,23 +33,60 @@ export function fracoes(linha) {
   return linha.map((v) => v / total);
 }
 
-/** A edição pedida, com as rodadas e o total já somado. */
-export function edicaoDe(dados, { serie, ano }) {
+/**
+ * O total de um trecho do campeonato.
+ *
+ * Somar só as rodadas do recorte é o que permite perguntar se o mando pesa
+ * mais no começo do ano do que no fim. Rodada fora do intervalo não entra, e
+ * edição mais curta que o intervalo simplesmente acaba antes.
+ */
+export function totalNoIntervalo(rodadas, { de = 1, ate = Infinity } = {}) {
+  const inicio = Math.max(1, Math.min(de, ate));
+  const fim = Math.max(de, ate);
+  return (rodadas ?? []).reduce((acc, linha, i) => {
+    const rodada = i + 1;
+    return (rodada < inicio || rodada > fim) ? acc : somar(acc, linha);
+  }, vazio());
+}
+
+/**
+ * A edição pedida, com as rodadas e o total já somado.
+ *
+ * `intervalo` recorta o total por rodada. As `rodadas` vêm inteiras de
+ * qualquer jeito: quem desenha a edição rodada a rodada quer a coluna vazia
+ * no lugar dela, e não a lista encurtada.
+ */
+export function edicaoDe(dados, { serie, ano, intervalo = null }) {
   const edicao = dados?.series?.[serie]?.[String(ano)];
   if (!edicao) return null;
+  const rodadas = edicao.rodadas ?? [];
   return {
     ano: Number(ano),
     encerrada: Boolean(edicao.encerrada),
-    rodadas: edicao.rodadas ?? [],
-    total: edicao.total ?? vazio(),
+    rodadas,
+    total: intervalo
+      ? totalNoIntervalo(rodadas, intervalo)
+      : (edicao.total ?? vazio()),
   };
 }
 
 /** Uma linha por edição da série, da mais antiga à mais nova. */
-export function edicoesDaSerie(dados, { serie }) {
+export function edicoesDaSerie(dados, { serie, intervalo = null } = {}) {
   const anos = Object.keys(dados?.series?.[serie] ?? {}).map(Number)
     .sort((a, b) => a - b);
-  return anos.map((ano) => edicaoDe(dados, { serie, ano })).filter(Boolean);
+  return anos.map((ano) => edicaoDe(dados, { serie, ano, intervalo }))
+    .filter(Boolean);
+}
+
+/**
+ * A edição mais longa da série, em rodadas.
+ *
+ * É o tamanho da trilha do filtro: o Brasileirão já teve de 38 a 46 rodadas, e
+ * uma trilha do tamanho da edição mais curta esconderia o fim das outras.
+ */
+export function maiorNumeroDeRodadas(dados, { serie } = {}) {
+  return Math.max(0, ...Object.values(dados?.series?.[serie] ?? {})
+    .map((e) => (e?.rodadas ?? []).length));
 }
 
 /**
@@ -60,8 +97,9 @@ export function edicoesDaSerie(dados, { serie }) {
  * fica sempre de fora: metade de um ano não é um ano.
  */
 export function acumuladoDaSerie(dados, { serie, exceto = null,
-                                          soEncerradas = true } = {}) {
-  const edicoes = edicoesDaSerie(dados, { serie })
+                                          soEncerradas = true,
+                                          intervalo = null } = {}) {
+  const edicoes = edicoesDaSerie(dados, { serie, intervalo })
     .filter((e) => (!soEncerradas || e.encerrada) && e.ano !== exceto);
   return {
     edicoes: edicoes.length,

@@ -1,28 +1,35 @@
 /**
  * Card: onde foram parar os pontos — mandante, empate ou visitante.
  *
- * Uma barra empilhada por linha, sempre com as três partes na mesma ordem:
- * azul do mandante à esquerda, cinza do empate no meio, vermelho do visitante
- * à direita. Com a ordem fixa, comparar duas linhas é comparar onde as
- * emendas caem — e é isso que se quer ver.
+ * A ordem das três partes é sempre a mesma, e é isso que faz a tela funcionar:
+ * mandante primeiro, empate no meio, visitante por último. Com a ordem fixa,
+ * comparar duas barras é comparar onde as emendas caem. Na barra deitada isso
+ * é da esquerda para a direita; na coluna em pé, de cima para baixo — a mesma
+ * leitura, virada.
  *
- * **Na edição**, uma linha por rodada e, em cima, a distribuição do ano
- * inteiro contra a média das outras edições da série. A rodada isolada é
- * ruidosa — dez jogos —, e é a barra de cima que diz se o ano fugiu do normal.
+ * **Na edição**, uma coluna por rodada e, em cima, a distribuição do ano
+ * inteiro contra a média das outras edições da série. Em pé, cada rodada tem a
+ * altura do card inteiro e cabe o número de jogos dentro de cada pedaço: dez
+ * jogos por rodada é pouco para uma porcentagem significar alguma coisa, e o
+ * "5, 3 e 2" diz o que o "50%" esconde.
  *
  * **No histórico**, uma linha por edição e, em cima, o acumulado de todas.
  * Aqui a pergunta é outra: se o mando vem perdendo força ao longo dos anos, é
- * nesta coluna de barras que isso aparece.
+ * nesta coluna de barras que isso aparece. E o recorte de rodadas responde a
+ * seguinte: se o mando pesa mais no começo do ano do que na reta final.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH,
 } from "/js/cartao.js";
+import { marcaAtual } from "/js/marca.js";
 import {
   acumuladoDaSerie, diferencaEmPontos, edicaoDe, edicoesDaSerie, fracoes,
 } from "/js/resultados.js";
 
 const CALHA = 64;
 const ALTURA_RESUMO = 126;
+// Embaixo das colunas, a fileira dos números de rodada.
+const ALTURA_EIXO = 24;
 
 const pct = (v) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
 const inteiro = (v) => `${Math.round(v * 100)}%`;
@@ -32,12 +39,21 @@ const comSinal = (v) =>
 const CORES = () => [COR.azul, COR.cinzaEscuro, COR.negativo];
 const NOMES = ["mandante", "empate", "visitante"];
 
+/**
+ * O nome de cada desfecho na língua de quem publica.
+ *
+ * O ECBahia escreve **triunfo** e nunca "vitória"; o Podcast45 escreve
+ * **vitória** e nunca "triunfo".
+ */
+const nomeDoDesfecho = (i) => (i === 1 ? "empates"
+  : `${marcaAtual().triunfos} do ${NOMES[i]}`);
+
 export function montarCartao(estado) {
-  const { serie, ano, modo, resultados } = estado;
+  const { serie, ano, modo, resultados, intervalo } = estado;
   if (!resultados) return null;
 
   return modo === "historico"
-    ? cartaoDoHistorico({ serie, resultados })
+    ? cartaoDoHistorico({ serie, resultados, intervalo })
     : cartaoDaEdicao({ serie, ano, resultados });
 }
 
@@ -61,28 +77,19 @@ function cartaoDaEdicao({ serie, ano, resultados }) {
     corpo: async (ctx, y) => {
       const topo = y + 20;
       const base = CARD.altura - 84;
-      const x0 = MARGEM + CALHA;
+      const x0 = MARGEM;
       const x1 = CARD.largura - MARGEM;
 
       resumoDaEdicao(ctx, {
         edicao, historico, diferenca, jogos, x0, x1, y: topo,
       });
 
-      const inicio = topo + ALTURA_RESUMO + 30;
-      legenda(ctx, { x: MARGEM, y: inicio - 14 });
+      const inicio = topo + ALTURA_RESUMO + 34;
+      legenda(ctx, { x: MARGEM, y: inicio - 16 });
 
-      const alturaLinha = (base - inicio) / edicao.rodadas.length;
-      const alvos = [];
-      for (const [i, linha] of edicao.rodadas.entries()) {
-        const yl = inicio + i * alturaLinha;
-        texto(ctx, `${i + 1}ª`, x0 - 12, yl + alturaLinha / 2 + 4,
-              { tamanho: 11, peso: 700, alinha: "right", cor: COR.cinzaEscuro });
-        alvos.push(...barra(ctx, {
-          linha, x: x0, largura: x1 - x0, y: yl + 2,
-          altura: alturaLinha - 4, rotulo: `${i + 1}ª rodada`,
-          numeros: alturaLinha >= 22,
-        }));
-      }
+      const alvos = colunasDasRodadas(ctx, {
+        rodadas: edicao.rodadas, x0, x1, topo: inicio, base: base - ALTURA_EIXO,
+      });
 
       spec.hover = {
         pontos: alvos, eixo: "caixa", unidade: "",
@@ -92,6 +99,57 @@ function cartaoDaEdicao({ serie, ano, resultados }) {
     },
   };
   return spec;
+}
+
+/**
+ * Uma coluna por rodada.
+ *
+ * Em pé, e não deitada: assim cada rodada tem a altura inteira do card, e
+ * dentro de cada pedaço cabe o número de jogos. A ordem de cima para baixo é a
+ * mesma da esquerda para a direita nas barras de resumo — mandante, empate,
+ * visitante —, e é ela que deixa as emendas comparáveis entre as colunas.
+ */
+function colunasDasRodadas(ctx, { rodadas, x0, x1, topo, base }) {
+  const cores = CORES();
+  const largura = (x1 - x0) / rodadas.length;
+  const altura = base - topo;
+  const alvos = [];
+
+  for (const [i, linha] of rodadas.entries()) {
+    const x = x0 + i * largura;
+    const fracao = fracoes(linha);
+
+    texto(ctx, i + 1, x + largura / 2, base + 16,
+          { tamanho: 10.5, peso: 700, alinha: "center", cor: COR.cinzaEscuro });
+
+    if (!fracao) {
+      contorno(ctx, x + 1, topo, largura - 2, altura);
+    } else {
+      let cursor = topo;
+      for (const [k, parte] of fracao.entries()) {
+        const pedaco = parte * altura;
+        if (pedaco <= 0) continue;
+        caixa(ctx, x + 1, cursor, largura - 2, pedaco, cores[k], 3);
+        // O número de jogos é o que a rodada tem a dizer: com dez jogos, "50%"
+        // é uma precisão inventada, e "5" é o fato.
+        if (pedaco >= 20 && largura >= 20) {
+          texto(ctx, linha[k], x + largura / 2, cursor + pedaco / 2 + 5,
+                { tamanho: 14, peso: 800, alinha: "center", cor: COR.branco });
+        }
+        cursor += pedaco;
+      }
+    }
+
+    alvos.push({
+      x, y: topo, l: largura, a: altura,
+      ...dicaDaLinha(linha, fracao, `${i + 1}ª rodada`),
+    });
+  }
+
+  texto(ctx, "rodadas →", (x0 + x1) / 2, base + 38,
+        { tamanho: 10.5, peso: 700, maiuscula: true, espaco: .9,
+          alinha: "center", cor: COR.cinzaEscuro });
+  return alvos;
 }
 
 /**
@@ -112,7 +170,8 @@ function resumoDaEdicao(ctx, { edicao, historico, diferenca, jogos, x0, x1, y })
 
   rotulo(`esta edição · ${jogos} jogos`, y + 10);
   barra(ctx, { linha: edicao.total, x: x0, largura, y: y + 18, altura: 34,
-               rotulo: "a edição", numeros: true, tamanho: 13 });
+               rotulo: "a edição", numeros: true, tamanho: 13,
+               contar: true });
 
   rotulo(`a série · outras ${historico.edicoes} edições`, y + 70);
   barra(ctx, { linha: historico.total, x: x0, largura, y: y + 78, altura: 22,
@@ -131,15 +190,17 @@ function resumoDaEdicao(ctx, { edicao, historico, diferenca, jogos, x0, x1, y })
 }
 
 /* -------------------------------------------------------------- histórico */
-function cartaoDoHistorico({ serie, resultados }) {
-  const edicoes = edicoesDaSerie(resultados, { serie })
+function cartaoDoHistorico({ serie, resultados, intervalo }) {
+  const edicoes = edicoesDaSerie(resultados, { serie, intervalo })
     .filter((e) => e.total.some((v) => v > 0));
   if (!edicoes.length) return null;
 
-  const acumulado = acumuladoDaSerie(resultados, { serie });
+  const acumulado = acumuladoDaSerie(resultados, { serie, intervalo });
+  const recorte = recorteEmPalavras(intervalo);
 
   const spec = {
-    titulo: `Mandante, empate e visitante na Série ${serie}, edição por edição`,
+    titulo: `Mandante, empate e visitante na Série ${serie}, edição por edição`
+          + `${recorte ? `, ${recorte}` : ""}`,
     subtitulo: "",
     arquivo: `resultados-${serie}-historico`,
     numeros: [],
@@ -188,6 +249,20 @@ function cartaoDoHistorico({ serie, resultados }) {
   return spec;
 }
 
+/**
+ * "da 1ª à 19ª rodada", para entrar no título.
+ *
+ * Quem chama manda `null` quando o recorte é o campeonato inteiro: é a página
+ * que sabe quantas rodadas a série tem, e "da 1ª à 38ª" no título seria
+ * ocupar a linha para dizer que não há recorte nenhum.
+ */
+function recorteEmPalavras(intervalo) {
+  if (!intervalo) return "";
+  const { de, ate } = intervalo;
+  if (de === ate) return `só na ${de}ª rodada`;
+  return `da ${de}ª à ${ate}ª rodada`;
+}
+
 /* ------------------------------------------------------------------ barra */
 /**
  * Uma barra empilhada, sempre na mesma ordem.
@@ -196,16 +271,10 @@ function cartaoDoHistorico({ serie, resultados }) {
  * rodada de zero vitórias do mandante.
  */
 function barra(ctx, { linha, x, largura, y, altura, rotulo, numeros = false,
-                      tamanho = 12, apagada = false }) {
+                      tamanho = 12, apagada = false, contar = false }) {
   const fracao = fracoes(linha);
   if (!fracao) {
-    ctx.save();
-    ctx.strokeStyle = COR.linha;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 4);
-    ctx.stroke();
-    ctx.restore();
+    contorno(ctx, x, y, largura, altura);
     return [];
   }
 
@@ -221,7 +290,8 @@ function barra(ctx, { linha, x, largura, y, altura, rotulo, numeros = false,
     ctx.restore();
 
     if (numeros && pedaco > 42) {
-      texto(ctx, inteiro(parte), cursor + pedaco / 2, y + altura / 2 + tamanho * .35,
+      const escrito = contar ? `${inteiro(parte)} · ${linha[i]}` : inteiro(parte);
+      texto(ctx, escrito, cursor + pedaco / 2, y + altura / 2 + tamanho * .35,
             { tamanho, peso: 800, alinha: "center", cor: COR.branco });
     }
     cursor += pedaco;
@@ -232,6 +302,17 @@ function barra(ctx, { linha, x, largura, y, altura, rotulo, numeros = false,
     ...dicaDaLinha(linha, fracao, rotulo),
   });
   return alvos;
+}
+
+/** O retângulo vazado de uma linha sem jogo disputado. */
+function contorno(ctx, x, y, largura, altura) {
+  ctx.save();
+  ctx.strokeStyle = COR.linha;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x + .5, y + .5, largura - 1, altura - 1, 4);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function legenda(ctx, { x, y }) {
@@ -247,18 +328,20 @@ function legenda(ctx, { x, y }) {
 
 function dicaDaLinha(linha, fracao, rotulo) {
   const cores = CORES();
-  const jogos = linha.reduce((s, v) => s + v, 0);
+  const jogos = (linha ?? []).reduce((s, v) => s + v, 0);
   return {
     n: rotulo,
     itens: NOMES.map((nome, i) => ({
-      rotulo: nome === "empate" ? "empates" : `vitórias do ${nome}`,
+      rotulo: nomeDoDesfecho(i),
       cor: cores[i], pontos: null,
-      texto: `${linha[i]}`,
-      detalhe: pct(fracao[i]),
+      texto: `${linha?.[i] ?? 0}`,
+      detalhe: fracao ? pct(fracao[i]) : "",
     })),
     diferenca: {
-      rotulo: `${jogos} ${jogos === 1 ? "jogo" : "jogos"}`,
-      texto: "na conta desta linha",
+      rotulo: jogos
+        ? `${jogos} ${jogos === 1 ? "jogo" : "jogos"}`
+        : "sem jogo disputado",
+      texto: jogos ? "na conta desta linha" : "",
       cor: COR.azulEscuro,
     },
   };

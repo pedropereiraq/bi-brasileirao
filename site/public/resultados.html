@@ -95,14 +95,25 @@ try { document.documentElement.dataset.marca =
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
+    <div class="filtros-linha trilhas" id="campo-rodadas" hidden>
+      <div class="campo campo-trilha">
+        <label id="rotulo-rodadas">Rodadas
+          <span class="dica-campo" id="resumo-rodadas"></span>
+        </label>
+        <div id="rodadas" aria-labelledby="rotulo-rodadas"></div>
+      </div>
+    </div>
+
     <p class="dica-campo" id="rodape-edicao"></p>
     <p class="nota-ordem"><b>A ordem das três partes é sempre a mesma:</b>
       mandante à esquerda, empate no meio, visitante à direita. Com a ordem
-      fixa, comparar duas linhas é comparar onde as emendas caem. Na edição, a
+      fixa, comparar duas barras é comparar onde as emendas caem. Na edição,
+      cada coluna é uma rodada e traz o número de jogos de cada desfecho; a
       barra de cima é o ano inteiro contra a média das outras edições da série
       — a rodada isolada tem dez jogos e é ruidosa demais para responder
-      sozinha. No histórico, cada linha é uma edição, e a de cima é o acumulado
-      de todas as encerradas.</p>
+      sozinha. No histórico, cada linha é uma edição, a de cima é o acumulado
+      das encerradas, e o recorte de rodadas responde se o mando pesa mais no
+      começo do ano do que na reta final.</p>
   </section>
 
   <section class="palco-card">
