@@ -154,6 +154,33 @@ export function rankingContraBloco(lados, { bloco, mando = "ambos" } = {}) {
 }
 
 /**
+ * Os jogos de um clube contra os do bloco, separados por campo.
+ *
+ * O ranking responde quanto cada um pontuou contra o bloco; esta lista
+ * responde **como** — quais jogos foram, em que campo e em que placar. É a
+ * conta destrinchada de uma linha só do ranking.
+ */
+export function jogosContraBloco(lados, { equipe, bloco, mando = "ambos" } = {}) {
+  const alvo = new Set(bloco ?? []);
+  const campos = { casa: [], fora: [] };
+
+  for (const lado of lados ?? []) {
+    if (lado.equipe !== equipe || !alvo.has(lado.adversario)) continue;
+    if (!doMando(lado, mando)) continue;
+    campos[lado.mando]?.push(lado);
+  }
+
+  // `lista` são os jogos e `jogos` é a contagem, como no resto do módulo:
+  // trocar os nomes faria a conta sumir debaixo da lista.
+  const resumir = (encontrados) => ({
+    lista: [...encontrados].sort((a, b) => a.rodada - b.rodada),
+    ...comAproveitamento(encontrados.reduce((conta, jogo) => somar(conta, jogo),
+                                            vazio())),
+  });
+  return { casa: resumir(campos.casa), fora: resumir(campos.fora) };
+}
+
+/**
  * Quanto cada clube do bloco entregou ao resto.
  *
  * É a mesma lista de jogos do ranking, agrupada pela outra ponta: o

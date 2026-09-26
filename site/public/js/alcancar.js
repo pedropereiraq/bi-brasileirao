@@ -132,6 +132,36 @@ export function alvoPadrao(marcos) {
 }
 
 /**
+ * A edição mais recente da série, e o que cada clube tem nela.
+ *
+ * É a lista de clubes da tela e, junto, a resposta que serve de marca padrão:
+ * "quantos jogos eu levava para chegar ao que tenho hoje" é a pergunta que se
+ * faz olhando a tabela de agora.
+ *
+ * A ordem põe o melhor primeiro em qualquer métrica: mais gols pró é melhor,
+ * menos gols sofridos também — o que muda é o sentido da conta, e é ele que
+ * decide de que lado a lista começa.
+ */
+export function situacaoAtual(dados, { serie, metrica }) {
+  const anos = Object.keys(dados?.series?.[serie] ?? {}).map(Number);
+  if (!anos.length) return { ano: null, clubes: [] };
+
+  const ano = Math.max(...anos);
+  const ruim = METRICAS[metrica]?.sentido === "ruim";
+  const clubes = (dados.series[serie][String(ano)] ?? []).map((linha) => {
+    const curva = curvaDaMetrica(linha, metrica);
+    return {
+      equipe: linha[0],
+      valor: curva.length ? curva[curva.length - 1] : 0,
+      jogos: curva.length,
+    };
+  }).sort((a, b) => (ruim ? a.valor - b.valor : b.valor - a.valor)
+                 || a.equipe.localeCompare(b.equipe, "pt-BR"));
+
+  return { ano, clubes };
+}
+
+/**
  * Os números do alto do card.
  *
  * A média de jogos conta só quem alcançou: misturar o ano em que o clube não

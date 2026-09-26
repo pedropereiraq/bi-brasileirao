@@ -52,6 +52,7 @@ try { document.documentElement.dataset.marca =
     <a href="/gols.html">Gols</a>
     <a href="/ultimos.html">Últimos X jogos</a>
     <a href="/grade.html">Classificação por rodada</a>
+    <a href="/desfechos.html">Posição final por pontos</a>
     <a href="/mando.html">Mando de campo</a>
     <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
@@ -80,13 +81,6 @@ try { document.documentElement.dataset.marca =
         <label id="rotulo-serie">Divisão</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
-      <div class="campo campo-equipe">
-        <label for="equipe">Equipe</label>
-        <div class="equipe-com-escudo">
-          <img id="escudo-equipe" alt="">
-          <select id="equipe"></select>
-        </div>
-      </div>
       <div class="campo">
         <label id="rotulo-metrica">Procurar</label>
         <div class="chaves" id="metrica" role="group" aria-labelledby="rotulo-metrica"></div>
@@ -98,6 +92,15 @@ try { document.documentElement.dataset.marca =
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
+    <div class="faixa-clubes">
+      <span class="rotulo" id="rotulo-clubes">Equipe
+        <span class="dica-campo" id="rotulo-clubes-dica">clube da edição em
+          curso, com o que ele tem hoje — clicar leva a marca para esse
+          número</span>
+      </span>
+      <div class="lista-clubes" id="clubes"></div>
+    </div>
+
     <div class="campo campo-posicoes">
       <label id="rotulo-alvo">Marca a alcançar
         <span class="dica-campo">abre na mediana das edições do clube ·
@@ -106,12 +109,14 @@ try { document.documentElement.dataset.marca =
       <div id="alvo" aria-labelledby="rotulo-alvo"></div>
     </div>
 
-    <p class="nota-ordem"><b>O eixo é o jogo, não a rodada.</b> A barra mostra
-      em que altura da campanha o clube chegou à marca — quanto mais curta,
-      mais cedo. A edição em que ele não chegou aparece com o trilho vazio e o
-      total que fez: é resposta, e não falta de resposta. A cor vem do que se
-      procura: verde no que é bom alcançar, cinza no empate, vermelho em
-      derrotas e gols sofridos.</p>
+    <p class="nota-ordem"><b>Os jogos são contados na ordem cronológica, não
+      pela rodada.</b> "No 25º jogo" é o 25º que a equipe disputou, na ordem em
+      que aconteceram — com jogo adiado, ele pode ser de uma rodada bem
+      diferente da 25ª. A barra mostra em que altura da campanha o clube chegou
+      à marca: quanto mais curta, mais cedo. A edição em que ele não chegou
+      aparece com o trilho vazio e o total que fez — é resposta, e não falta de
+      resposta. A cor vem do que se procura: verde no que é bom alcançar, cinza
+      no empate, vermelho em derrotas e gols sofridos.</p>
   </section>
 
   <section class="palco-card">

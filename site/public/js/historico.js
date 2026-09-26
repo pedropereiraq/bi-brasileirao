@@ -177,7 +177,11 @@ function aplicar() {
   const maximo = noFinal && estado.series.length > 1
     ? POSICOES_POR_SERIE * 2 : POSICOES_POR_SERIE;
   el("alvo").max = maximo;
-  estado.alvo = Math.min(estado.alvo, maximo);
+  // Na posição final a marca é opcional: o zero é "nenhuma", e o gráfico sai
+  // sem a linha pontilhada. No rodada a rodada ela é o próprio corte entre o
+  // que está acima e o que está abaixo, e aí não há como não ter.
+  el("alvo").min = noFinal ? 0 : 1;
+  estado.alvo = Math.min(Math.max(estado.alvo, noFinal ? 0 : 1), maximo);
   el("alvo").value = estado.alvo;
   el("valor-alvo").textContent = rotuloDoAlvo();
   el("valor-ignorar").textContent = estado.ignorar;
@@ -203,6 +207,7 @@ function aplicar() {
 
 function rotuloDoAlvo() {
   const { alvo } = estado;
+  if (!alvo) return "nenhuma";
   if (estado.modo === "final" && estado.series.length > 1
       && alvo > POSICOES_POR_SERIE) {
     return `${alvo - POSICOES_POR_SERIE}º da B`;

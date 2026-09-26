@@ -15,14 +15,17 @@ import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_alcancar.js";
 import { ligarTrilha } from "/js/seletor_posicoes.js";
 import {
-  METRICAS, alvoPadrao, maiorTotal, marcosDoClube,
+  METRICAS, alvoPadrao, maiorTotal, marcosDoClube, situacaoAtual,
 } from "/js/alcancar.js";
 import { marcaAtual, aoMudarMarca } from "/js/marca.js";
-import { nomeBonito, nomeComUf } from "/js/nomes.js";
+import { nomeComUf } from "/js/nomes.js";
 
 const estado = {
   clubes: {}, campanhas: null,
   serie: null, equipe: null, metrica: "pontos", alvo: null, ordem: "jogos",
+  // A edição em curso da série, que é a lista de clubes da tela e a marca que
+  // cada um deles traz de casa.
+  atual: { ano: null, clubes: [] },
 };
 
 const el = (id) => document.getElementById(id);
@@ -56,9 +59,10 @@ async function inicializar() {
   ligarChaves("metrica", (valor) => {
     estado.metrica = valor;
     pintarChaves("metrica", valor);
-    // A régua muda de tamanho e de sentido: o alvo volta ao padrão da nova
-    // métrica em vez de carregar um número que era de outra conta.
-    montarTrilha();
+    // A régua muda de tamanho e de sentido: o alvo volta ao que o clube tem
+    // hoje naquela conta, em vez de carregar um número que era de outra.
+    montarListaDeClubes();
+    montarTrilha(valorDeHoje());
     aplicar();
   });
 
@@ -71,12 +75,20 @@ async function inicializar() {
     aplicar();
   });
 
-  el("equipe").addEventListener("change", () => trocarEquipe(el("equipe").value));
 
   // "Triunfos" ou "vitórias" é escolha da marca: o rótulo se refaz junto.
   aoMudarMarca(() => {
     escreverMetricas();
     pintarChaves("metrica", estado.metrica);
+  });
+
+  el("clubes").addEventListener("click", (evento) => {
+    const botao = evento.target.closest(".clube");
+    if (!botao) return;
+    // Clicar num clube leva a marca para o que ele tem hoje: é a comparação
+    // que a tela existe para fazer — "em que jogo eu chegava a isto".
+    const atual = estado.atual.clubes.find((c) => c.equipe === botao.dataset.equipe);
+    trocarEquipe(botao.dataset.equipe, { alvoDaUrl: atual?.valor });
   });
 
   pintarChaves("ordem", estado.ordem);
@@ -128,36 +140,57 @@ function trocarSerie(serie, url = {}) {
   lembrarSerie(serie);
   pintarChaves("serie", serie);
 
-  // Todo clube que já apareceu na série, e não só os da edição corrente: a
-  // tela cruza as edições todas, e quem subiu em 2010 e caiu em 2014 tem
-  // marcas para mostrar.
-  const nomes = new Set();
-  for (const clubes of Object.values(estado.campanhas.series?.[serie] ?? {})) {
-    for (const [equipe] of clubes) nomes.add(equipe);
-  }
-  const lista = [...nomes].sort((a, b) =>
-    nomeBonito(a).localeCompare(nomeBonito(b), "pt-BR"));
-
-  el("equipe").innerHTML = lista
-    .map((e) => `<option value="${e}">${nomeComUf(e)}</option>`).join("");
+  // A lista é a da edição em curso: é dela que sai o "hoje" que cada botão
+  // mostra, e é com esse número que a tela compara os anos anteriores.
+  montarListaDeClubes();
+  const lista = estado.atual.clubes.map((c) => c.equipe);
 
   const desejada = url.equipe ?? estado.equipe ?? equipeLembrada();
-  trocarEquipe(lista.includes(desejada) ? desejada : lista[0],
-               { alvoDaUrl: url.alvo });
+  const escolhida = lista.includes(desejada) ? desejada : lista[0];
+  const hoje = estado.atual.clubes.find((c) => c.equipe === escolhida)?.valor;
+  trocarEquipe(escolhida, { alvoDaUrl: url.alvo ?? hoje });
 }
 
 function trocarEquipe(equipe, { alvoDaUrl = null } = {}) {
   if (!equipe) return;
   estado.equipe = equipe;
   lembrarEquipe(equipe);
-  el("equipe").value = equipe;
-
-  const im = el("escudo-equipe");
-  im.src = estado.clubes[equipe]?.escudo ?? "";
-  im.alt = nomeBonito(equipe);
+  pintarListaDeClubes();
 
   montarTrilha(alvoDaUrl);
   aplicar();
+}
+
+/** O que o clube em foco tem hoje na métrica escolhida, se ele está na lista. */
+const valorDeHoje = () =>
+  estado.atual.clubes.find((c) => c.equipe === estado.equipe)?.valor ?? null;
+
+/**
+ * A lista deitada de clubes, com o número de hoje debaixo de cada escudo.
+ *
+ * Deitada, e não em `<select>`: o número embaixo é metade da informação — ver
+ * de uma vez quem tem 47 e quem tem 28 é o que faz escolher o clube seguinte.
+ */
+function montarListaDeClubes() {
+  estado.atual = situacaoAtual(estado.campanhas,
+    { serie: estado.serie, metrica: estado.metrica });
+  const nome = METRICAS[estado.metrica]?.nome ?? "";
+
+  el("clubes").innerHTML = estado.atual.clubes.map((c, i) => `
+    <button type="button" class="clube" data-equipe="${c.equipe}"
+            title="${nomeComUf(c.equipe)} · ${c.valor} ${nome} em ${c.jogos} jogos">
+      <span class="clube-pos">${i + 1}</span>
+      <img src="${estado.clubes[c.equipe]?.escudo ?? ""}" alt="${nomeComUf(c.equipe)}">
+      <span class="clube-pts">${c.valor}</span>
+      <span class="clube-situacao">${nome}</span>
+    </button>`).join("");
+  pintarListaDeClubes();
+}
+
+function pintarListaDeClubes() {
+  for (const botao of el("clubes").children) {
+    botao.classList.toggle("ativo", botao.dataset.equipe === estado.equipe);
+  }
 }
 
 /**
@@ -183,8 +216,10 @@ function montarTrilha(alvoDesejado = null) {
 }
 
 function aplicar() {
+  const hoje = valorDeHoje();
   el("rotulo-alvo-valor").textContent =
-    `${estado.alvo} ${METRICAS[estado.metrica]?.nome ?? ""}`;
+    `${estado.alvo} ${METRICAS[estado.metrica]?.nome ?? ""}`
+    + (hoje === null ? "" : ` · hoje: ${hoje}`);
   atualizarUrl();
   redesenhar();
 }

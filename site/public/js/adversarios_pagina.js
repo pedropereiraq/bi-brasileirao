@@ -31,12 +31,19 @@ const estado = {
   faixa: { melhor: 1, pior: 4 }, mando: "ambos",
   jogos: [], classificacao: [], agenda: [], lados: [],
   aoEscolher: (equipe) => {
-    if (!equipe || equipe === estado.equipe) return;
+    if (!equipe) return;
+    // No ranking por bloco, clicar é abrir os jogos daquele clube contra o
+    // bloco — e clicar de novo no mesmo fecha, voltando ao panorama.
+    if (estado.modo === "ranking") {
+      estado.equipe = estado.equipe === equipe ? "" : equipe;
+      if (estado.equipe) el("equipe").value = estado.equipe;
+      aplicar();
+      return;
+    }
+    if (equipe === estado.equipe) return;
     estado.equipe = equipe;
     el("equipe").value = equipe;
-    // Clicar num clube é escolher a equipe analisada; no ranking por bloco,
-    // que não tem equipe, o clique não tem o que fazer.
-    if (estado.modo === "equipe") aplicar();
+    aplicar();
   },
 };
 

@@ -12,8 +12,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  cedidoPorMembro, confrontosDoClube, extremosDosBlocos, pontosPorBloco,
-  rankingContraBloco,
+  cedidoPorMembro, confrontosDoClube, extremosDosBlocos, jogosContraBloco,
+  pontosPorBloco, rankingContraBloco,
 } from "../public/js/adversarios.js";
 
 const jogo = (adversario, mando, resultado, gp = 1, gc = 0) => ({
@@ -93,8 +93,8 @@ test("os extremos ignoram bloco sem jogo", () => {
 });
 
 /* --------------------------------------------------- ranking por bloco */
-const lado = (equipe, adversario, mando, resultado) => ({
-  equipe, adversario, mando, realizado: resultado !== null, resultado,
+const lado = (equipe, adversario, mando, resultado, rodada = 1) => ({
+  equipe, adversario, mando, realizado: resultado !== null, resultado, rodada,
 });
 
 // Três clubes; o bloco é {LIDER, VICE}.
@@ -123,6 +123,27 @@ test("o filtro de mando corta os dois lados da mesma lista", () => {
     { bloco: ["LIDER", "VICE"], mando: "casa" });
   const alfa = emCasa.find((l) => l.equipe === "ALFA");
   assert.deepEqual([alfa.jogos, alfa.pontos], [2, 4], "triunfo e empate");
+});
+
+test("os jogos contra o bloco saem separados por campo", () => {
+  const beta = jogosContraBloco(lados,
+    { equipe: "BETA", bloco: ["LIDER", "VICE"] });
+
+  assert.deepEqual(beta.casa.lista.map((j) => j.adversario), ["LIDER", "VICE"]);
+  assert.deepEqual([beta.casa.jogos, beta.casa.pontos], [2, 4],
+    "empate com o líder e triunfo sobre o vice");
+  assert.deepEqual([beta.fora.jogos, beta.fora.pontos], [2, 4]);
+  assert.equal(beta.casa.aproveitamento, 4 / 6);
+
+  // Jogo por disputar entra na lista, mas não no possível.
+  const alfa = jogosContraBloco(lados,
+    { equipe: "ALFA", bloco: ["LIDER", "VICE"] });
+  assert.equal(alfa.fora.lista.length, 2);
+  assert.equal(alfa.fora.possiveis, 3, "só o jogo realizado conta");
+
+  const ninguem = jogosContraBloco(lados,
+    { equipe: "GAMA", bloco: ["LIDER", "VICE"] });
+  assert.deepEqual([ninguem.casa.lista, ninguem.fora.lista], [[], []]);
 });
 
 test("o cedido por membro é a mesma lista vista do outro lado", () => {

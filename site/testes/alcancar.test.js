@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 import {
   alvoPadrao, curvaDaMetrica, edicoesDoClube, jogoQueAlcanca, maiorTotal,
-  marcosDoClube, ordenarMarcos, resumoDosMarcos,
+  marcosDoClube, ordenarMarcos, resumoDosMarcos, situacaoAtual,
 } from "../public/js/alcancar.js";
 
 /** Uma campanha como o arquivo entrega: acumulados jogo a jogo. */
@@ -135,4 +135,31 @@ test("a média de jogos conta só quem alcançou", () => {
   const vazio = resumoDosMarcos([{ ano: 2020, jogos: null, total: 2 }]);
   assert.equal(vazio.media, null);
   assert.equal(vazio.maisRapido, null);
+});
+
+test("a situação atual sai da edição mais nova, com o melhor na frente", () => {
+  const dois = {
+    series: {
+      A: {
+        2025: [campanha("ALFA (SP)", 1, { v: [1], e: [0], gp: [2], gc: [0] })],
+        2026: [
+          campanha("ALFA (SP)", null, { v: [1, 1], e: [0, 1], gp: [2, 2], gc: [0, 3] }),
+          campanha("BETA (RJ)", null, { v: [0, 1], e: [1, 1], gp: [1, 4], gc: [1, 1] }),
+        ],
+      },
+    },
+  };
+
+  const pontos = situacaoAtual(dois, { serie: "A", metrica: "pontos" });
+  assert.equal(pontos.ano, 2026, "a edição mais nova é a de hoje");
+  assert.deepEqual(pontos.clubes.map((c) => [c.equipe, c.valor]),
+    [["ALFA (SP)", 4], ["BETA (RJ)", 4]]);
+
+  // Em gols sofridos, menos é melhor: a lista vira do avesso.
+  const sofridos = situacaoAtual(dois, { serie: "A", metrica: "golsContra" });
+  assert.deepEqual(sofridos.clubes.map((c) => [c.equipe, c.valor]),
+    [["BETA (RJ)", 1], ["ALFA (SP)", 3]]);
+
+  assert.deepEqual(situacaoAtual(dois, { serie: "B", metrica: "pontos" }),
+    { ano: null, clubes: [] });
 });

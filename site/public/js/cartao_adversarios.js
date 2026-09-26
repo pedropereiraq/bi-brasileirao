@@ -24,10 +24,11 @@
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
 } from "/js/cartao.js";
-import { nomeBonito } from "/js/nomes.js";
+import { nomeBonito, artigoDefinido } from "/js/nomes.js";
 import { marcaAtual } from "/js/marca.js";
 import {
-  cedidoPorMembro, confrontosDoClube, pontosPorBloco, rankingContraBloco,
+  cedidoPorMembro, confrontosDoClube, jogosContraBloco, pontosPorBloco,
+  rankingContraBloco,
 } from "/js/adversarios.js";
 
 const LARGURA_TABELA = 520;
@@ -364,7 +365,7 @@ function corDoBloco(i, quantos) {
 
 /* ====================================================== ranking do bloco */
 function cartaoDoRanking(estado) {
-  const { serie, edicao, clubes, classificacao, lados, faixa, mando,
+  const { serie, edicao, clubes, classificacao, lados, faixa, mando, equipe,
           aoEscolher } = estado;
   if (!edicao || !classificacao?.length) return null;
 
@@ -376,6 +377,13 @@ function cartaoDoRanking(estado) {
   const ranking = rankingContraBloco(lados, { bloco, mando });
   const membros = cedidoPorMembro(lados, { bloco, mando });
   if (!ranking.length) return null;
+
+  // Escolhido um clube na classificação, a direita deixa de ser o panorama do
+  // bloco e passa a ser a conta dele destrinchada: quais jogos foram, em que
+  // campo e em que placar.
+  const escolhido = ranking.some((l) => l.equipe === equipe) ? equipe : null;
+  const confrontos = escolhido
+    ? jogosContraBloco(lados, { equipe: escolhido, bloco, mando }) : null;
 
   const posicaoDe = (nome) =>
     classificacao.find((c) => c.equipe === nome)?.pos ?? null;
@@ -400,15 +408,21 @@ function cartaoDoRanking(estado) {
       const larguraRanking = CARD.largura - MARGEM * 2 - larguraMembros - VAO;
 
       const alvos = await tabelaDoRanking(ctx, {
-        ranking, clubes, bloco,
+        ranking, clubes, bloco, destaque: escolhido,
         x: MARGEM, largura: larguraRanking, y, base,
       });
 
       const x0 = MARGEM + larguraRanking + VAO;
-      alvos.push(...await painelDosMembros(ctx, {
-        membros, clubes, posicaoDe, mando,
-        x: x0, largura: CARD.largura - MARGEM - x0, y, base,
-      }));
+      const largura = CARD.largura - MARGEM - x0;
+      alvos.push(...(confrontos
+        ? await painelDosJogos(ctx, {
+            confrontos, equipe: escolhido, clubes, posicaoDe,
+            x: x0, largura, y, base,
+          })
+        : await painelDosMembros(ctx, {
+            membros, clubes, posicaoDe, mando,
+            x: x0, largura, y, base,
+          })));
 
       spec.hover = {
         pontos: alvos, eixo: "caixa", unidade: "",
@@ -493,8 +507,82 @@ async function painelDosMembros(ctx, { membros, clubes, posicaoDe, mando,
   return alvos;
 }
 
+/**
+ * Os jogos do clube escolhido contra o bloco, separados por campo.
+ *
+ * O ranking ao lado diz quanto ele fez; esta coluna diz de onde veio. Casa e
+ * fora em colunas separadas porque é a pergunta seguinte natural — pontuar
+ * contra os quatro primeiros em casa e fora são coisas diferentes.
+ */
+async function painelDosJogos(ctx, { confrontos, equipe, clubes, posicaoDe,
+                                     x, largura, y, base }) {
+  texto(ctx, `os jogos d${artigoDefinido(equipe)} `
+           + `${nomeBonito(equipe)} contra o bloco`,
+        x, y + 18, { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
+                     cor: COR.cinzaEscuro });
+  linhaH(ctx, x, x + largura, y + 26, COR.linha);
+
+  const vao = 18;
+  const larguraCampo = (largura - vao) / 2;
+  const alvos = [];
+
+  for (const [i, campo] of ["casa", "fora"].entries()) {
+    const conta = confrontos[campo];
+    const xc = x + i * (larguraCampo + vao);
+    const topo = y + 40;
+
+    texto(ctx, campo === "casa" ? "em casa" : "fora de casa", xc, topo,
+          { tamanho: 12.5, peso: 800,
+            cor: campo === "casa" ? COR.azul : COR.vermelho });
+    texto(ctx, `${conta.pontos} de ${conta.possiveis} pts · `
+             + `${pct(conta.aproveitamento)}`,
+          xc + larguraCampo, topo,
+          { tamanho: 11.5, peso: 700, alinha: "right", cor: COR.cinzaEscuro });
+    linhaH(ctx, xc, xc + larguraCampo, topo + 10, COR.linha);
+
+    if (!conta.lista.length) {
+      texto(ctx, "nenhum jogo neste campo", xc, topo + 34,
+            { tamanho: 12, cor: COR.cinza });
+      continue;
+    }
+
+    const inicio = topo + 22;
+    const alturaLinha = Math.min(52, (base - inicio) / conta.lista.length);
+    for (const [k, jogo] of conta.lista.entries()) {
+      const yl = inicio + k * alturaLinha;
+      const meio = yl + alturaLinha / 2;
+      const lado = Math.min(26, alturaLinha - 10);
+
+      desenharEscudo(ctx, await imagem(clubes?.[jogo.adversario]?.escudo),
+                     xc + 4, meio - lado / 2, lado);
+      texto(ctx, cortar(ctx, nomeBonito(jogo.adversario),
+                        larguraCampo - 150, 12.5, 700),
+            xc + 38, meio + 1,
+            { tamanho: 12.5, peso: 700, cor: COR.azulEscuro });
+      texto(ctx, `${ordinal(posicaoDe(jogo.adversario) ?? 0)} · `
+               + `${jogo.rodada}ª rodada`,
+            xc + 38, meio + 16, { tamanho: 10, cor: COR.cinzaEscuro });
+
+      etiqueta(ctx, xc + larguraCampo - TAG.largura, meio, jogo);
+
+      alvos.push({
+        n: nomeBonito(jogo.adversario), equipe: jogo.adversario,
+        x: xc, y: yl, l: larguraCampo, a: alturaLinha - 2,
+        itens: [],
+        diferenca: {
+          rotulo: jogo.realizado ? `${jogo.gp}×${jogo.gc}` : "a jogar",
+          texto: `${campo === "casa" ? "em casa" : "fora"} · `
+               + `${jogo.rodada}ª rodada`,
+          cor: jogo.realizado ? corDoResultado(jogo.resultado) : COR.cinzaEscuro,
+        },
+      });
+    }
+  }
+  return alvos;
+}
+
 /** A classificação contando só os jogos contra o bloco. */
-async function tabelaDoRanking(ctx, { ranking, clubes, bloco,
+async function tabelaDoRanking(ctx, { ranking, clubes, bloco, destaque,
                                       x, largura, y, base }) {
   const membros = new Set(bloco);
   // A barra do aproveitamento ocupa os 126px antes do percentual; jogos e
@@ -523,12 +611,15 @@ async function tabelaDoRanking(ctx, { ranking, clubes, bloco,
     const yl = topo + i * alturaLinha;
     const meio = yl + alturaLinha / 2;
     const doBloco = membros.has(linha.equipe);
+    const marcado = destaque === linha.equipe;
 
     // Quem é do bloco leva a etiqueta, e só ela: pintar a linha inteira
     // sugeria uma hierarquia que não existe — o clube está ali pelo mesmo
-    // motivo que os outros, por quanto pontuou contra o bloco.
+    // motivo que os outros, por quanto pontuou contra o bloco. O fundo forte
+    // fica para o clube escolhido, que é o assunto da direita.
     caixa(ctx, x, yl, largura, alturaLinha - 2,
-          i % 2 ? COR.fundo : COR.branco, 4);
+          marcado ? COR.azulLavado : i % 2 ? COR.fundo : COR.branco, 4);
+    if (marcado) caixa(ctx, x, yl, 4, alturaLinha - 2, COR.azul, 2);
 
     texto(ctx, i + 1, x + 22, meio + 4,
           { tamanho: 11.5, peso: 800, alinha: "right", cor: COR.cinzaEscuro });
