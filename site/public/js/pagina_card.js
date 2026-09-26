@@ -273,12 +273,20 @@ function ligarHover(geometria) {
   }
 }
 
+/**
+ * O conteúdo da dica.
+ *
+ * `pontos` é o caso comum e sai com a unidade pronta — quase todo card do BI
+ * fala de pontos. Quando o número é outra coisa (gols, jogos, gols por jogo),
+ * o card manda `texto` já escrito, com a unidade dele.
+ */
 function conteudoDaDica(ponto, g) {
   const linhas = ponto.itens.map((item) => `
     <div class="dica-time">
       <span class="dica-marca" style="background:${item.cor}"></span>
       <span class="dica-nome">${item.rotulo}</span>
-      <span class="dica-pts">${item.pontos === null ? "—" : item.pontos + " pts"}</span>
+      <span class="dica-pts">${item.texto
+        ?? (item.pontos === null ? "—" : item.pontos + " pts")}</span>
       <span class="dica-detalhe">${item.detalhe}</span>
     </div>`).join("");
 
