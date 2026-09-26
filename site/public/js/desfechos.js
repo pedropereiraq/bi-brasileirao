@@ -20,24 +20,32 @@ const fimDaEdicao = (edicao, semTapetao) =>
   (semTapetao && edicao?.fim_st ? edicao.fim_st : edicao?.fim);
 
 /**
- * Uma linha por campanha encerrada da série: ano, clube, posição e pontos.
+ * Uma linha por campanha encerrada: ano, série, clube, posição e pontos.
+ *
+ * `serie` aceita uma série ou várias. Somar A e B é uma pergunta legítima — a
+ * Série B é o mesmo torneio de 38 rodadas, e juntas as duas dobram a amostra
+ * de cada posição —, e o que muda é só quantas campanhas caem em cada casa.
  */
 export function campanhasEncerradas(dados, { serie, semTapetao } = {}) {
-  const anos = dados?.series?.[serie] ?? {};
+  const series = [].concat(serie ?? []).filter(Boolean);
   const saida = [];
 
-  for (const [ano, edicao] of Object.entries(anos)) {
-    if (!edicao?.encerrada) continue;
-    const fim = fimDaEdicao(edicao, semTapetao) ?? [];
-    fim.forEach((desfecho, indice) => {
-      if (!desfecho) return;
-      const [posicao, pontos] = desfecho;
-      saida.push({ ano: Number(ano), equipe: edicao.clubes[indice],
-                   posicao, pontos });
-    });
+  for (const nome of series) {
+    for (const [ano, edicao] of Object.entries(dados?.series?.[nome] ?? {})) {
+      if (!edicao?.encerrada) continue;
+      const fim = fimDaEdicao(edicao, semTapetao) ?? [];
+      fim.forEach((desfecho, indice) => {
+        if (!desfecho) return;
+        const [posicao, pontos] = desfecho;
+        saida.push({ ano: Number(ano), serie: nome,
+                     equipe: edicao.clubes[indice], posicao, pontos });
+      });
+    }
   }
 
-  return saida.sort((a, b) => a.ano - b.ano || a.posicao - b.posicao);
+  return saida.sort((a, b) => a.ano - b.ano
+    || (a.serie < b.serie ? -1 : a.serie > b.serie ? 1 : 0)
+    || a.posicao - b.posicao);
 }
 
 /** A chave de uma casa da tabela. */

@@ -35,6 +35,13 @@ const dados = {
         fim: [null, null],
       },
     },
+    B: {
+      2024: {
+        clubes: ["DELTA (PR)", "EPSILON (BA)"],
+        encerrada: true,
+        fim: [[1, 64], [2, 60]],
+      },
+    },
   },
 };
 
@@ -44,8 +51,24 @@ test("só campanha encerrada entra, e ela vem com ano e clube", () => {
   assert.equal(campanhas.length, 6, "duas edições de três clubes");
   assert.ok(!campanhas.some((c) => c.ano === 2026),
     "a edição em curso não terminou em lugar nenhum");
-  assert.deepEqual(campanhas[0], { ano: 2024, equipe: "ALFA (SP)", posicao: 1, pontos: 70 });
-  assert.deepEqual(campanhasEncerradas(dados, { serie: "B" }), []);
+  assert.deepEqual(campanhas[0],
+    { ano: 2024, serie: "A", equipe: "ALFA (SP)", posicao: 1, pontos: 70 });
+  assert.deepEqual(campanhasEncerradas(dados, { serie: "C" }), []);
+});
+
+test("as séries podem vir juntas, e cada campanha sabe de qual é", () => {
+  const juntas = campanhasEncerradas(dados, { serie: ["A", "B"] });
+  assert.equal(juntas.length, 8, "as seis da A mais as duas da B");
+  assert.deepEqual([...new Set(juntas.map((c) => c.serie))], ["A", "B"]);
+
+  // A mesma casa recebe campanha das duas: 64 pontos em 2º tem as duas da A,
+  // e 64 em 1º passa a existir por causa da B.
+  const cruz = cruzarPontosEPosicao(juntas);
+  assert.equal(casa(cruz, 64, 2).length, 2);
+  assert.deepEqual(casa(cruz, 64, 1).map((c) => c.serie), ["B"]);
+
+  assert.deepEqual(campanhasEncerradas(dados, { serie: [] }), [],
+    "sem série marcada não há campanha nenhuma");
 });
 
 test("sem tapetão, é o outro desfecho que vale", () => {

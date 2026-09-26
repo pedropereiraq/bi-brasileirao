@@ -1,9 +1,9 @@
 /**
  * Card: quanto custou cada posição, em todas as edições da série.
  *
- * Uma linha por lugar da tabela; na horizontal, as pontuações. O tom de cada
- * casa conta quantas campanhas terminaram naquele cruzamento, e a mancha
- * diagonal que aparece é a resposta das perguntas que todo mundo faz em
+ * Uma linha por lugar da tabela; na horizontal, as pontuações. O número dentro
+ * de cada casa conta quantas campanhas terminaram naquele cruzamento, e a
+ * mancha diagonal que aparece é a resposta das perguntas que todo mundo faz em
  * setembro: quanto costuma bastar para ser campeão, quanto já não bastou para
  * escapar do rebaixamento.
  *
@@ -23,16 +23,31 @@ import {
   resumoDaPosicao,
 } from "/js/desfechos.js";
 
-const COLUNAS = { posicao: 58, minimo: 62, media: 76, maximo: 62 };
-const VAO = 24;
+// Estreitas e centradas: as quatro colunas são a legenda da linha, e o card é
+// da tabela. Cada pixel que elas devolvem é uma casa mais larga à direita.
+const COLUNAS = { posicao: 40, minimo: 42, media: 54, maximo: 42 };
+const VAO = 18;
+const LARGURA_RESUMO = COLUNAS.posicao + COLUNAS.minimo + COLUNAS.media
+                     + COLUNAS.maximo;
+
 const ordinal = (n) => `${n}º`;
-const num = (v) => v.toFixed(1).replace(".", ",");
+
+/** A média sai inteira: meio ponto não existe em tabela de campeonato. */
+const media = (v) => String(Math.round(v));
+
+/** "na Série A" ou "nas Séries A e B", conforme o que está marcado. */
+function nomeDasSeries(series) {
+  const lista = [...series];
+  if (lista.length === 1) return `na Série ${lista[0]}`;
+  return `nas Séries ${lista.slice(0, -1).join(", ")} e `
+       + `${lista[lista.length - 1]}`;
+}
 
 export function montarCartao(estado) {
-  const { serie, posicoes, semTapetao } = estado;
-  if (!posicoes) return null;
+  const { series, posicoes, semTapetao } = estado;
+  if (!posicoes || !series?.length) return null;
 
-  const campanhas = campanhasEncerradas(posicoes, { serie, semTapetao });
+  const campanhas = campanhasEncerradas(posicoes, { serie: series, semTapetao });
   if (!campanhas.length) return null;
 
   const cruz = cruzarPontosEPosicao(campanhas);
@@ -41,26 +56,25 @@ export function montarCartao(estado) {
   const lugares = Array.from({ length: cruz.posicoes }, (_, i) => i + 1);
   const resumos = new Map(
     lugares.map((p) => [p, resumoDaPosicao(campanhas, p)]));
-  const anos = new Set(campanhas.map((c) => c.ano));
+  const edicoes = new Set(campanhas.map((c) => `${c.serie}${c.ano}`));
+  const varias = series.length > 1;
 
   const spec = {
-    titulo: `Quanto custou cada posição na Série ${serie}`,
-    subtitulo: `${anos.size} edições encerradas · ${campanhas.length} campanhas`
-             + ` · o tom conta quantas terminaram em cada casa`,
-    arquivo: `desfechos-${serie}`,
+    titulo: `Pontuação final por posição ${nomeDasSeries(series)}`,
+    subtitulo: `${edicoes.size} edições encerradas · ${campanhas.length} `
+             + `campanhas · o número na casa conta quantas terminaram ali`,
+    arquivo: `desfechos-${series.join("")}`,
     numeros: [],
     nota: "Cada casa é um cruzamento de pontuação e posição final. Casa vazia "
-        + "quer dizer que aquela combinação nunca aconteceu nesta série.",
+        + "quer dizer que aquela combinação nunca aconteceu.",
     corpo: async (ctx, y) => {
-      const topo = y + 48;
+      const topo = y + 34;
       const base = CARD.altura - 84;
-      const x0 = MARGEM + COLUNAS.posicao + COLUNAS.minimo + COLUNAS.media
-               + COLUNAS.maximo + VAO;
+      const x0 = MARGEM + LARGURA_RESUMO + VAO;
       const x1 = CARD.largura - MARGEM;
       const altura = (base - topo) / lugares.length;
       const largura = (x1 - x0) / pontuacoes.length;
 
-      legenda(ctx, { maior: cruz.maior, x: MARGEM, y: y + 16 });
       cabecalho(ctx, { x0, largura, pontuacoes, y: topo - 12 });
 
       const alvos = [];
@@ -82,9 +96,12 @@ export function montarCartao(estado) {
 
           caixa(ctx, x + 1, yl + 2, largura - 2, altura - 4,
                 tom(dentro.length, cruz.maior), 3);
-          if (dentro.length > 1 && largura >= 16 && altura >= 16) {
+          // O número volta para dentro do quadrado: sem ele o tom obriga a
+          // comparar cinzas de cabeça, e a casa de uma campanha fica parecida
+          // demais com a de duas.
+          if (largura >= 13 && altura >= 13) {
             texto(ctx, dentro.length, x + largura / 2, meio + 4,
-                  { tamanho: Math.min(12, altura - 8), peso: 800,
+                  { tamanho: Math.min(12, largura - 3, altura - 6), peso: 800,
                     alinha: "center",
                     cor: dentro.length / cruz.maior > .55
                       ? COR.branco : COR.azulEscuro });
@@ -92,7 +109,7 @@ export function montarCartao(estado) {
 
           alvos.push({
             x, y: yl, l: largura, a: altura,
-            ...dicaDaCasa(dentro, pontos, posicao),
+            ...dicaDaCasa(dentro, pontos, posicao, varias),
           });
         }
 
@@ -120,18 +137,14 @@ export function montarCartao(estado) {
 
 /* ---------------------------------------------------- colunas da esquerda */
 function cabecalho(ctx, { x0, largura, pontuacoes, y }) {
-  const rotulo = (t, x) =>
-    texto(ctx, t, x, y, { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
-                          alinha: "right", cor: COR.cinzaEscuro });
-
   let x = MARGEM;
-  rotulo("pos", x + COLUNAS.posicao - 12);
-  x += COLUNAS.posicao;
-  rotulo("mín", x + COLUNAS.minimo - 10);
-  x += COLUNAS.minimo;
-  rotulo("média", x + COLUNAS.media - 10);
-  x += COLUNAS.media;
-  rotulo("máx", x + COLUNAS.maximo - 10);
+  for (const [chave, rotulo] of [["posicao", "pos"], ["minimo", "mín"],
+                                 ["media", "média"], ["maximo", "máx"]]) {
+    texto(ctx, rotulo, x + COLUNAS[chave] / 2, y,
+          { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
+            alinha: "center", cor: COR.cinzaEscuro });
+    x += COLUNAS[chave];
+  }
 
   // A escala de pontos, de cinco em cinco: uma régua por cima da grade.
   for (const [i, pontos] of pontuacoes.entries()) {
@@ -149,25 +162,25 @@ function cabecalho(ctx, { x0, largura, pontuacoes, y }) {
  */
 function colunasDaEsquerda(ctx, { posicao, resumo, meio, altura }) {
   let x = MARGEM;
-  texto(ctx, ordinal(posicao), x + COLUNAS.posicao - 12, meio + 5,
-        { tamanho: 13.5, peso: 800, alinha: "right", cor: COR.azulEscuro });
+  texto(ctx, ordinal(posicao), x + COLUNAS.posicao / 2, meio + 5,
+        { tamanho: 13, peso: 800, alinha: "center", cor: COR.azulEscuro });
   x += COLUNAS.posicao;
 
   if (!resumo) return;
 
-  texto(ctx, resumo.minimo, x + COLUNAS.minimo - 10, meio + 5,
-        { tamanho: 12.5, alinha: "right", cor: COR.cinzaTexto });
+  texto(ctx, resumo.minimo, x + COLUNAS.minimo / 2, meio + 5,
+        { tamanho: 12, alinha: "center", cor: COR.cinzaTexto });
   x += COLUNAS.minimo;
 
   const chip = Math.min(24, altura - 6);
-  caixa(ctx, x + 6, meio - chip / 2, COLUNAS.media - 16, chip,
+  caixa(ctx, x + 4, meio - chip / 2, COLUNAS.media - 8, chip,
         COR.azulLavado, 5);
-  texto(ctx, num(resumo.media), x + COLUNAS.media - 10, meio + 5,
-        { tamanho: 13.5, peso: 800, alinha: "right", cor: COR.azulEscuro });
+  texto(ctx, media(resumo.media), x + COLUNAS.media / 2, meio + 5,
+        { tamanho: 13, peso: 800, alinha: "center", cor: COR.azulEscuro });
   x += COLUNAS.media;
 
-  texto(ctx, resumo.maximo, x + COLUNAS.maximo - 10, meio + 5,
-        { tamanho: 12.5, alinha: "right", cor: COR.cinzaTexto });
+  texto(ctx, resumo.maximo, x + COLUNAS.maximo / 2, meio + 5,
+        { tamanho: 12, alinha: "center", cor: COR.cinzaTexto });
 }
 
 /* ---------------------------------------------------------------- tons */
@@ -189,27 +202,12 @@ function mistura(de, para, t) {
   return `rgb(${valor(0)}, ${valor(1)}, ${valor(2)})`;
 }
 
-function legenda(ctx, { maior, x, y }) {
-  texto(ctx, "campanhas na casa", x, y + 4,
-        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
-          cor: COR.cinzaEscuro });
-
-  const passos = Math.min(maior, 5);
-  for (let i = 1; i <= passos; i++) {
-    const quantas = Math.round(1 + ((maior - 1) * (i - 1)) / Math.max(1, passos - 1));
-    const cx = x + 150 + (i - 1) * 46;
-    caixa(ctx, cx, y - 8, 28, 16, tom(quantas, maior), 3);
-    texto(ctx, quantas, cx + 34, y + 4,
-          { tamanho: 10.5, peso: 700, cor: COR.cinzaEscuro });
-  }
-}
-
 /* ------------------------------------------------------------------ dica */
-function dicaDaCasa(campanhas, pontos, posicao) {
+function dicaDaCasa(campanhas, pontos, posicao, varias) {
   const MOSTRAR = 7;
   const itens = campanhas.slice(0, MOSTRAR).map((c) => ({
     rotulo: nomeBonito(c.equipe), cor: COR.azul, pontos: null,
-    texto: String(c.ano), detalhe: "",
+    texto: varias ? `${c.ano} · ${c.serie}` : String(c.ano), detalhe: "",
   }));
   if (campanhas.length > MOSTRAR) {
     itens.push({ rotulo: `e mais ${campanhas.length - MOSTRAR}`,
@@ -240,7 +238,7 @@ function dicaDaPosicao(resumo, distribuicao) {
     n: `${ordinal(resumo.posicao)} lugar`,
     itens: [
       { rotulo: "média", cor: COR.azul, pontos: null,
-        texto: `${num(resumo.media)} pts`,
+        texto: `${media(resumo.media)} pts`,
         detalhe: `em ${resumo.campanhas} campanhas` },
       { rotulo: "mínimo", cor: COR.cinzaEscuro, pontos: null,
         texto: `${resumo.minimo} pts`, detalhe: "já bastou" },

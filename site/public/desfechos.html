@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Posição final por pontos · Cards ECBahia Números</title>
+<title>Pontuação final por posição · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Posição final por pontos</h1>
-      <p class="subtitulo">Quanto custou cada lugar, em todas as edições da série.</p>
+      <h1>Pontuação final por posição</h1>
+      <p class="subtitulo">Quanto custou cada lugar, em todas as edições encerradas.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -52,7 +52,7 @@ try { document.documentElement.dataset.marca =
     <a href="/gols.html">Gols</a>
     <a href="/ultimos.html">Últimos X jogos</a>
     <a href="/grade.html">Classificação por rodada</a>
-    <a href="/desfechos.html" aria-current="page">Posição final por pontos</a>
+    <a href="/desfechos.html" aria-current="page">Pontuação final por posição</a>
     <a href="/resultados.html">Distribuição de resultados</a>
     <a href="/media-movel.html">Média móvel</a>
     <a href="/mando.html">Mando de campo</a>
@@ -74,13 +74,14 @@ try { document.documentElement.dataset.marca =
     <a href="/historico.html">Posições históricas</a>
     <a href="/distancias.html">Distância entre posições</a>
     <a href="/proximos.html">Próximos jogos</a>
+    <a href="/simulador.html">Simulador</a>
     <a href="/atualizar.html">Atualizar dados</a>
   </nav>
 
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-serie">Série</label>
+        <label id="rotulo-serie">Séries</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
@@ -88,17 +89,18 @@ try { document.documentElement.dataset.marca =
 
     <p class="dica-campo" id="rodape-edicao"></p>
     <p class="nota-ordem"><b>Cada casa é um cruzamento de pontuação e posição
-      final.</b> O tom conta quantas campanhas terminaram ali: quanto mais
-      escuro, mais vezes aquilo aconteceu. À esquerda, o que cada posição
-      resume — o mínimo que já bastou, a média e o máximo que já não bastou.
-      Passe o mouse sobre uma posição para ver a distribuição inteira dela. Só
-      entram edições encerradas.</p>
+      final.</b> O número dentro dela conta quantas campanhas terminaram ali, e
+      o tom acompanha. À esquerda, o que cada posição resume — o mínimo que já
+      bastou, a média e o máximo que já não bastou. Passe o mouse sobre uma
+      posição para ver a distribuição inteira dela. As duas séries podem ficar
+      marcadas ao mesmo tempo: são 38 rodadas nas duas, e juntas dobram a
+      amostra de cada lugar. Só entram edições encerradas.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de posição final por pontos"></canvas>
+            aria-label="card de pontuação final por posição"></canvas>
   </section>
 
   <footer class="rodape">
