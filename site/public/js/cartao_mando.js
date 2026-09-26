@@ -30,7 +30,7 @@
  * é o mesmo que partindo de 40%.
  */
 import {
-  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
+  CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo, ligacaoEmS,
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import { marcaAtual } from "/js/marca.js";
@@ -344,11 +344,11 @@ function dicaDaLinha(clube, nome) {
 }
 
 /**
- * A linha que costura as três tabelas.
+ * O fio que costura as três tabelas.
  *
- * Sem ela, achar o mesmo clube em três classificações diferentes é trabalho de
- * conferência. Com ela, a inclinação já conta a história: subindo da geral
- * para a de casa, o clube é melhor em casa do que a tabela sugere.
+ * Sem ele, achar o mesmo clube em três classificações diferentes é trabalho de
+ * conferência. Com ele, o degrau já conta a história: descendo da geral para a
+ * de casa, o clube é melhor em casa do que a tabela sugere.
  */
 function ligarAsTabelas(ctx, o) {
   const { tabelas, destaque, x, topo, alturaCabecalho, alturaLinha } = o;
@@ -361,17 +361,10 @@ function ligarAsTabelas(ctx, o) {
   const yGeral = onde("geral"), yCasa = onde("casa"), yFora = onde("fora");
   if (yGeral === null || yCasa === null || yFora === null) return;
 
-  ctx.save();
-  ctx.strokeStyle = COR.marca;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(x.geral + LARGURA.geral + 3, yGeral);
-  ctx.lineTo(x.casa - 3, yCasa);
-  ctx.moveTo(x.casa + LARGURA.casa + 3, yCasa);
-  ctx.lineTo(x.fora - 3, yFora);
-  ctx.stroke();
-  ctx.restore();
+  ligacaoEmS(ctx, { x0: x.geral + LARGURA.geral + 3, y0: yGeral,
+                    x1: x.casa - 3, y1: yCasa });
+  ligacaoEmS(ctx, { x0: x.casa + LARGURA.casa + 3, y0: yCasa,
+                    x1: x.fora - 3, y1: yFora });
 }
 
 /* -------------------------------------------------------------- barras */

@@ -302,6 +302,37 @@ const hoje = () => new Intl.DateTimeFormat("pt-BR", {
 }).format(new Date());
 
 /* ------------------------------------------------------ desenhos comuns */
+/**
+ * O fio que costura a mesma equipe em duas listas vizinhas.
+ *
+ * Em S de cantos retos, e não na diagonal: a reta inclinada atravessa as
+ * linhas das duas tabelas em ângulo e passa por cima de nomes que não têm
+ * nada com ela. O S sai na horizontal da linha de origem, dá o degrau no vão
+ * entre as listas — onde não há texto nenhum — e chega na horizontal à linha
+ * de destino. Quem lê segue o fio sem perder de vista em que linha estava.
+ *
+ * Com as duas linhas na mesma altura, o S vira o segmento reto que ele já
+ * seria: não há degrau a dar.
+ */
+export function ligacaoEmS(ctx, { x0, y0, x1, y1, cor = COR.marca,
+                                  espessura = 2, tracejado = [4, 4] }) {
+  const meio = (x0 + x1) / 2;
+  ctx.save();
+  ctx.strokeStyle = cor;
+  ctx.lineWidth = espessura;
+  ctx.lineJoin = "miter";
+  ctx.lineCap = "butt";
+  if (tracejado) ctx.setLineDash(tracejado);
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(meio, y0);
+  ctx.lineTo(meio, y1);
+  ctx.lineTo(x1, y1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+
 /** Barra empilhada de triunfos, empates e derrotas. */
 export function barraTED(ctx, x, y, largura, altura, { t, e, d, j }) {
   if (!j) { caixa(ctx, x, y, largura, altura, COR.cinzaClaro, 4); return; }
