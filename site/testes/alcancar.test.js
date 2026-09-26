@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 import {
   alvoPadrao, curvaDaMetrica, edicoesDoClube, jogoQueAlcanca, maiorTotal,
-  marcosDoClube, ordenarMarcos, resumoDosMarcos, situacaoAtual,
+  marcosDoClube, nomeDaMetrica, ordenarMarcos, resumoDosMarcos, situacaoAtual,
 } from "../public/js/alcancar.js";
 
 /** Uma campanha como o arquivo entrega: acumulados jogo a jogo. */
@@ -162,4 +162,16 @@ test("a situação atual sai da edição mais nova, com o melhor na frente", () 
 
   assert.deepEqual(situacaoAtual(dois, { serie: "B", metrica: "pontos" }),
     { ano: null, clubes: [] });
+});
+
+test("a métrica dos triunfos muda de nome com a marca", () => {
+  // O ECBahia escreve "triunfo" e nunca "vitória"; o 45, o contrário. A
+  // palavra chega de fora porque este módulo não conhece marca nenhuma.
+  assert.equal(nomeDaMetrica("vitorias", { triunfos: "triunfos" }), "triunfos");
+  assert.equal(nomeDaMetrica("vitorias", { triunfos: "vitórias" }), "vitórias");
+
+  // As outras não dependem da marca, e sem a palavra sobra o padrão.
+  assert.equal(nomeDaMetrica("golsPro", { triunfos: "triunfos" }), "gols pró");
+  assert.equal(nomeDaMetrica("vitorias"), "vitórias");
+  assert.equal(nomeDaMetrica("inexistente"), "pontos");
 });

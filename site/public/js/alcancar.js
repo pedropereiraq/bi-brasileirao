@@ -34,6 +34,19 @@ export const METRICAS = {
   golsContra: { nome: "gols sofridos", sentido: "ruim" },
 };
 
+/**
+ * O nome da métrica na língua de quem vai publicar.
+ *
+ * O ECBahia escreve **triunfo** e nunca "vitória"; o Podcast45 escreve
+ * **vitória** e nunca "triunfo". A palavra chega de fora, em `triunfos`,
+ * porque este módulo não conhece marca nenhuma — nem pode, para o Node
+ * carregá-lo nos testes.
+ */
+export function nomeDaMetrica(metrica, { triunfos } = {}) {
+  if (metrica === "vitorias" && triunfos) return triunfos;
+  return METRICAS[metrica]?.nome ?? "pontos";
+}
+
 /** A curva acumulada daquela métrica, jogo a jogo. */
 export function curvaDaMetrica(linha, metrica) {
   const [, , vitorias, empates, golsPro, golsContra] = linha ?? [];

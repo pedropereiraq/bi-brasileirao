@@ -16,6 +16,7 @@ import { montarCartao } from "/js/cartao_alcancar.js";
 import { ligarTrilha } from "/js/seletor_posicoes.js";
 import {
   METRICAS, alvoPadrao, edicoesDoClube, maiorTotal, marcosDoClube,
+  nomeDaMetrica,
   situacaoAtual,
 } from "/js/alcancar.js";
 import { marcaAtual, aoMudarMarca } from "/js/marca.js";
@@ -135,7 +136,8 @@ function escreverMetricas() {
   const triunfos = marcaAtual().triunfos;
   escreverChaves("metrica", [
     { valor: "pontos", rotulo: "Pontos" },
-    { valor: "vitorias", rotulo: triunfos.replace(/^./, (c) => c.toUpperCase()) },
+    { valor: "vitorias",
+      rotulo: triunfos.replace(/^./, (c) => c.toUpperCase()) },
     { valor: "empates", rotulo: "Empates" },
     { valor: "derrotas", rotulo: "Derrotas" },
     { valor: "golsPro", rotulo: "Gols pró" },
@@ -184,7 +186,7 @@ const valorDeHoje = () =>
 function montarListaDeClubes() {
   estado.atual = situacaoAtual(estado.campanhas,
     { serie: estado.serie, metrica: estado.metrica });
-  const nome = METRICAS[estado.metrica]?.nome ?? "";
+  const nome = nomeDaMetrica(estado.metrica, marcaAtual());
   const lista = estado.outras ? outrasEquipes() : estado.atual.clubes;
 
   el("clubes").innerHTML = lista.map((c, i) => `
@@ -254,7 +256,7 @@ function montarTrilha(alvoDesejado = null) {
 
   trilha = ligarTrilha({
     raiz: el("alvo"), total: teto, crescente: true,
-    descrever: (v) => `${v} ${METRICAS[metrica]?.nome ?? ""}`,
+    descrever: (v) => `${v} ${nomeDaMetrica(metrica, marcaAtual())}`,
     alcas: [{ nome: "alvo", classe: "alca-meta", valor: estado.alvo,
               descricao: "a marca a alcançar" }],
     aoMudar: ({ alvo }) => { estado.alvo = alvo; aplicar(); },
@@ -264,7 +266,7 @@ function montarTrilha(alvoDesejado = null) {
 function aplicar() {
   const hoje = valorDeHoje();
   el("rotulo-alvo-valor").textContent =
-    `${estado.alvo} ${METRICAS[estado.metrica]?.nome ?? ""}`
+    `${estado.alvo} ${nomeDaMetrica(estado.metrica, marcaAtual())}`
     + (hoje === null ? "" : ` · hoje: ${hoje}`);
   atualizarUrl();
   redesenhar();

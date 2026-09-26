@@ -17,6 +17,7 @@ import {
   CARD, COR, MARGEM, texto, caixa, linhaH, imagem, desenharEscudo,
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
+import { marcaAtual } from "/js/marca.js";
 import {
   DERROTA, EMPATOU, VITORIA, contarPalpites, desfechoDaLinha, pendentesDoClube,
 } from "/js/simulador.js";
@@ -37,9 +38,16 @@ const corDoDesfecho = (desfecho) =>
    : desfecho === EMPATOU ? COR.cinzaEscuro
    : desfecho === DERROTA ? COR.negativo : null);
 
-const NOME_DO_DESFECHO = {
-  [VITORIA]: "vitória", [EMPATOU]: "empate", [DERROTA]: "derrota",
-};
+/**
+ * O nome de cada desfecho, na língua de quem vai publicar.
+ *
+ * O ECBahia escreve **triunfo** e nunca "vitória"; o Podcast45 escreve
+ * **vitória** e nunca "triunfo". A palavra sai da marca em vez de ficar
+ * escrita aqui — é a mesma regra de todo card do BI.
+ */
+const nomeDoDesfecho = (desfecho) => ({
+  [VITORIA]: marcaAtual().triunfo, [EMPATOU]: "empate", [DERROTA]: "derrota",
+}[desfecho]);
 
 export function montarCartao(estado) {
   const { serie, ano, clubes, hoje, simulada, pendentes, palpites, variacao,
@@ -142,7 +150,7 @@ function legenda(ctx, { x, y }) {
   let cursor = x;
   for (const desfecho of [VITORIA, EMPATOU, DERROTA]) {
     caixa(ctx, cursor, y - 10, 13, 13, corDoDesfecho(desfecho), 3);
-    const nome = NOME_DO_DESFECHO[desfecho];
+    const nome = nomeDoDesfecho(desfecho);
     texto(ctx, nome, cursor + 19, y,
           { tamanho: 10.5, peso: 700, cor: COR.cinzaEscuro });
     cursor += 19 + nome.length * 6.2 + 20;
@@ -232,11 +240,12 @@ function dicaDoJogo(jogo, equipe, desfecho) {
         texto: "visitante", detalhe: "" },
     ],
     diferenca: {
-      rotulo: desfecho ? NOME_DO_DESFECHO[desfecho] : "sem palpite",
-      texto: desfecho
-        ? `simulada ${jogo.emCasa ? "em casa" : "fora"} para ${nomeBonito(equipe)}`
-        : `${jogo.emCasa ? "em casa" : "fora"} contra `
-          + `${nomeBonito(jogo.adversario)}`,
+      rotulo: desfecho ? nomeDoDesfecho(desfecho) : "sem palpite",
+      // Sem particípio: "triunfo" é masculino e "vitória" é feminino, e a
+      // frase tem de servir às duas marcas sem concordar com nenhuma.
+      texto: `${jogo.emCasa ? "em casa" : "fora"} `
+           + `${desfecho ? `para ${nomeBonito(equipe)}`
+                         : `contra ${nomeBonito(jogo.adversario)}`}`,
       cor: corDoDesfecho(desfecho) ?? COR.cinzaEscuro,
     },
   };

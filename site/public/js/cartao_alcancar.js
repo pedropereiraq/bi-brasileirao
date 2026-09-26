@@ -18,8 +18,9 @@ import {
   CARD, COR, MARGEM, texto, caixa, linhaH,
 } from "/js/cartao.js";
 import { nomeBonito, artigoDefinido } from "/js/nomes.js";
+import { marcaAtual } from "/js/marca.js";
 import {
-  METRICAS, marcosDoClube, ordenarMarcos, resumoDosMarcos,
+  METRICAS, marcosDoClube, nomeDaMetrica, ordenarMarcos, resumoDosMarcos,
 } from "/js/alcancar.js";
 
 const ALTURA_LINHA = 40;
@@ -50,7 +51,7 @@ export function montarCartao(estado) {
   const cor = corDaMetrica(metrica);
   const nome = nomeBonito(equipe);
   const artigo = artigoDefinido(equipe);
-  const rotulo = METRICAS[metrica]?.nome ?? "pontos";
+  const rotulo = nomeDaMetrica(metrica, marcaAtual());
 
   const spec = {
     titulo: `Quantos jogos ${artigo} ${nome} levou para chegar a ${alvo} `
