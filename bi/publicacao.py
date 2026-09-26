@@ -263,6 +263,58 @@ def campanhas_por_jogo(jogos: pd.DataFrame, criterio: str = "CT") -> dict:
     return {"campos": ["equipe", "pos_fim", "pontos"], "series": series}
 
 
+def campanhas_detalhadas(jogos: pd.DataFrame) -> dict:
+    """
+    A campanha jogo a jogo em vitórias, empates e gols.
+
+    `campanhas.json` traz só o acumulado de pontos, que responde "quem já
+    esteve nesta situação". A pergunta de quantos jogos um clube levou para
+    chegar a X vitórias — ou a X gols sofridos — precisa das outras contas, e
+    precisa delas em todas as edições do clube de uma vez.
+
+    Vão só duas das três colunas de resultado e nenhum ponto: derrota é o
+    jogo menos a vitória e o empate, e ponto é três vezes a vitória mais o
+    empate. Publicar o que se deduz é pagar duas vezes pelo mesmo número.
+
+    Sem tapetão, de propósito: a pergunta é sobre o que o clube fez em campo,
+    e punição de tribunal não é jogo. Quem quiser a tabela como ela ficou tem
+    a classificação.
+
+    O índice é o **jogo**, como em `campanhas_por_jogo`: comparar edições pela
+    rodada deslocaria tudo no ano em que houve jogo adiado.
+    """
+    from . import derivadas, motor
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+    tabela = motor.campanha(recorte, ordem="data", criterio="ST",
+                            local="todos")
+
+    reais = tabela[tabela["j"] == tabela["etapa"]].sort_values(
+        ["serie", "ano", "equipe", "etapa"]
+    )
+
+    series: dict[str, dict[str, list]] = {}
+    for (serie, ano, equipe), grupo in reais.groupby(
+        ["serie", "ano", "equipe"], sort=True, observed=True
+    ):
+        encerrada = (ano, serie) in completas
+        series.setdefault(str(serie), {}).setdefault(str(int(ano)), []).append([
+            equipe,
+            int(grupo["pos_fim"].iloc[-1]) if encerrada else None,
+            [int(v) for v in grupo["v"]],
+            [int(v) for v in grupo["e"]],
+            [int(v) for v in grupo["gp_ac"]],
+            [int(v) for v in grupo["gc_ac"]],
+        ])
+
+    return {
+        "campos": ["equipe", "pos_fim", "vitorias", "empates", "gols_pro",
+                   "gols_contra"],
+        "series": series,
+    }
+
+
 def _fluxo_da_edicao(jogos: pd.DataFrame, ultima: int,
                      punicoes: pd.DataFrame | None = None) -> list[list[int]]:
     """
@@ -457,6 +509,7 @@ def construir(jogos: pd.DataFrame | None = None,
     _gravar(DESTINO / "clubes.json", dados_clubes)
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
     _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
+    _gravar(DESTINO / "campanhas_detalhe.json", campanhas_detalhadas(jogos))
     _gravar(DESTINO / "posicoes.json", posicoes_por_rodada(jogos))
     _gravar(DESTINO / "tapetao.json",
             pontos_no_tapetao(canonico.carregar_tapetao()))

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aceleração por posição · Cards ECBahia Números</title>
+<title>Jogos para alcançar X · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Aceleração por posição</h1>
-      <p class="subtitulo">Quem costuma correr mais — e quem costuma frear — daqui em diante.</p>
+      <h1>Jogos para alcançar X</h1>
+      <p class="subtitulo">Em que altura da temporada a marca costuma cair.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -63,10 +63,10 @@ try { document.documentElement.dataset.marca =
     <a href="/blocos.html">Blocos de 6 jogos</a>
     <a href="/semelhantes.html">Campanhas semelhantes</a>
     <a href="/recortes.html">Recortes iniciais</a>
-    <a href="/alcancar.html">Jogos para alcançar X</a>
+    <a href="/alcancar.html" aria-current="page">Jogos para alcançar X</a>
     <a href="/medias.html">Média por posição e rodada</a>
     <a href="/degraus.html">Distâncias para a equipe de baixo</a>
-    <a href="/ritmo.html" aria-current="page">Aceleração por posição</a>
+    <a href="/ritmo.html">Aceleração por posição</a>
     <a href="/historico.html">Posições históricas</a>
     <a href="/distancias.html">Distância entre posições</a>
     <a href="/proximos.html">Próximos jogos</a>
@@ -76,33 +76,47 @@ try { document.documentElement.dataset.marca =
   <section class="cartao filtros">
     <div class="filtros-linha">
       <div class="campo">
-        <label id="rotulo-serie">Série</label>
+        <label id="rotulo-serie">Divisão</label>
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
+      </div>
+      <div class="campo campo-equipe">
+        <label for="equipe">Equipe</label>
+        <div class="equipe-com-escudo">
+          <img id="escudo-equipe" alt="">
+          <select id="equipe"></select>
+        </div>
+      </div>
+      <div class="campo">
+        <label id="rotulo-metrica">Procurar</label>
+        <div class="chaves" id="metrica" role="group" aria-labelledby="rotulo-metrica"></div>
+      </div>
+      <div class="campo">
+        <label id="rotulo-ordem">Ordenar por</label>
+        <div class="chaves" id="ordem" role="group" aria-labelledby="rotulo-ordem"></div>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="coluna-controles">
-      <div class="campo campo-deslizante">
-        <label for="rodada">Rodada <output id="valor-rodada">—</output>
-          <span class="dica-campo">começa na rodada do campeonato em andamento</span>
-        </label>
-        <input type="range" id="rodada" min="1" max="37" step="1" value="10">
-      </div>
+    <div class="campo campo-posicoes">
+      <label id="rotulo-alvo">Marca a alcançar
+        <span class="dica-campo">abre na mediana das edições do clube ·
+          <b id="rotulo-alvo-valor">—</b></span>
+      </label>
+      <div id="alvo" aria-labelledby="rotulo-alvo"></div>
     </div>
 
-    <p class="dica-campo" id="rodape-edicao"></p>
-    <p class="nota-ordem"><b>Ordem da rodada, não cronológica.</b> A conta olha
-      quem estava em cada posição ao fim da rodada escolhida e acompanha
-      <b>aquele clube</b> até o fim da edição — quem é 5º na 28ª rodada quase
-      nunca é o 5º do fim, e é o clube que acelera ou freia, não a posição.
-      Entram só as edições encerradas: a que está em andamento não tem depois.</p>
+    <p class="nota-ordem"><b>O eixo é o jogo, não a rodada.</b> A barra mostra
+      em que altura da campanha o clube chegou à marca — quanto mais curta,
+      mais cedo. A edição em que ele não chegou aparece com o trilho vazio e o
+      total que fez: é resposta, e não falta de resposta. A cor vem do que se
+      procura: verde no que é bom alcançar, cinza no empate, vermelho em
+      derrotas e gols sofridos.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de aceleração por posição"></canvas>
+            aria-label="card de jogos para alcançar X"></canvas>
   </section>
 
   <footer class="rodape">
@@ -115,6 +129,6 @@ try { document.documentElement.dataset.marca =
 
 <script type="module" src="/js/marca.js"></script>
 <script type="module" src="/js/tapetao.js"></script>
-<script type="module" src="/js/ritmo.js"></script>
+<script type="module" src="/js/alcancar_pagina.js"></script>
 </body>
 </html>

@@ -177,6 +177,43 @@ def test_as_campanhas_publicadas_batem_com_o_canonico(jogos):
     assert publicado == publicacao.campanhas_por_jogo(jogos)
 
 
+def test_o_detalhe_da_campanha_fecha_com_a_pontuacao(jogos):
+    """
+    As duas visões da mesma campanha têm de contar a mesma história: três
+    pontos por vitória mais um por empate é a pontuação que o outro arquivo
+    publica, jogo a jogo.
+
+    Se abrir, a tela de jogos para alcançar X estaria respondendo sobre uma
+    campanha que não é a que o resto do BI mostra.
+    """
+    from bi import publicacao
+
+    pontos = _dados_do_site("campanhas.json")
+    detalhe = _dados_do_site("campanhas_detalhe.json")
+    assert detalhe == publicacao.campanhas_detalhadas(jogos)
+
+    for serie, anos in detalhe["series"].items():
+        for ano, clubes in anos.items():
+            # A pontuação publicada leva o tapetão; o detalhe, não. Só os
+            # clubes punidos podem divergir, e só para menos.
+            por_equipe = {linha[0]: linha for linha in pontos["series"][serie][ano]}
+            for equipe, pos_fim, v, e, gp, gc in clubes:
+                assert len(v) == len(e) == len(gp) == len(gc)
+                acumulado = por_equipe[equipe][2]
+                assert len(acumulado) == len(v), f"{equipe} {serie}{ano}"
+                for i, (vi, ei) in enumerate(zip(v, e)):
+                    assert 3 * vi + ei >= acumulado[i], (
+                        f"{equipe} {serie}{ano} jogo {i + 1}: o detalhe tem "
+                        f"menos ponto do que a campanha"
+                    )
+                # Vitória e empate nunca passam do número de jogos.
+                for i, (vi, ei) in enumerate(zip(v, e)):
+                    assert vi + ei <= i + 1, f"{equipe} {serie}{ano} jogo {i + 1}"
+                # Gols nunca caem.
+                for serie_gols in (gp, gc):
+                    assert all(b >= a for a, b in zip(serie_gols, serie_gols[1:]))
+
+
 def test_o_tapetao_publicado_bate_com_a_aba(jogos):
     """
     A aba `Tapetão` é a fonte: o que o site publica tem de ser exatamente ela,
