@@ -67,9 +67,9 @@ export function montarCartao(estado) {
                          : "quem mais desacelera" },
       { valor: `${amostras}`, nome: "edições encerradas na conta" },
     ],
-    nota: `Ritmo é pontos por rodada da posição, e não de um clube: o antes `
-        + `é do time que estava ali na ${rodada}ª rodada, o depois é do que `
-        + `terminou na mesma posição. Clique para abrir as edições.`,
+    // Sem instrução de clique: o card é publicado como imagem, e numa
+    // imagem não há o que clicar.
+    nota: "Ritmo é a média de pontos conquistados por rodada.",
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
       const cheia = CARD.largura - MARGEM * 2;
@@ -125,8 +125,7 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
   cabecalho("depois", colunas.depois);
   cabecalho("mudança", colunas.chip.ate);
   if (barra) {
-    cabecalho("aceleração média · edições em que acelerou",
-              (barra.de + barra.ate) / 2, "center");
+    cabecalho("aceleração média", (barra.de + barra.ate) / 2, "center");
   }
 
   const alvos = [];
@@ -169,17 +168,12 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       ctx.stroke();
       ctx.restore();
 
-      const meia = (barra.ate - barra.de) / 2 - 46;
+      const meia = (barra.ate - barra.de) / 2 - 12;
       const comprimento = (Math.abs(linha.diferenca ?? 0) / extremo) * meia;
       const acelerou = (linha.diferenca ?? 0) >= 0;
       caixa(ctx, acelerou ? meioBarra : meioBarra - comprimento, meio - 8,
             Math.max(2, comprimento), 16,
             acelerou ? COR.verde : COR.negativo, 3);
-      texto(ctx, `${linha.aceleraram} de ${linha.amostras}`,
-            acelerou ? meioBarra + comprimento + 10
-                     : meioBarra - comprimento - 10, meio + 4,
-            { tamanho: 10.5, peso: 700, alinha: acelerou ? "left" : "right",
-              cor: COR.cinzaEscuro });
     }
 
     alvos.push({
@@ -190,8 +184,7 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       diferenca: {
         rotulo: comSinal(linha.diferenca),
         texto: `${num(linha.antes)} → ${num(linha.depois)} pontos por rodada `
-             + `da posição · ${linha.aceleraram} de ${linha.amostras} edições `
-             + `aceleraram`,
+             + `da posição`,
         cor: (linha.diferenca ?? 0) >= 0 ? COR.verde : COR.negativo,
       },
     });

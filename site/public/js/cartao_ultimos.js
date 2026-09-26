@@ -10,10 +10,10 @@
  * para a esquerda está em fase melhor do que a classificação ainda diz, e
  * quem despenca está vivendo de pontos que fez há dois meses.
  *
- * O número da posição ganha fundo quando a coluna discorda da tabela cheia:
- * azul em quem aparece mais acima do que termina, vermelho em quem aparece
- * mais abaixo. É o degradê que faz a fase de cada clube saltar aos olhos sem
- * precisar comparar vinte linhas de cabeça.
+ * As onze colunas saem sem cor. Cada uma já é uma tabela, e pintar vinte
+ * linhas por coluna com um segundo assunto — o quanto aquele recorte discorda
+ * da tabela cheia — dava uma parede de cor onde o olho precisa ler nomes. O
+ * que ganha destaque é o que se compara: a pontuação.
  *
  * O tapetão fica de fora dos recortes: punição de tribunal não é ponto de
  * jogo, e uma coluna de "últimos 3 jogos" com quatro pontos a menos seria uma
@@ -42,10 +42,9 @@ export function montarCartao(estado) {
   const largura = (CARD.largura - MARGEM * 2 - VAO * (colunas.length - 1))
                 / colunas.length;
 
-  // A posição na tabela cheia é a régua de todas as outras colunas.
+  // A posição na tabela cheia é a régua das outras colunas — na dica, que é
+  // onde ela cabe sem pintar a grade inteira.
   const naTabela = new Map(atual.tabela.map((c) => [c.equipe, c.pos]));
-  const maiorVariacao = Math.max(1, ...colunas.flatMap((coluna) =>
-    coluna.tabela.map((c) => Math.abs((naTabela.get(c.equipe) ?? c.pos) - c.pos))));
 
   const spec = {
     titulo: `Classificação pelos últimos jogos na Série ${serie} ${edicao.ano}`,
@@ -54,8 +53,9 @@ export function montarCartao(estado) {
     arquivo: `ultimos-${serie}-${edicao.ano}`,
     numeros: [],
     // A nota divide a linha com a assinatura: cabe uma frase.
-    nota: "Recorte cronológico e por equipe. O fundo do número da posição diz "
-        + "quantos lugares a coluna move o clube em relação à tabela cheia.",
+    nota: "Recorte cronológico e por equipe: com jogo adiado, os cinco últimos "
+        + "jogos de um clube podem ser de rodadas diferentes dos cinco do "
+        + "vizinho.",
     corpo: async (ctx, y) => {
       const topo = y + 26;
       const base = CARD.altura - 84;
@@ -66,7 +66,7 @@ export function montarCartao(estado) {
       const alvos = [];
       for (const [i, coluna] of colunas.entries()) {
         alvos.push(...await desenharColuna(ctx, {
-          coluna, naTabela, maiorVariacao, clubes, destaque,
+          coluna, naTabela, clubes, destaque,
           x: xDaColuna(i), largura, topo, alturaCabecalho, alturaLinha,
         }));
       }
@@ -93,7 +93,7 @@ export function montarCartao(estado) {
 
 /* -------------------------------------------------------------- colunas */
 async function desenharColuna(ctx, o) {
-  const { coluna, naTabela, maiorVariacao, clubes, destaque, x, largura, topo,
+  const { coluna, naTabela, clubes, destaque, x, largura, topo,
           alturaCabecalho, alturaLinha } = o;
   const inteira = coluna.n === null;
   const base = topo + alturaCabecalho + coluna.tabela.length * alturaLinha;
@@ -122,29 +122,25 @@ async function desenharColuna(ctx, o) {
       caixa(ctx, x - 2, yLinha + 1, largura + 4, alturaLinha - 2, COR.marca, 5);
     }
 
-    // O fundo do número diz o quanto a coluna discorda da tabela cheia.
-    const tom = inteira || marcado
-      ? null : tomDaVariacao(resumo?.variacao ?? 0, maiorVariacao);
-    if (tom) {
-      caixa(ctx, x + 2, meio - 11, 24, 22, tom.fundo, 5);
-    }
     texto(ctx, clube.pos, x + 14, meio + 4,
           { tamanho: 11.5, peso: 800, alinha: "center",
-            cor: marcado ? COR.marcaTexto : tom ? tom.tinta : COR.cinzaEscuro });
+            cor: marcado ? COR.marcaTexto : COR.cinzaEscuro });
 
     const lado = Math.min(20, alturaLinha - 6);
     const escudo = await imagem(clubes?.[clube.equipe]?.escudo);
     desenharEscudo(ctx, escudo, x + 30, meio - lado / 2, lado);
 
+    // A sigla identifica; a pontuação é o que se compara de coluna em coluna.
+    // Por isso ela vai maior e mais escura, e o código fica um tom atrás.
     const sigla = clubes?.[clube.equipe]?.sigla
       ?? nomeBonito(clube.equipe).slice(0, 3).toUpperCase();
     texto(ctx, sigla, x + 56, meio + 4,
-          { tamanho: 11.5, peso: 700,
-            cor: marcado ? COR.marcaTexto : COR.azulEscuro });
+          { tamanho: 11, peso: 700,
+            cor: marcado ? COR.marcaSuave : COR.cinzaTexto });
 
     texto(ctx, clube.pts, x + largura - 6, meio + 4,
-          { tamanho: 12, peso: 800, alinha: "right",
-            cor: marcado ? COR.marcaTexto : COR.cinzaTexto });
+          { tamanho: 13.5, peso: 800, alinha: "right",
+            cor: marcado ? COR.marcaTexto : COR.azulEscuro });
 
     alvos.push({
       equipe: clube.equipe,
@@ -157,28 +153,6 @@ async function desenharColuna(ctx, o) {
 
 const rotuloDaColuna = (n) =>
   (n === null ? "tabela cheia" : n === 1 ? "último jogo" : `últimos ${n}`);
-
-/**
- * O fundo do número da posição.
- *
- * Divergência zero não ganha cor: coluna que concorda com a tabela é o estado
- * normal, e pintá-la faria a grade inteira parecer informação.
- */
-function tomDaVariacao(variacao, maior) {
-  if (!variacao) return null;
-  const t = Math.min(1, Math.abs(variacao) / maior);
-  const escuro = variacao > 0 ? COR.positivo : COR.negativo;
-  return {
-    fundo: mistura(COR.fundo, escuro, 0.18 + t * 0.72),
-    tinta: t > 0.45 ? COR.branco : COR.azulEscuro,
-  };
-}
-
-function mistura(de, para, t) {
-  const canal = (cor, i) => parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
-  const valor = (i) => Math.round(canal(de, i) + (canal(para, i) - canal(de, i)) * t);
-  return `rgb(${valor(0)}, ${valor(1)}, ${valor(2)})`;
-}
 
 function dicaDaLinha(coluna, resumo) {
   if (!resumo) return { n: "", itens: [] };

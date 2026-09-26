@@ -51,8 +51,8 @@ export function montarCartao(estado) {
   const porAproveitamento = criterio === "aproveitamento";
 
   const spec = {
-    titulo: `Classificação da Série ${serie} ${edicao.ano}`,
-    subtitulo: descreverRecorte({ criterio, recorte, edicao }),
+    titulo: tituloDoCard({ serie, criterio, recorte, edicao }),
+    subtitulo: "",
     arquivo: `classificacao-${serie}-${edicao.ano}-${criterio}`,
     numeros: [],
     nota: "",
@@ -94,34 +94,41 @@ export function montarCartao(estado) {
 }
 
 /**
- * O recorte vai no subtítulo porque muda o que a tabela é.
+ * O título diz a tabela inteira, recorte incluído.
  *
- * Uma classificação até a 12ª rodada não é a classificação; sem dizer isso, o
- * card publicado sozinho vira um número errado. Já o critério só aparece
- * quando não é o de sempre: ninguém precisa ler "ordenado por pontos".
+ * Uma classificação até a 12ª rodada não é a classificação; publicada sozinha,
+ * sem isso escrito, vira um número errado. E isso é assunto de título, não de
+ * subtítulo: quem lê o card no Twitter lê a linha grande e segue em frente.
+ *
+ * Por isso o recorte entra em português corrido, e não em etiquetas separadas
+ * por ponto: "Classificação da Série A 2026 da 5ª à 12ª rodada" é uma frase;
+ * "Classificação da Série A 2026 · da 5ª à 12ª rodada" é um formulário.
+ *
+ * O critério só aparece quando não é o de sempre: ninguém precisa ler
+ * "classificação por pontos".
  */
-function descreverRecorte({ criterio, recorte, edicao }) {
-  const partes = [];
-  if (criterio === "aproveitamento") partes.push("Classificada por aproveitamento");
+function tituloDoCard({ serie, criterio, recorte, edicao }) {
+  const como = criterio === "aproveitamento" ? " por aproveitamento" : "";
+  let titulo = `Classificação${como} da Série ${serie} ${edicao.ano}`;
+
   if (recorte?.rodadaDe || recorte?.rodadaAte) {
     const de = recorte.rodadaDe ?? 1;
     const ate = recorte.rodadaAte ?? edicao.rodadas;
-    partes.push(de > 1 ? `da ${ordinal(de)} à ${ordinal(ate)} rodada`
-                       : `até a ${ordinal(ate)} rodada`);
+    titulo += de > 1 ? ` da ${ordinal(de)} à ${ordinal(ate)} rodada`
+                     : ` até a ${ordinal(ate)} rodada`;
   }
-  // Os últimos X são cronológicos e por equipe: dizer só "últimos 5 jogos"
+  // Os últimos X são cronológicos e por equipe: dizer só "nos últimos 5 jogos"
   // deixaria o leitor achar que são as 5 últimas rodadas.
   if (recorte?.ultimos) {
-    partes.push(`últimos ${recorte.ultimos} jogos de cada equipe`);
+    titulo += ` nos últimos ${recorte.ultimos} jogos de cada equipe`;
   }
   if (recorte?.dataDe || recorte?.dataAte) {
-    partes.push(recorte.dataDe && recorte.dataAte
-      ? `de ${dataBr(recorte.dataDe)} a ${dataBr(recorte.dataAte)}`
-      : recorte.dataDe ? `a partir de ${dataBr(recorte.dataDe)}`
-      : `até ${dataBr(recorte.dataAte)}`);
+    titulo += recorte.dataDe && recorte.dataAte
+      ? ` de ${dataBr(recorte.dataDe)} a ${dataBr(recorte.dataAte)}`
+      : recorte.dataDe ? ` a partir de ${dataBr(recorte.dataDe)}`
+      : ` até ${dataBr(recorte.dataAte)}`;
   }
-  if (!partes.length) return "";
-  return partes.join(" · ").replace(/^./, (c) => c.toUpperCase());
+  return titulo;
 }
 
 /* -------------------------------------------------------------- legenda */

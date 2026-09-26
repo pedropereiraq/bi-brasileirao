@@ -292,11 +292,12 @@ function cartaoDaSerie(estado) {
       }
 
       await painel(ctx, {
-        titulo: "maior degrau da edição", degrau: maior, clubes,
+        titulo: "maior degrau", detalhe: "da edição", degrau: maior, clubes,
         x: x1 + 18, y: topo, largura: 152,
       });
       await painel(ctx, {
-        titulo: `maior degrau na ${ultima?.rodada ?? 0}ª rodada`,
+        titulo: "maior degrau",
+        detalhe: `na ${ultima?.rodada ?? 0}ª rodada`,
         degrau: agora ? { ...agora, rodada: ultima.rodada } : null, clubes,
         x: x1 + 18, y: topo + 214, largura: 152,
       });
@@ -318,7 +319,7 @@ function cartaoDaSerie(estado) {
  * 4º e o 5º é uma coisa a 60 pontos e outra a 30, e é a dupla de números que
  * diz qual delas.
  */
-async function painel(ctx, { titulo, degrau, clubes, x, y, largura }) {
+async function painel(ctx, { titulo, detalhe, degrau, clubes, x, y, largura }) {
   const altura = 196;
   caixa(ctx, x, y, largura, altura, COR.branco, 8);
   ctx.save();
@@ -329,23 +330,22 @@ async function painel(ctx, { titulo, degrau, clubes, x, y, largura }) {
   ctx.stroke();
   ctx.restore();
 
-  texto(ctx, titulo, x + 12, y + 20,
-        { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
-          cor: COR.cinzaEscuro });
+  // O título em duas linhas: "maior degrau na 29ª rodada" numa linha só não
+  // cabe nos 152px do painel, e maiúscula com espaçamento não perdoa.
+  const rotulo = { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
+                   cor: COR.cinzaEscuro };
+  texto(ctx, titulo, x + 12, y + 18, rotulo);
+  texto(ctx, detalhe, x + 12, y + 31, rotulo);
   if (!degrau) {
-    texto(ctx, "—", x + 12, y + 56, { tamanho: 32, peso: 800, cor: COR.cinza });
+    texto(ctx, "—", x + 12, y + 68, { tamanho: 32, peso: 800, cor: COR.cinza });
     return;
   }
 
-  texto(ctx, degrau.distancia, x + 12, y + 60,
+  texto(ctx, degrau.distancia, x + 12, y + 70,
         { tamanho: 34, peso: 800, cor: COR.azul });
   texto(ctx, `do ${ordinal(degrau.posicao)} para o `
            + `${ordinal(degrau.posicao + 1)}`,
-        x + 12, y + 80, { tamanho: 11, cor: COR.cinzaEscuro });
-  if (degrau.rodada) {
-    texto(ctx, `na ${degrau.rodada}ª rodada`, x + 12, y + 96,
-          { tamanho: 11, cor: COR.cinzaEscuro });
-  }
+        x + 12, y + 90, { tamanho: 11, cor: COR.cinzaEscuro });
 
   const lado = 24;
   const linhas = [
@@ -353,7 +353,7 @@ async function painel(ctx, { titulo, degrau, clubes, x, y, largura }) {
     { equipe: degrau.abaixo.equipe, pontos: degrau.abaixo.pontos, peso: 400 },
   ];
   for (const [i, linha] of linhas.entries()) {
-    const yl = y + 116 + i * 38;
+    const yl = y + 118 + i * 38;
     desenharEscudo(ctx, await imagem(clubes?.[linha.equipe]?.escudo),
                    x + 12, yl, lado);
     texto(ctx, cortar(ctx, nomeBonito(linha.equipe), largura - 82, 11, linha.peso),
