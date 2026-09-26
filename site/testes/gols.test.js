@@ -12,8 +12,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  afastarEscudos, correlacaoComAPosicao, extremoDeGols, linhasDeGols,
-  ordenarPorGols, resumoDaEdicao, retaDaTendencia, valorDe,
+  afastarEscudos, extremoDeGols, linhasDeGols, ordenarPorGols, resumoDaEdicao,
+  retaDaTendencia, valorDe,
 } from "../public/js/gols.js";
 
 /** Um clube como o motor entrega: posição, pontos, jogos e os dois gols. */
@@ -103,22 +103,6 @@ test("o extremo devolve a linha inteira, e ignora quem não jogou", () => {
     "ALFA (SP)", "melhor defesa é o menor número de gols sofridos");
   assert.equal(extremoDeGols(linhas, "gc").equipe, "DELTA (BA)");
   assert.equal(extremoDeGols([], "gp"), null);
-});
-
-test("a correlação sai negativa quando quem marca mais fica na frente", () => {
-  const linhas = linhasDeGols([
-    clube("A (SP)", 1, { gp: 40 }), clube("B (SP)", 2, { gp: 30 }),
-    clube("C (SP)", 3, { gp: 20 }), clube("D (SP)", 4, { gp: 10 }),
-  ]);
-  assert.equal(correlacaoComAPosicao(linhas, "gp"), -1);
-
-  const iguais = linhasDeGols([
-    clube("A (SP)", 1, { gp: 10 }), clube("B (SP)", 2, { gp: 10 }),
-    clube("C (SP)", 3, { gp: 10 }),
-  ]);
-  assert.equal(correlacaoComAPosicao(iguais, "gp"), null,
-    "sem variação não há correlação que contar");
-  assert.equal(correlacaoComAPosicao(linhas.slice(0, 2), "gp"), null);
 });
 
 test("a reta da tendência recupera a reta que gerou os pontos", () => {

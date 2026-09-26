@@ -6,11 +6,16 @@
  * gráfico à direita mostra o que a coluna de números não mostra — a forma da
  * edição inteira.
  *
+ * Nos três gráficos o melhor canto é o mesmo: **em cima à direita**. Onde o
+ * eixo mede gols sofridos ele corre ao contrário — para a direita é sofrer
+ * menos —, e assim o leitor não precisa reaprender a tela a cada visão.
+ *
  * Em **ambos**, o gráfico cruza os dois lados: gols sofridos na horizontal,
  * marcados na vertical. Os dois eixos usam a mesma escala de propósito, e é
  * isso que faz a diagonal valer alguma coisa — em cima dela estão os clubes
- * de saldo zero, acima quem marca mais do que sofre. As duas retas pontilhadas
- * são as médias da edição, e partem o gráfico nos quatro tipos de campanha.
+ * de saldo zero, e acima dela quem marca mais do que sofre. As duas retas
+ * pontilhadas são as médias da edição, e partem o gráfico nos quatro tipos de
+ * campanha.
  *
  * Em **gols pró** e **gols contra**, o gráfico cruza a posição com os gols, e
  * a reta é a tendência da nuvem: ela responde de quanto adiantou marcar — ou
@@ -25,12 +30,14 @@ import {
 } from "/js/cartao.js";
 import { nomeBonito } from "/js/nomes.js";
 import {
-  afastarEscudos, correlacaoComAPosicao, extremoDeGols, linhasDeGols,
-  ordenarPorGols, resumoDaEdicao, retaDaTendencia, valorDe,
+  afastarEscudos, extremoDeGols, linhasDeGols, ordenarPorGols, resumoDaEdicao,
+  retaDaTendencia, valorDe,
 } from "/js/gols.js";
 
 const VAO = 48;
 const LADO_ESCUDO = 34;
+/** Posição, escudo e sigla: o que vem antes dos números em toda linha. */
+const LARGURA_IDENTIDADE = 96;
 
 const inteiro = (v) => (v === null || v === undefined ? "—" : String(Math.round(v)));
 const decimal = (v, casas = 2) =>
@@ -55,7 +62,12 @@ export function montarCartao(estado) {
   const mostrar = (v) => (porJogo ? decimal(v) : inteiro(v));
 
   const resumo = resumoDaEdicao(linhas);
-  const largura = visao === "ambos" ? 470 : 404;
+  // A largura do ranking sai das colunas que ele tem, e não de um número
+  // redondo: sobrando espaço, a sigla e os números ficavam nas duas pontas de
+  // um vão vazio.
+  const colunas = colunasDaVisao(visao);
+  const largura = LARGURA_IDENTIDADE
+                + colunas.reduce((soma, c) => soma + c.largura, 0);
 
   const spec = {
     titulo: tituloDaVisao(visao, serie, edicao.ano),
@@ -74,7 +86,7 @@ export function montarCartao(estado) {
 
       const alvos = [];
       alvos.push(...await desenharRanking(ctx, {
-        ordem, visao, medida, mostrar, valor, clubes, destaque,
+        ordem, colunas, criterio, medida, mostrar, valor, clubes, destaque,
         x: MARGEM, largura, topo, alturaCabecalho, alturaLinha,
       }));
 
@@ -117,18 +129,17 @@ function notaDaVisao(visao, porJogo) {
   const medida = porJogo ? "Gols por jogo = gols ÷ jogos disputados. " : "";
   if (visao === "ambos") {
     return porJogo
-      ? `${medida}Os dois eixos têm a mesma escala: a diagonal é o saldo zero, `
-        + `e as pontilhadas são as médias da edição.`
-      : `Os dois eixos têm a mesma escala: a diagonal é o saldo zero, e as `
-        + `pontilhadas são as médias da edição. Escudo que cairia sobre o `
-        + `vizinho se afasta, e o fio marca o ponto.`;
+      ? `${medida}Mesma escala nos dois eixos: a diagonal é o saldo zero, e as `
+        + `pontilhadas são as médias da edição.`
+      : `Mesma escala nos dois eixos: a diagonal é o saldo zero, e as `
+        + `pontilhadas são as médias da edição. O melhor canto é sempre o de `
+        + `cima à direita.`;
   }
   return porJogo
     ? `${medida}A reta é o ajuste de mínimos quadrados dos gols em função da `
       + `posição.`
-    : `A reta é o ajuste de mínimos quadrados dos gols em função da posição: `
-      + `correlação perto de zero quer dizer que a tabela daquele ano não se `
-      + `decidiu por aqui.`;
+    : `A reta é o ajuste de mínimos quadrados dos gols em função da posição. `
+      + `O melhor canto é sempre o de cima à direita.`;
 }
 
 function numerosDaVisao({ visao, linhas, resumo, medida, clubes, porJogo }) {
@@ -148,15 +159,13 @@ function numerosDaVisao({ visao, linhas, resumo, medida, clubes, porJogo }) {
     const campo = visao === "pro" ? "gp" : "gc";
     const primeiro = extremo(campo, visao === "pro");
     const ultimo = extremo(campo, visao !== "pro");
-    const r = correlacaoComAPosicao(linhas, campo, medida);
     return [
       daEdicao,
       { valor: mostrar(valorDe(primeiro, campo, medida)),
         nome: `${visao === "pro" ? "maior ataque" : "melhor defesa"} · ${sigla(primeiro)}` },
       { valor: mostrar(valorDe(ultimo, campo, medida)),
-        nome: `${visao === "pro" ? "menor ataque" : "pior defesa"} · ${sigla(ultimo)}` },
-      { valor: r === null ? "—" : comSinal(r, 2),
-        nome: "correlação com a posição", destaque: "cinza" },
+        nome: `${visao === "pro" ? "menor ataque" : "pior defesa"} · ${sigla(ultimo)}`,
+        destaque: "cinza" },
     ];
   }
 
@@ -175,12 +184,9 @@ function numerosDaVisao({ visao, linhas, resumo, medida, clubes, porJogo }) {
 }
 
 /* -------------------------------------------------------------- ranking */
-async function desenharRanking(ctx, o) {
-  const { ordem, visao, medida, mostrar, valor, clubes, destaque,
-          x, largura, topo, alturaCabecalho, alturaLinha } = o;
-  const porJogo = medida === "media";
-
-  const colunas = visao === "ambos"
+/** As colunas de números de cada visão, na ordem em que aparecem. */
+function colunasDaVisao(visao) {
+  return visao === "ambos"
     ? [
         { rotulo: "gp", campo: "gp", largura: 76, tom: COR.positivo },
         { rotulo: "gc", campo: "gc", largura: 76, tom: COR.negativo },
@@ -193,6 +199,24 @@ async function desenharRanking(ctx, o) {
         { rotulo: "j", campo: "j", largura: 52 },
         { rotulo: "pts", campo: "pts", largura: 62 },
       ];
+}
+
+/**
+ * O que o ranking é, dito no cabeçalho.
+ *
+ * Ordenado por gols, ele deixa de ser a classificação: a coluna da esquerda
+ * passa a numerar os melhores ataques, ou as melhores defesas, e dizer
+ * "classificação" ali seria trocar o nome de duas coisas diferentes.
+ */
+const tituloDoRanking = (criterio) =>
+  (criterio === "pro" ? "melhores ataques"
+ : criterio === "contra" ? "melhores defesas" : "classificação");
+
+async function desenharRanking(ctx, o) {
+  const { ordem, colunas, criterio, medida, mostrar, valor, clubes, destaque,
+          x, largura, topo, alturaCabecalho, alturaLinha } = o;
+  const porJogo = medida === "media";
+  const porPontos = criterio === "pontos";
 
   // Cada degradê é calibrado dentro da própria coluna: é lá que a comparação
   // acontece. Numa edição em que ninguém passa de 40 gols, esticar a escala
@@ -212,7 +236,7 @@ async function desenharRanking(ctx, o) {
     posicoes.unshift({ ...coluna, x: cursor, centro: cursor + coluna.largura / 2 });
   }
 
-  texto(ctx, porJogo ? "por jogo" : "na edição", x + 4, topo + 12,
+  texto(ctx, tituloDoRanking(criterio), x + 4, topo + 12,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .8,
           cor: COR.cinzaEscuro });
   for (const coluna of posicoes) {
@@ -230,7 +254,9 @@ async function desenharRanking(ctx, o) {
 
     if (marcado) caixa(ctx, x - 3, yLinha, largura + 6, alturaLinha - 2, COR.marca, 5);
 
-    texto(ctx, linha.pos, x + 16, meio + 4,
+    // Ordenado por gols, o número da esquerda é o lugar naquele ranking, e
+    // não a posição na tabela — que continua na dica e no gráfico.
+    texto(ctx, porPontos ? linha.pos : i + 1, x + 16, meio + 4,
           { tamanho: 12, peso: 800, alinha: "center",
             cor: marcado ? COR.marcaTexto : COR.cinzaEscuro });
 
@@ -348,7 +374,10 @@ async function nuvemDeGols(ctx, o) {
   const faixa = faixaDe([
     ...jogaram.map((l) => valor(l, "gp")), ...jogaram.map((l) => valor(l, "gc")),
   ]);
-  const xDe = (v) => area.x0 + ((v - faixa.minimo) / (faixa.maximo - faixa.minimo))
+  // O eixo dos sofridos corre ao contrário: para a direita é sofrer menos, e
+  // assim o melhor canto do gráfico é o de cima à direita, como nas outras
+  // duas visões.
+  const xDe = (v) => area.x1 - ((v - faixa.minimo) / (faixa.maximo - faixa.minimo))
                              * (area.x1 - area.x0);
   const yDe = (v) => area.y1 - ((v - faixa.minimo) / (faixa.maximo - faixa.minimo))
                              * (area.y1 - area.y0);
@@ -392,7 +421,7 @@ async function nuvemDeGols(ctx, o) {
         { tamanho: 10, peso: 700, alinha: "right", cor: COR.cinzaEscuro });
 
   quadrantes(ctx, area);
-  texto(ctx, "gols sofridos →", (area.x0 + area.x1) / 2, area.y1 + 38,
+  texto(ctx, "menos gols sofridos →", (area.x0 + area.x1) / 2, area.y1 + 38,
         { tamanho: 11.5, peso: 700, alinha: "center", maiuscula: true,
           espaco: .9, cor: COR.cinzaEscuro });
   ctx.save();
@@ -420,8 +449,14 @@ async function golsPorPosicao(ctx, o) {
 
   const total = linhas.length;
   const faixa = faixaDe(jogaram.map((l) => valor(l, campo)));
-  const xDe = (v) => area.x0 + ((v - faixa.minimo) / (faixa.maximo - faixa.minimo))
-                             * (area.x1 - area.x0);
+  // Sofrer menos é melhor: nessa visão o eixo corre ao contrário, para que o
+  // melhor canto seja o de cima à direita nas três telas.
+  const invertido = campo === "gc";
+  const xDe = (v) => {
+    const t = (v - faixa.minimo) / (faixa.maximo - faixa.minimo);
+    return invertido ? area.x1 - t * (area.x1 - area.x0)
+                     : area.x0 + t * (area.x1 - area.x0);
+  };
   const altura = (area.y1 - area.y0) / total;
   const yDe = (pos) => area.y0 + (pos - 0.5) * altura;
 
@@ -459,7 +494,7 @@ async function golsPorPosicao(ctx, o) {
     ctx.restore();
   }
 
-  texto(ctx, visao === "pro" ? "gols marcados →" : "gols sofridos →",
+  texto(ctx, visao === "pro" ? "gols marcados →" : "menos gols sofridos →",
         (area.x0 + area.x1) / 2, area.y1 + 38,
         { tamanho: 11.5, peso: 700, alinha: "center", maiuscula: true,
           espaco: .9, cor: COR.cinzaEscuro });
@@ -508,10 +543,10 @@ function pontilhada(ctx, x0, y0, x1, y1) {
 /** Os quatro tipos de campanha, um em cada canto. */
 function quadrantes(ctx, area) {
   const cantos = [
-    ["marca muito · sofre pouco", area.x0 + 12, area.y0 + 14, "left"],
-    ["marca muito · sofre muito", area.x1 - 12, area.y0 + 14, "right"],
-    ["marca pouco · sofre pouco", area.x0 + 12, area.y1 - 10, "left"],
-    ["marca pouco · sofre muito", area.x1 - 12, area.y1 - 10, "right"],
+    ["marca muito · sofre muito", area.x0 + 12, area.y0 + 14, "left"],
+    ["marca muito · sofre pouco", area.x1 - 12, area.y0 + 14, "right"],
+    ["marca pouco · sofre muito", area.x0 + 12, area.y1 - 10, "left"],
+    ["marca pouco · sofre pouco", area.x1 - 12, area.y1 - 10, "right"],
   ];
   for (const [rotulo, x, y, alinha] of cantos) {
     texto(ctx, rotulo, x, y,

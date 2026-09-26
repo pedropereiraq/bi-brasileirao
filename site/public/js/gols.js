@@ -112,37 +112,6 @@ export function extremoDeGols(linhas, campo, { medida = "total",
 }
 
 /**
- * Correlação de Pearson entre a posição e os gols.
- *
- * Responde de quanto adianta fazer gol naquela edição. Vem negativa para gols
- * marcados — quem marca mais termina com o número de posição menor — e
- * positiva para gols sofridos. Perto de zero quer dizer que a tabela daquele
- * ano não foi decidida por ali.
- *
- * `null` com menos de três clubes ou sem variação nenhuma: correlação de dois
- * pontos é sempre ±1, e não diz nada.
- */
-export function correlacaoComAPosicao(linhas, campo, medida = "total") {
-  const lista = (linhas ?? []).filter((l) => l.j > 0);
-  if (lista.length < 3) return null;
-
-  const xs = lista.map((l) => l.pos);
-  const ys = lista.map((l) => valorDe(l, campo, medida));
-  const media = (v) => v.reduce((s, n) => s + n, 0) / v.length;
-  const mx = media(xs), my = media(ys);
-
-  let cima = 0, sx = 0, sy = 0;
-  for (let i = 0; i < xs.length; i++) {
-    const dx = xs[i] - mx, dy = ys[i] - my;
-    cima += dx * dy;
-    sx += dx * dx;
-    sy += dy * dy;
-  }
-  if (sx === 0 || sy === 0) return null;
-  return cima / Math.sqrt(sx * sy);
-}
-
-/**
  * A reta que resume a nuvem, para o gráfico de posição × gols.
  *
  * Mínimos quadrados de gols em função da posição. Devolve `null` quando não há
