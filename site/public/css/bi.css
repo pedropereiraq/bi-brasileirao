@@ -527,6 +527,9 @@ table.mini-classificacao {
 .campo-trilha { flex: 1 1 380px; min-width: 280px; }
 .campo-trilha > label { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 
+/* Trilha que ainda não foi usada: existe, mas não está dizendo nada. */
+.trilha-apagada { opacity: .45; }
+
 /* A trilha serve às posições e ao que cresce — rodadas, jogos. */
 .trilha {
   position: relative; height: 56px; margin: 10px 14px 0;

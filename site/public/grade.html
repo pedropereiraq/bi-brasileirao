@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dificuldade de tabela · Cards ECBahia Números</title>
+<title>Classificação por rodada · Cards ECBahia Números</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@ try { document.documentElement.dataset.marca =
 
   <header class="topo">
     <div>
-      <h1>Dificuldade de tabela</h1>
-      <p class="subtitulo">Quem pegou a parte pesada do calendário.</p>
+      <h1>Classificação por rodada</h1>
+      <p class="subtitulo">Quem esteve em cada posição, da primeira rodada à última.</p>
     </div>
     <div class="marca">
       <img src="/img/marca.png" alt="ecbahia números">
@@ -51,9 +51,9 @@ try { document.documentElement.dataset.marca =
     <a href="/jogos.html">Jogos</a>
     <a href="/gols.html">Gols</a>
     <a href="/ultimos.html">Últimos X jogos</a>
-    <a href="/grade.html">Classificação por rodada</a>
+    <a href="/grade.html" aria-current="page">Classificação por rodada</a>
     <a href="/mando.html">Mando de campo</a>
-    <a href="/dificuldade.html" aria-current="page">Dificuldade de tabela</a>
+    <a href="/dificuldade.html">Dificuldade de tabela</a>
     <a href="/fmi.html">FMI</a>
     <a href="/turnos.html">Comparativo de turnos</a>
     <a href="/adversarios.html">Resultados por adversário</a>
@@ -81,58 +81,38 @@ try { document.documentElement.dataset.marca =
         <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
       </div>
       <div class="campo">
-        <label for="ano">Edição</label>
+        <label for="ano">Ano</label>
         <select id="ano"></select>
       </div>
-      <div class="campo">
-        <label id="rotulo-quando">Quais jogos
-          <span class="dica-campo">o que já passou explica a campanha; o que
-            falta prevê a reta final</span>
+      <div class="campo campo-equipe">
+        <label for="destaque">Destacar equipe
+          <span class="dica-campo">opcional · também dá para clicar num escudo</span>
         </label>
-        <div class="chaves" id="quando" role="group" aria-labelledby="rotulo-quando"></div>
+        <select id="destaque"></select>
       </div>
       <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
     </div>
 
-    <div class="filtros-linha">
-      <div class="campo">
-        <label id="rotulo-local">Local do jogo
-          <span class="dica-campo">considerando, o adversário vale a campanha
-            dele no campo em que o jogo acontece</span>
-        </label>
-        <div class="chaves" id="local" role="group" aria-labelledby="rotulo-local"></div>
-      </div>
-      <div class="campo">
-        <label id="rotulo-criterio">Dificuldade
-          <span class="dica-campo">a posição é a leitura da tabela; o
-            aproveitamento mede a distância real entre os adversários</span>
-        </label>
-        <div class="chaves" id="criterio" role="group" aria-labelledby="rotulo-criterio"></div>
-      </div>
-      <div class="campo">
-        <label id="rotulo-ordem">Ordenar por</label>
-        <div class="chaves" id="ordem" role="group" aria-labelledby="rotulo-ordem"></div>
-      </div>
-      <div class="campo campo-equipe">
-        <label for="destaque">Abrir no painel
-          <span class="dica-campo">ou clique na equipe dentro do card</span>
-        </label>
-        <select id="destaque"></select>
-      </div>
+    <div class="campo campo-posicoes">
+      <label id="rotulo-posicoes">Contar rodadas nestas posições
+        <span class="dica-campo" id="resumo-faixa">sem faixa escolhida</span>
+        <button type="button" class="chave" id="limpar-faixa" hidden>Limpar faixa</button>
+      </label>
+      <div id="posicoes" aria-labelledby="rotulo-posicoes"></div>
     </div>
 
     <p class="dica-campo" id="rodape-edicao"></p>
-    <p class="nota-ordem"><b>As faixas G-4 a Z-4 são a classificação de hoje.</b>
-      São cinco blocos de quatro posições — G-4 é do 1º ao 4º, G-8 do 5º ao 8º,
-      e assim por diante até o Z-4 —, e dizem de que região do campeonato veio
-      o adversário. Elas não mudam com o local do jogo: mudar de campo muda a
-      campanha do adversário, não a região da tabela em que ele vive.</p>
+    <p class="nota-ordem"><b>Cada coluna é uma rodada, e cada linha é um lugar
+      da tabela.</b> O escudo mostra quem dormiu naquela posição ao fim da
+      rodada. Escolha uma faixa de posições — na trilha acima ou clicando no
+      número da posição no card — para ver quantas rodadas cada clube passou
+      ali. Clicar num escudo acende o clube em todas as rodadas.</p>
   </section>
 
   <section class="palco-card">
     <p id="aviso-card" class="aviso-card" hidden></p>
     <canvas id="card" width="2400" height="1350"
-            aria-label="card de dificuldade de tabela"></canvas>
+            aria-label="card de classificação por rodada"></canvas>
   </section>
 
   <footer class="rodape">
@@ -145,6 +125,6 @@ try { document.documentElement.dataset.marca =
 
 <script type="module" src="/js/marca.js"></script>
 <script type="module" src="/js/tapetao.js"></script>
-<script type="module" src="/js/dificuldade.js"></script>
+<script type="module" src="/js/grade_pagina.js"></script>
 </body>
 </html>
