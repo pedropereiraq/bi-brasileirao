@@ -12,8 +12,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  campanhasDaSerie, descontoNoRecorte, montarRanking, pagina, paginas,
-  pontosNoRecorte,
+  POR_PAGINA, campanhasDaSerie, descontoNoRecorte, montarRanking, pagina,
+  paginas, pontosNoRecorte,
 } from "../public/js/campanhas_historicas.js";
 
 /**
@@ -170,6 +170,11 @@ test("os filtros cortam por ano, por equipe e por posição final", () => {
 
 test("a paginação não sai do lugar quando pedem página que não existe", () => {
   const ranking = Array.from({ length: 250 }, (_, i) => ({ posicao: i + 1 }));
+
+  // A página fecha em cem: "do 101º ao 200º" se lê sem conta.
+  assert.equal(POR_PAGINA, 100);
+  assert.equal(paginas(250), 3);
+  assert.equal(pagina(ranking, 2)[0].posicao, 101);
 
   assert.equal(paginas(250, 104), 3);
   assert.equal(paginas(0, 104), 1, "ranking vazio ainda é uma página");

@@ -23,8 +23,13 @@
  * ordem em que aconteceram. Sem `import` nenhum, para o Node carregar.
  */
 
-/** Quantas campanhas cabem numa página do card. */
-export const POR_PAGINA = 104;
+/**
+ * Quantas campanhas por página do card.
+ *
+ * Cem, e não o quanto coubesse: "do 101º ao 200º" se lê sem conta, e é o
+ * número que alguém repete em voz alta ao falar do card.
+ */
+export const POR_PAGINA = 100;
 
 /** O desfecho da edição, pela chave do tapetão. */
 const fimDaEdicao = (edicao, semTapetao) =>

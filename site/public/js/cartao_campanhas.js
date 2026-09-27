@@ -5,9 +5,9 @@
  * série. Nenhum card cabe isso, e nem deveria: o que se publica é uma página do
  * ranking — as cem primeiras, as cem seguintes —, e é a tela que vira a página.
  *
- * Quatro colunas, e não uma lista comprida. Uma coluna de vinte e seis linhas
- * usa a altura inteira do card e sobra largura para as outras três; uma lista
- * única de vinte e seis nomes deixaria três quartos do card vazios.
+ * Quatro colunas de vinte e cinco linhas, e não uma lista comprida. As quatro
+ * usam a altura inteira do card; uma lista única de vinte e cinco nomes
+ * deixaria três quartos dele vazios.
  *
  * O título diz o recorte por extenso, porque é ele que dá sentido ao número:
  * "melhores campanhas" e "melhores campanhas nos 10 primeiros jogos fora de
