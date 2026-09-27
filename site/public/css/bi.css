@@ -81,15 +81,49 @@ a { color: var(--azul); }
 .regua i:nth-child(2) { flex: 2; background: var(--vermelho); }
 .regua i:nth-child(3) { flex: 1; background: var(--cinza); }
 
+/* O menu: seis seções numa linha, cada uma com a lista suspensa das telas
+   dela. Com trinta telas enfileiradas nada se achava — a lista era longa
+   demais para ser lida e curta demais para ser procurada. */
 .navegacao { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
-.navegacao a {
+.menu-inicio, .menu-botao {
+  font: inherit; border: 0; cursor: pointer;
   padding: 5px 11px; border-radius: 99px; font-size: 13px; font-weight: 600;
   text-decoration: none; color: var(--cinza-texto); background: var(--cinza-claro);
 }
-.navegacao a[aria-current="page"] { background: var(--azul); color: var(--branco); }
-.navegacao a:hover:not([aria-current]) { background: var(--azul-lavado); color: var(--azul); }
+.menu-inicio[aria-current="page"],
+.menu-botao[aria-current="page"],
+.menu-botao[data-aqui] { background: var(--azul); color: var(--branco); }
+.menu-inicio:hover:not([aria-current]),
+.menu-botao:not([data-aqui]):not([aria-current]):hover {
+  background: var(--azul-lavado); color: var(--azul);
+}
+button.menu-botao::after {
+  content: "›"; display: inline-block; margin-left: 6px;
+  transform: rotate(90deg); font-size: 14px; line-height: 1;
+}
+button.menu-botao[aria-expanded="true"]::after { transform: rotate(-90deg); }
+/* O botão aberto continua aceso depois que o mouse sai dele: o menu está na
+   frente, e não saber qual deles abriu é procurar de novo. */
+button.menu-botao[aria-expanded="true"]:not([data-aqui]) {
+  background: var(--azul-lavado); color: var(--azul);
+}
 
-.navegacao .separador { flex: 1; }
+.menu { position: relative; }
+.menu-lista {
+  position: absolute; top: calc(100% + 5px); left: 0; z-index: 20;
+  min-width: 232px; padding: 5px 0;
+  background: var(--branco); border: 1px solid var(--linha);
+  border-radius: var(--raio); box-shadow: var(--sombra);
+}
+.menu-lista a {
+  display: block; padding: 6px 14px; font-size: 13px;
+  text-decoration: none; color: var(--cinza-texto); white-space: nowrap;
+}
+.menu-lista a:hover { background: var(--azul-lavado); color: var(--azul); }
+.menu-lista a[aria-current="page"] {
+  background: var(--azul-lavado); color: var(--azul-escuro); font-weight: 700;
+}
+
 .botao-card {
   font: inherit; font-size: 13px; font-weight: 700; padding: 5px 13px;
   border: 1px solid var(--azul); border-radius: 99px; background: var(--branco);
@@ -762,11 +796,19 @@ table.mini-classificacao {
 
 /* ------------------------------------------------------------- a capa */
 .telas {
-  display: grid; gap: 14px; margin-top: 22px;
+  display: grid; gap: 14px; margin-top: 10px; margin-bottom: 28px;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
 }
+/* As mesmas seções do menu, e na mesma ordem: a capa é o menu aberto por
+   inteiro, e duas divisões diferentes para as mesmas trinta telas seriam
+   duas coisas para decorar. */
+.titulo-secao {
+  font-family: "Bree Serif", Georgia, serif; font-weight: 400;
+  font-size: 20px; color: var(--azul); margin-top: 26px;
+  padding-bottom: 7px; border-bottom: 1px solid var(--linha);
+}
 .tela { display: block; padding: 16px 18px; text-decoration: none; color: inherit; }
-.tela h2 { font-size: 19px; margin-bottom: 6px; }
+.tela h3 { font-size: 18px; margin-bottom: 6px; color: var(--azul-escuro); }
 .tela p { margin: 0; font-size: 13.5px; color: var(--cinza-texto); }
 .tela:hover { border-color: var(--azul); }
 
