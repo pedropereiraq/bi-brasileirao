@@ -24,6 +24,7 @@ import json
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from . import canonico
@@ -315,6 +316,88 @@ def campanhas_detalhadas(jogos: pd.DataFrame) -> dict:
     }
 
 
+def campanhas_jogo_a_jogo(jogos: pd.DataFrame) -> dict:
+    """
+    Cada jogo de cada campanha: a rodada, o mando e o que ele rendeu.
+
+    O ranking histórico de campanhas recorta por rodada, por ordem de jogo e
+    por mando, e nenhuma base publicada responde às três. `posicoes.json` é
+    indexado por rodada e não sabe de mando; `campanhas_detalhe.json` é
+    indexado por jogo e também não. Recortar por casa e fora exige o jogo
+    cru — é o único lugar onde o mando ainda existe.
+
+    O mando sai como uma letra por jogo e o ponto como um dígito, numa string:
+    são duas listas de trinta e oito valores de um caractere por clube, e um
+    array de números custaria três vezes isso para dizer o mesmo. A rodada vai
+    como número porque ela chega a dois dígitos e é comparada, não lida.
+
+    As duas posições finais vêm junto — com tapetão e sem — para a tela não
+    precisar baixar `posicoes.json` inteiro atrás de vinte pares por edição.
+    Edição em andamento não tem desfecho: `fim` é `None` e a tela mostra o
+    traço, porque campanha em curso não terminou em lugar nenhum.
+    """
+    from . import derivadas, motor
+
+    recorte = _recorte_bi(jogos)
+    completas = derivadas.edicoes_completas(jogos)
+
+    longo = motor.formato_longo(recorte)
+    longo = longo[longo["contabiliza"]].copy()
+    longo["pontos"] = np.where(longo["gp"] > longo["gc"], 3,
+                               np.where(longo["gp"] == longo["gc"], 1, 0))
+    longo = longo.sort_values(["serie", "ano", "equipe", "data", "rodada"])
+
+    # As duas ordens finais: a tabela como ficou e a que teria ficado sem as
+    # punições. Só a última etapa de cada clube interessa aqui.
+    com = motor.campanha(recorte, ordem="rodada", criterio="CT", local="todos")
+    sem = motor.campanha(recorte, ordem="rodada", criterio="ST", local="todos")
+
+    series: dict[str, dict[str, dict]] = {}
+    for (serie, ano), grupo in longo.groupby(["serie", "ano"], sort=True,
+                                             observed=True):
+        chave_serie, chave_ano = str(serie), str(int(ano))
+        encerrada = (ano, serie) in completas
+        clubes = sorted(grupo["equipe"].unique())
+
+        edicao = {
+            "clubes": clubes,
+            "encerrada": encerrada,
+            "fim": _desfecho(com, serie, ano, clubes, encerrada),
+            "rodadas": [], "mando": [], "pontos": [],
+        }
+        for clube in clubes:
+            do_clube = grupo[grupo["equipe"] == clube]
+            edicao["rodadas"].append([int(r) for r in do_clube["rodada"]])
+            edicao["mando"].append(
+                "".join("C" if m == "casa" else "F" for m in do_clube["mando"]))
+            edicao["pontos"].append(
+                "".join(str(int(p)) for p in do_clube["pontos"]))
+
+        outro = _desfecho(sem, serie, ano, clubes, encerrada)
+        if outro != edicao["fim"]:
+            edicao["fim_st"] = outro
+
+        series.setdefault(chave_serie, {})[chave_ano] = edicao
+
+    return {
+        "campos": {"mando": "C de casa, F de fora",
+                   "pontos": "3, 1 ou 0, um dígito por jogo",
+                   "fim": "[posição final, pontos]"},
+        "series": series,
+    }
+
+
+def _desfecho(tabela, serie, ano, clubes, encerrada) -> list:
+    """A posição e a pontuação final de cada clube, na ordem de `clubes`."""
+    if not encerrada:
+        return [None] * len(clubes)
+
+    da_edicao = tabela[(tabela["serie"] == serie) & (tabela["ano"] == ano)]
+    ultima = da_edicao[da_edicao["etapa"] == int(da_edicao["etapa"].max())]
+    por_clube = {l.equipe: [int(l.pos), int(l.pts)] for l in ultima.itertuples()}
+    return [por_clube.get(nome) for nome in clubes]
+
+
 def distribuicao_de_resultados(jogos: pd.DataFrame) -> dict:
     """
     Quantos jogos cada rodada deu ao mandante, ao empate e ao visitante.
@@ -551,6 +634,7 @@ def construir(jogos: pd.DataFrame | None = None,
     _gravar(DESTINO / "referencias.json", referencias_por_posicao(jogos))
     _gravar(DESTINO / "campanhas.json", campanhas_por_jogo(jogos))
     _gravar(DESTINO / "campanhas_detalhe.json", campanhas_detalhadas(jogos))
+    _gravar(DESTINO / "campanhas_jogos.json", campanhas_jogo_a_jogo(jogos))
     _gravar(DESTINO / "resultados.json", distribuicao_de_resultados(jogos))
     _gravar(DESTINO / "posicoes.json", posicoes_por_rodada(jogos))
     _gravar(DESTINO / "tapetao.json",

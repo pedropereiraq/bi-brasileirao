@@ -214,6 +214,42 @@ def test_o_detalhe_da_campanha_fecha_com_a_pontuacao(jogos):
                     assert all(b >= a for a, b in zip(serie_gols, serie_gols[1:]))
 
 
+def test_a_campanha_jogo_a_jogo_fecha_com_a_pontuacao_final(jogos):
+    """
+    A soma dos pontos jogo a jogo é a pontuação da campanha **sem tapetão** —
+    ponto tirado no tribunal não saiu de jogo nenhum, e por isso a conferência
+    é contra `fim_st` onde ele existe. As três listas de um clube têm o mesmo
+    tamanho: são o mesmo jogo visto por três colunas, e uma delas mais curta
+    desalinharia a rodada do placar.
+    """
+    from bi import publicacao
+
+    dados = publicacao.campanhas_jogo_a_jogo(jogos)
+
+    for serie, anos in dados["series"].items():
+        for ano, edicao in anos.items():
+            onde = f"Série {serie} {ano}"
+            fim = edicao.get("fim_st", edicao["fim"])
+
+            for i, clube in enumerate(edicao["clubes"]):
+                rodadas = edicao["rodadas"][i]
+                mando = edicao["mando"][i]
+                pontos = edicao["pontos"][i]
+
+                assert len(rodadas) == len(mando) == len(pontos), f"{onde} {clube}"
+                assert set(mando) <= {"C", "F"}, f"{onde} {clube}"
+                assert set(pontos) <= {"0", "1", "3"}, f"{onde} {clube}"
+
+                if edicao["encerrada"]:
+                    somados = sum(int(p) for p in pontos)
+                    assert somados == fim[i][1], f"{onde} {clube}"
+                    # Turno e returno: metade em casa, metade fora. A diferença
+                    # de um é o jogo que não chegou a acontecer — Atlético-MG e
+                    # Chapecoense na Série A de 2016, decidido na mesa.
+                    diferenca = abs(mando.count("C") - mando.count("F"))
+                    assert diferenca <= 1, f"{onde} {clube}"
+
+
 def test_a_distribuicao_de_resultados_fecha_com_os_jogos(jogos):
     """
     Todo jogo realizado cai em exatamente uma das três colunas: vitória do

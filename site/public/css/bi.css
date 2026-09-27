@@ -798,6 +798,15 @@ table.mini-classificacao {
 .pinta.negativa { background: var(--negativo); }
 
 /* ------------------------------------------------------------- a capa */
+/* O paginador do ranking histórico: navegação, e não filtro. Fica embaixo de
+   tudo porque escolher a página é a última coisa que se faz. */
+.paginador {
+  display: flex; align-items: center; gap: 10px; margin-top: 16px;
+}
+.paginador input[type="range"] { flex: 1; max-width: 420px; }
+.paginador .chave { min-width: 34px; font-size: 15px; line-height: 1; }
+.paginador .chave:disabled { opacity: .4; cursor: default; }
+
 .telas {
   display: grid; gap: 14px; margin-top: 10px; margin-bottom: 28px;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
