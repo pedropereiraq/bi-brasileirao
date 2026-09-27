@@ -12,8 +12,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  POR_PAGINA, campanhasDaSerie, descontoNoRecorte, montarRanking, pagina,
-  paginas, pontosNoRecorte,
+  POR_PAGINA, campanhasDaSerie, descontoNoRecorte, montarRanking,
+  montarRankingDeEquipes, pagina, paginas, pontosNoRecorte,
 } from "../public/js/campanhas_historicas.js";
 
 /**
@@ -183,4 +183,43 @@ test("a paginação não sai do lugar quando pedem página que não existe", () 
   assert.equal(pagina(ranking, 9, 104)[0].posicao, 209, "cai na última");
   assert.equal(pagina(ranking, 0, 104)[0].posicao, 1);
   assert.deepEqual(pagina([], 1, 104), []);
+});
+
+test("o ranking por equipe soma as edições do clube", () => {
+  const equipes = montarRankingDeEquipes(dados, { serie: "A" });
+
+  // O ALFA jogou as três edições do fixture: 7 + 7 + 4 pontos em 8 jogos.
+  const alfa = equipes.find((e) => e.equipe === "ALFA (SP)");
+  assert.deepEqual([alfa.pontos, alfa.jogos, alfa.edicoes], [18, 8, 3]);
+  assert.equal(alfa.melhorFim, 1, "o melhor desfecho que ele já teve");
+  assert.equal(Math.round(alfa.aproveitamento * 100), 75);
+
+  // O GAMA só existe em 2024, e não vira linha de três edições.
+  const gama = equipes.find((e) => e.equipe === "GAMA (MG)");
+  assert.deepEqual([gama.pontos, gama.jogos, gama.edicoes], [1, 3, 1]);
+
+  assert.deepEqual(equipes.map((e) => e.posicao), [1, 2, 3]);
+  assert.ok(equipes[0].pontos >= equipes[1].pontos, "do maior para o menor");
+});
+
+test("o recorte vale igual no ranking por equipe", () => {
+  // Só a 1ª rodada: o ALFA fez 3 em 2024, 3 em 2025 e 3 em 2026.
+  const primeira = montarRankingDeEquipes(dados,
+    { serie: "A", porRodada: true, de: 1, ate: 1 });
+  const alfa = primeira.find((e) => e.equipe === "ALFA (SP)");
+  assert.deepEqual([alfa.pontos, alfa.jogos, alfa.edicoes], [9, 3, 3]);
+
+  // Recorte por ano, e o clube que some do intervalo some do ranking.
+  const so2024 = montarRankingDeEquipes(dados,
+    { serie: "A", deAno: 2024, ateAno: 2024 });
+  assert.equal(so2024.length, 3);
+  assert.equal(so2024.find((e) => e.equipe === "ALFA (SP)").edicoes, 1);
+
+  const soBeta = montarRankingDeEquipes(dados,
+    { serie: "A", equipes: new Set(["BETA (RJ)"]) });
+  assert.deepEqual(soBeta.map((e) => e.equipe), ["BETA (RJ)"]);
+
+  // Recorte sem jogo nenhum não devolve clubes zerados.
+  assert.deepEqual(montarRankingDeEquipes(dados,
+    { serie: "A", porRodada: true, de: 9, ate: 9 }), []);
 });

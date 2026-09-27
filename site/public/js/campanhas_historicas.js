@@ -31,6 +31,15 @@
  */
 export const POR_PAGINA = 100;
 
+/**
+ * E quantos clubes por página do ranking por equipe.
+ *
+ * Menos, porque a linha ali tem quatro números em vez de dois e pede três
+ * colunas no lugar de quatro. Setenta e cinco cobre a Série A inteira — são 44
+ * clubes em 21 edições — e parte a B em duas.
+ */
+export const POR_PAGINA_EQUIPES = 75;
+
 /** O desfecho da edição, pela chave do tapetão. */
 const fimDaEdicao = (edicao, semTapetao) =>
   (semTapetao && edicao?.fim_st ? edicao.fim_st : edicao?.fim);
@@ -160,6 +169,51 @@ export function montarRanking(dados, {
     .filter((c) => c.jogos > 0)
     .sort((a, b) => compararCampanhas(a, b, ordem))
     .map((c, i) => ({ ...c, posicao: i + 1 }));
+}
+
+/**
+ * O mesmo recorte somado por clube, e não por campanha.
+ *
+ * Aqui a edição some: o que sobra é quanto cada clube fez ao todo no trecho
+ * escolhido. É uma pergunta diferente da do ranking de campanhas — lá a
+ * unidade é o ano, aqui é o clube — e a mesma lista de jogos responde às duas.
+ *
+ * Vão junto as edições e os jogos porque sem eles o número engana: um clube de
+ * vinte e uma participações soma mais do que um de quatro sem ter sido melhor
+ * em nada. O aproveitamento é o que compara os dois, e por isso está ao lado.
+ */
+export function montarRankingDeEquipes(dados, {
+  serie, deAno = -Infinity, ateAno = Infinity, equipes = null,
+  semTapetao = false, descontosDoAno, ...recorte
+} = {}) {
+  const porClube = new Map();
+
+  for (const c of campanhasDaSerie(dados,
+    { serie, semTapetao, descontosDoAno, ...recorte })) {
+    if (c.ano < deAno || c.ano > ateAno) continue;
+    if (equipes && !equipes.has(c.equipe)) continue;
+    // Clube sem jogo no recorte não entra: ele não fez zero pontos naquele
+    // trecho, ele não esteve lá.
+    if (!c.jogos) continue;
+
+    const linha = porClube.get(c.equipe)
+      ?? { equipe: c.equipe, pontos: 0, jogos: 0, edicoes: 0, melhorFim: null };
+    linha.pontos += c.pontos;
+    linha.jogos += c.jogos;
+    linha.edicoes += 1;
+    if (c.posicaoFinal !== null
+        && (linha.melhorFim === null || c.posicaoFinal < linha.melhorFim)) {
+      linha.melhorFim = c.posicaoFinal;
+    }
+    porClube.set(c.equipe, linha);
+  }
+
+  return [...porClube.values()]
+    .map((l) => ({ ...l, aproveitamento: l.jogos ? l.pontos / (3 * l.jogos) : 0 }))
+    .sort((a, b) => b.pontos - a.pontos
+      || b.aproveitamento - a.aproveitamento
+      || a.equipe.localeCompare(b.equipe, "pt-BR"))
+    .map((l, i) => ({ ...l, posicao: i + 1 }));
 }
 
 /** Quantas páginas o ranking ocupa, no mínimo uma. */

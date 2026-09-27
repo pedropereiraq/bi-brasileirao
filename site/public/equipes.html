@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ranking por equipes · Cards ECBahia Números</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/bi.css">
+<script>
+// Antes da primeira pintura: sem isto a página nasce clara e pisca para o
+// preto quando o módulo da marca carrega.
+try { document.documentElement.dataset.marca =
+        localStorage.getItem("bi-marca") || "ecbahia"; } catch (e) {}
+</script>
+</head>
+<body>
+
+<main class="pagina larga">
+
+  <header class="topo">
+    <div>
+      <h1>Ranking por equipes</h1>
+      <p class="subtitulo">O acumulado de cada clube, por cima das edições.</p>
+    </div>
+    <div class="marca">
+      <img src="/img/marca.png" alt="ecbahia números">
+      <div class="chaves chaves-marca" id="chave-tapetao" role="group"
+           aria-label="Pontos tirados no tapetão">
+        <button type="button" class="chave" data-tapetao="com"
+                aria-pressed="true">com tapetão</button>
+        <button type="button" class="chave" data-tapetao="sem"
+                aria-pressed="false">sem</button>
+      </div>
+      <div class="chaves chaves-marca" id="chave-marca" role="group"
+           aria-label="Marca dos cards">
+        <button type="button" class="chave" data-marca="ecbahia"
+                aria-pressed="true">ecbn</button>
+        <button type="button" class="chave" data-marca="podcast45"
+                aria-pressed="false">45</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="regua" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="navegacao" id="navegacao" aria-label="Telas do BI"></nav>
+
+  <section class="cartao filtros">
+    <div class="filtros-linha">
+      <div class="campo">
+        <label id="rotulo-serie">Série</label>
+        <div class="chaves" id="serie" role="group" aria-labelledby="rotulo-serie"></div>
+      </div>
+      <div class="campo">
+        <label id="rotulo-recorte">Recortar</label>
+        <div class="chaves" id="recorte" role="group" aria-labelledby="rotulo-recorte"></div>
+      </div>
+      <div class="campo">
+        <label for="regiao">Região</label>
+        <select id="regiao"></select>
+      </div>
+      <div class="campo">
+        <label for="uf">Estado</label>
+        <select id="uf"></select>
+      </div>
+      <button type="button" class="botao-salvar" id="salvar" disabled>Salvar imagem</button>
+    </div>
+
+    <div class="filtros-linha trilhas">
+      <div class="campo campo-trilha">
+        <label id="rotulo-edicoes">Edições
+          <span class="dica-campo" id="resumo-edicoes"></span>
+        </label>
+        <div id="edicoes" aria-labelledby="rotulo-edicoes"></div>
+      </div>
+      <div class="campo campo-trilha">
+        <label id="rotulo-etapas">Trecho da campanha
+          <span class="dica-campo" id="resumo-etapas"></span>
+        </label>
+        <div id="etapas" aria-labelledby="rotulo-etapas"></div>
+      </div>
+    </div>
+
+    <div class="paginador">
+      <button type="button" class="chave" id="anterior" aria-label="Página anterior">‹</button>
+      <input type="range" id="pagina" min="1" max="1" step="1" value="1"
+             aria-label="Página do ranking">
+      <button type="button" class="chave" id="proxima" aria-label="Próxima página">›</button>
+      <span class="dica-campo" id="resumo-pagina"></span>
+      <span class="dica-campo" id="resumo-destaque"></span>
+      <button type="button" class="chave" id="limpar-destaque" hidden>Limpar destaque</button>
+    </div>
+
+    <p class="nota-ordem"><b>Aqui a edição some:</b> cada linha é um clube, e o
+      número é o que ele somou em todas as edições do recorte. Por isso as
+      colunas de edições, jogos e aproveitamento estão ao lado dos pontos — quem
+      participou mais soma mais sem ter sido melhor, e é o aproveitamento que
+      põe os dois na mesma régua. O recorte de trecho funciona como no histórico
+      de campanhas, e vale dentro de cada edição.</p>
+  </section>
+
+  <section class="palco-card">
+    <p id="aviso-card" class="aviso-card" hidden></p>
+    <canvas id="card" width="2400" height="1350"
+            aria-label="card do ranking por equipes"></canvas>
+  </section>
+
+  <footer class="rodape">
+    <p>O que está na tela é exatamente a imagem que o botão salva: 2400 × 1350,
+       no padrão dos cards do ECBahia Números.</p>
+    <p data-assinatura><b>ecbahia</b>numeros</p>
+  </footer>
+
+</main>
+
+<script type="module" src="/js/navegacao.js"></script>
+<script type="module" src="/js/marca.js"></script>
+<script type="module" src="/js/tapetao.js"></script>
+<script type="module" src="/js/equipes_pagina.js"></script>
+</body>
+</html>

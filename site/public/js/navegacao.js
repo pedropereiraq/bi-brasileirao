@@ -35,6 +35,7 @@ export const SECOES = [
       ["/dificuldade.html", "Dificuldade de tabela"],
       ["/simulador.html", "Simulador"],
       ["/campanhas.html", "Histórico de campanhas"],
+      ["/equipes.html", "Ranking por equipes"],
       ["/desfechos.html", "Pontuação final por posição"],
       ["/resultados.html", "Distribuição de resultados"],
       ["/medias.html", "Média por posição e rodada"],

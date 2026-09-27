@@ -27,10 +27,11 @@ import { POR_PAGINA, pagina, paginas } from "/js/campanhas_historicas.js";
 const COLUNAS = 4;
 const LINHAS = POR_PAGINA / COLUNAS;
 const VAO = 16;
-const ALTURA_LINHA = 24;
+const ALTURA_LINHA = 34;
 
 // A largura de cada campo dentro da coluna, da esquerda para a direita.
 const CAMPOS = { posicao: 34, ano: 36, escudo: 22, equipe: 178, fim: 28, pontos: 34 };
+const LARGURA_MAXIMA = 400;
 
 const ordinal = (n) => `${n}º`;
 
@@ -58,13 +59,24 @@ export function montarCartao(estado) {
     corpo: async (ctx, y) => {
       const topo = y + 34;
       const base = CARD.altura - 84;
-      const largura = (CARD.largura - MARGEM * 2 - VAO * (COLUNAS - 1)) / COLUNAS;
-      const altura = Math.min(ALTURA_LINHA, (base - topo) / LINHAS);
+      // Quantas colunas a página de fato precisa, e não quantas cabem: com
+      // treze linhas no recorte, quatro colunas deixariam três quartos do card
+      // em branco. A largura tem teto para o nome não descolar dos números, e
+      // o bloco fica centrado no que sobra.
+      const usadas = Math.min(COLUNAS, Math.ceil(linhas.length / LINHAS));
+      const disponivel = CARD.largura - MARGEM * 2 - VAO * (usadas - 1);
+      const largura = Math.min(LARGURA_MAXIMA, disponivel / usadas);
+      const x0 = (CARD.largura - (largura * usadas + VAO * (usadas - 1))) / 2;
+      // E a linha estica até a altura do card, pelo mesmo motivo: treze
+      // campanhas com a altura de cem deixariam metade do card em branco. O
+      // teto impede que três linhas virem três faixas.
+      const emUso = Math.min(LINHAS, Math.ceil(linhas.length / usadas));
+      const altura = Math.min(ALTURA_LINHA, (base - topo) / emUso);
 
       const alvos = [];
       for (const [i, linha] of linhas.entries()) {
         const coluna = Math.floor(i / LINHAS);
-        const x = MARGEM + coluna * (largura + VAO);
+        const x = x0 + coluna * (largura + VAO);
         const yl = topo + (i % LINHAS) * altura;
 
         if (i % LINHAS === 0) cabecalho(ctx, { x, largura, y: topo - 14 });
@@ -131,6 +143,8 @@ async function desenharLinha(ctx, { linha, clubes, x, largura, y, altura,
           cor: aceso ? COR.azulEscuro : COR.cinzaTexto });
   cursor += CAMPOS.ano;
 
+  // O escudo fica dentro do campo reservado mesmo quando a linha estica:
+  // crescer com ela o empurrava por cima do nome.
   const lado = Math.min(CAMPOS.escudo, altura - 4);
   const escudo = await imagem(clubes?.[linha.equipe]?.escudo);
   desenharEscudo(ctx, escudo, cursor, meio - lado / 2, lado);
