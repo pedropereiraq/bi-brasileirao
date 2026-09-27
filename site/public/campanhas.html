@@ -113,6 +113,8 @@ try { document.documentElement.dataset.marca =
              aria-label="Página do ranking">
       <button type="button" class="chave" id="proxima" aria-label="Próxima página">›</button>
       <span class="dica-campo" id="resumo-pagina"></span>
+      <span class="dica-campo" id="resumo-destaque"></span>
+      <button type="button" class="chave" id="limpar-destaque" hidden>Limpar destaque</button>
     </div>
 
     <p class="nota-ordem"><b>Uma campanha é um clube numa edição.</b> O ranking
@@ -120,8 +122,9 @@ try { document.documentElement.dataset.marca =
       entram e que pedaço de cada uma conta. <b>Por rodada</b> pega os jogos
       daquelas rodadas, tenham sido jogados quando tiverem sido; <b>por ordem
       dos jogos</b> pega os primeiros de cada campanha, que numa edição com
-      adiamento não são os mesmos. A barra embaixo passa as páginas do
-      ranking — o card mostra cem por vez.</p>
+      adiamento não são os mesmos. A barra acima passa as páginas do ranking —
+      o card mostra cem por vez. Clicar numa equipe dentro do card acende
+      todas as campanhas dela, sem tirar as outras da lista.</p>
   </section>
 
   <section class="palco-card">

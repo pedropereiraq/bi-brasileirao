@@ -12,6 +12,11 @@
  * O título diz o recorte por extenso, porque é ele que dá sentido ao número:
  * "melhores campanhas" e "melhores campanhas nos 10 primeiros jogos fora de
  * casa" são rankings diferentes, e o card publicado precisa dizer qual é.
+ *
+ * Um clube aceso pinta todas as campanhas dele, e não tira nenhuma das outras.
+ * É a leitura que o ranking sozinho não dá: onde o mesmo clube aparece de novo
+ * — e a que distância —, com o resto da lista ali para dar a medida. Filtrar
+ * responderia outra pergunta, e para isso existe o filtro de equipe, fora.
  */
 import {
   CARD, COR, MARGEM, texto, caixa, linhaH, cortar, imagem, desenharEscudo,
@@ -30,7 +35,8 @@ const CAMPOS = { posicao: 34, ano: 36, escudo: 22, equipe: 178, fim: 28, pontos:
 const ordinal = (n) => `${n}º`;
 
 export function montarCartao(estado) {
-  const { ranking, paginaAtual, clubes, titulo, nota } = estado;
+  const { ranking, paginaAtual, clubes, titulo, nota, destaque,
+          aoDestacar } = estado;
   if (!ranking?.length) return null;
 
   const quantas = paginas(ranking.length);
@@ -64,14 +70,17 @@ export function montarCartao(estado) {
         if (i % LINHAS === 0) cabecalho(ctx, { x, largura, y: topo - 14 });
         await desenharLinha(ctx, {
           linha, clubes, x, largura, y: yl, altura,
+          aceso: Boolean(destaque) && linha.equipe === destaque,
         });
-        alvos.push({ x, y: yl, l: largura, a: altura, ...dicaDaLinha(linha) });
+        alvos.push({ equipe: linha.equipe, x, y: yl, l: largura, a: altura,
+                     ...dicaDaLinha(linha) });
       }
 
       spec.hover = {
         pontos: alvos, eixo: "caixa", unidade: "",
         topo: y, alturaPlot: base - y,
         x0: MARGEM, x1: CARD.largura - MARGEM, largura: 20,
+        aoClicar: (alvo) => aoDestacar?.(alvo.equipe),
       };
     },
   };
@@ -97,17 +106,29 @@ function cabecalho(ctx, { x, largura, y }) {
  * no meio: são os dois números que se comparam de linha a linha, e o nome é o
  * que se lê depois de achar a linha.
  */
-async function desenharLinha(ctx, { linha, clubes, x, largura, y, altura }) {
+async function desenharLinha(ctx, { linha, clubes, x, largura, y, altura,
+                                    aceso = false }) {
   const meio = y + altura / 2;
   linhaH(ctx, x, x + largura, y + altura, COR.linha);
 
+  // A linha acesa ganha fundo, e não cor de texto: são quatro colunas de
+  // vinte e seis linhas, e o que se procura é a mancha, não a palavra.
+  if (aceso) {
+    ctx.save();
+    ctx.globalAlpha = .17;
+    caixa(ctx, x, y + 1, largura, altura - 3, COR.destaque, 4);
+    ctx.restore();
+  }
+
   let cursor = x + 4;
   texto(ctx, linha.posicao, cursor, meio + 4,
-        { tamanho: 11.5, peso: 700, cor: COR.cinzaEscuro });
+        { tamanho: 11.5, peso: aceso ? 800 : 700,
+          cor: aceso ? COR.destaque : COR.cinzaEscuro });
   cursor = x + CAMPOS.posicao;
 
   texto(ctx, linha.ano, cursor, meio + 4,
-        { tamanho: 11.5, peso: 700, cor: COR.cinzaTexto });
+        { tamanho: 11.5, peso: 700,
+          cor: aceso ? COR.azulEscuro : COR.cinzaTexto });
   cursor += CAMPOS.ano;
 
   const lado = Math.min(CAMPOS.escudo, altura - 4);
@@ -126,7 +147,8 @@ async function desenharLinha(ctx, { linha, clubes, x, largura, y, altura }) {
         { tamanho: 11, peso: 700, alinha: "right", cor: COR.cinzaEscuro });
 
   texto(ctx, linha.pontos, x + largura - 4, meio + 4,
-        { tamanho: 13, peso: 800, alinha: "right", cor: COR.azul });
+        { tamanho: 13, peso: 800, alinha: "right",
+          cor: aceso ? COR.destaque : COR.azul });
 }
 
 function dicaDaLinha(linha) {

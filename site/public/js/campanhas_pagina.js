@@ -12,13 +12,17 @@
  *
  * A paginação fica fora do card porque é navegação, e não dado: o card é uma
  * página do ranking, e qual delas é escolha de quem está olhando.
+ *
+ * Acender um clube dentro do card não é filtrar: as outras campanhas
+ * continuam todas lá, e é delas que vem a medida de onde as dele caem. Quem
+ * quer só um clube tem o filtro de equipe, aqui fora.
  */
 import { aoMudarTapetao, tapetaoLigado, descontosDe } from "/js/tapetao.js";
 import { lembrarSerie, serieLembrada } from "/js/preferencias.js";
 import { ligarPaginaDeCard, definirMensagemSemCard } from "/js/pagina_card.js";
 import { montarCartao } from "/js/cartao_campanhas.js";
 import { ligarTrilha, ligarSeletorDeRodadas } from "/js/seletor_posicoes.js";
-import { nomeComUf } from "/js/nomes.js";
+import { artigo, nomeBonito, nomeComUf } from "/js/nomes.js";
 import {
   anosDaSerie, montarRanking, paginas,
 } from "/js/campanhas_historicas.js";
@@ -33,7 +37,13 @@ const estado = {
   posicaoDe: 1, posicaoAte: POSICOES,
   regiao: "", uf: "", equipe: "",
   paginaAtual: 1, ranking: [], semTapetao: false,
-  titulo: "", nota: "",
+  titulo: "", nota: "", destaque: "",
+  aoDestacar: (equipe) => {
+    // Clicar no clube já aceso apaga: é o mesmo gesto, e sem isso só o botão
+    // de limpar desfaria o que um clique fez.
+    estado.destaque = estado.destaque === equipe ? "" : equipe;
+    aplicar();
+  },
 };
 
 const el = (id) => document.getElementById(id);
@@ -88,6 +98,10 @@ async function inicializar() {
   });
   el("anterior").addEventListener("click", () => virar(-1));
   el("proxima").addEventListener("click", () => virar(1));
+  el("limpar-destaque").addEventListener("click", () => {
+    estado.destaque = "";
+    aplicar();
+  });
 
   trocarSerie(serieLembrada() ?? "A");
 }
@@ -117,21 +131,21 @@ function trocarSerie(serie) {
   estado.deAno = estado.anos[0];
   estado.ateAno = estado.anos[estado.anos.length - 1];
 
-  // A trilha das edições anda em posições, e não em anos: as edições são
-  // consecutivas, e um ano faltando na série faria um buraco na régua.
+  // A trilha anda em anos, e não em posições: é o ano que está escrito na
+  // alça e nas marcas, e é ele que se procura. Os limites saem dos dados, de
+  // modo que a régua cresce sozinha quando entra uma edição nova.
   trilhaAnos = ligarTrilha({
-    raiz: el("edicoes"), total: estado.anos.length, crescente: true, minimo: 1,
-    descrever: (v) => String(estado.anos[v - 1] ?? ""),
+    raiz: el("edicoes"), crescente: true,
+    minimo: estado.anos[0], total: estado.anos[estado.anos.length - 1],
+    descrever: (v) => `edição de ${v}`,
     alcas: [
-      { nome: "de", classe: "alca-meta", valor: 1,
+      { nome: "de", classe: "alca-meta", valor: estado.deAno,
         descricao: "primeira edição do recorte" },
-      { nome: "ate", classe: "alca-melhor", valor: estado.anos.length,
+      { nome: "ate", classe: "alca-melhor", valor: estado.ateAno,
         descricao: "última edição do recorte" },
     ],
     aoMudar: ({ de, ate }) => {
-      estado.deAno = estado.anos[de - 1];
-      estado.ateAno = estado.anos[ate - 1];
-      estado.paginaAtual = 1;
+      Object.assign(estado, { deAno: de, ateAno: ate, paginaAtual: 1 });
       aplicar();
     },
   });
@@ -222,15 +236,33 @@ function equipesEscolhidas() {
 }
 
 /* --------------------------------------------------------------- título */
-/** O recorte por extenso, para o card dizer sozinho o que está mostrando. */
+/**
+ * O recorte por extenso, para o card dizer sozinho o que está mostrando.
+ *
+ * O clube entra colado no substantivo — "as melhores campanhas do Bahia na
+ * Série A" —, e não no fim da frase: é dele que o ranking passa a falar, e
+ * pendurar o nome depois de todos os recortes faria a frase dizer que o
+ * assunto é a série.
+ */
 function tituloDoRanking() {
   const partes = [estado.ordem === "pior" ? "As piores campanhas"
-                                          : "As melhores campanhas",
-                  `da Série ${estado.serie}`];
+                                          : "As melhores campanhas"];
 
-  if (estado.equipe) partes.push(`${nomeComUf(estado.equipe)}`);
-  else if (estado.uf) partes.push(`entre as equipes ${preposicao(estado.uf)}`);
-  else if (estado.regiao) partes.push(`entre as equipes do ${estado.regiao}`);
+  // "As melhores campanhas do Bahia na Série A", mas "as melhores campanhas
+  // da Série A" quando não há clube: sem ele a série é o complemento do
+  // substantivo, e com ele passa a ser o lugar onde a campanha aconteceu.
+  if (estado.equipe) {
+    partes.push(`${artigo(estado.equipe)} ${nomeBonito(estado.equipe)}`,
+                `na Série ${estado.serie}`);
+  } else {
+    partes.push(`da Série ${estado.serie}`);
+  }
+
+  if (!estado.equipe && estado.uf) {
+    partes.push(`entre as equipes ${preposicao(estado.uf)}`);
+  } else if (!estado.equipe && estado.regiao) {
+    partes.push(`entre as equipes do ${estado.regiao}`);
+  }
 
   if (estado.deAno !== estado.anos[0]
       || estado.ateAno !== estado.anos[estado.anos.length - 1]) {
@@ -307,6 +339,17 @@ function aplicar() {
   estado.paginaAtual = Math.min(Math.max(1, estado.paginaAtual), quantas);
   estado.titulo = tituloDoRanking();
   estado.nota = notaDoRanking();
+
+  // Clube aceso que sumiu do recorte deixa de estar aceso: manter o destaque
+  // num clube que não aparece em lugar nenhum é prometer uma marca invisível.
+  const acesas = estado.ranking.filter((c) => c.equipe === estado.destaque);
+  if (estado.destaque && !acesas.length) estado.destaque = "";
+  el("limpar-destaque").hidden = !estado.destaque;
+  el("resumo-destaque").textContent = estado.destaque
+    ? `${nomeBonito(estado.destaque)} em destaque · `
+      + `${acesas.length} ${acesas.length === 1 ? "campanha" : "campanhas"}`
+      + `, ${acesas[0].posicao}º a ${acesas[acesas.length - 1].posicao}º`
+    : "";
 
   const barra = el("pagina");
   barra.max = String(quantas);
