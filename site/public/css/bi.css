@@ -114,6 +114,9 @@ button.menu-botao[aria-expanded="true"]:not([data-aqui]) {
   min-width: 232px; padding: 5px 0;
   background: var(--branco); border: 1px solid var(--linha);
   border-radius: var(--raio); box-shadow: var(--sombra);
+  /* Edições tem quinze telas: numa tela baixa a lista passaria do rodapé, e
+     item de menu que não se alcança é item que não existe. */
+  max-height: calc(100vh - 150px); overflow-y: auto;
 }
 .menu-lista a {
   display: block; padding: 6px 14px; font-size: 13px;

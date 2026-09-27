@@ -18,7 +18,10 @@
 /** As seções, na ordem em que aparecem. */
 export const SECOES = [
   {
-    nome: "A edição",
+    // O campeonato: a tabela de hoje, o que ainda vem e o que vinte edições
+    // ensinaram sobre onde isso costuma terminar. É tudo a mesma coisa vista
+    // de longe — nenhuma dessas telas é sobre um clube.
+    nome: "Edições",
     telas: [
       ["/classificacao.html", "Classificação"],
       ["/jogos.html", "Jogos"],
@@ -28,46 +31,39 @@ export const SECOES = [
       ["/mando.html", "Mando de campo"],
       ["/fmi.html", "FMI"],
       ["/ondas.html", "Distribuição de pontos"],
-      ["/degraus.html", "Distâncias para a equipe de baixo"],
+      ["/proximos.html", "Próximos jogos"],
+      ["/dificuldade.html", "Dificuldade de tabela"],
+      ["/simulador.html", "Simulador"],
+      ["/desfechos.html", "Pontuação final por posição"],
+      ["/resultados.html", "Distribuição de resultados"],
+      ["/medias.html", "Média por posição e rodada"],
+      ["/ritmo.html", "Aceleração por posição"],
     ],
   },
   {
-    nome: "Um clube",
+    // Uma campanha, do começo ao fim, com os filtros apontados para um clube.
+    nome: "Clubes",
     telas: [
       ["/evolucao.html", "Evolução da campanha"],
       ["/media-movel.html", "Média móvel em X jogos"],
       ["/turnos.html", "Comparativo de turnos"],
       ["/adversarios.html", "Resultados por adversário"],
       ["/recortes.html", "Recortes iniciais"],
-      ["/historico.html", "Posições históricas"],
+      ["/blocos.html", "Blocos de 6 jogos"],
       ["/alcancar.html", "Jogos para alcançar X"],
+      ["/historico.html", "Posições históricas"],
     ],
   },
   {
+    // Duas coisas medidas uma contra a outra: duas campanhas, duas posições,
+    // dois degraus da tabela. O assunto é a distância entre elas.
     nome: "Comparações",
     telas: [
       ["/comparativo.html", "Comparativo de campanhas"],
       ["/semelhantes.html", "Campanhas semelhantes"],
       ["/diferenca.html", "Diferença entre dois pontos"],
-    ],
-  },
-  {
-    nome: "O histórico",
-    telas: [
-      ["/desfechos.html", "Pontuação final por posição"],
-      ["/resultados.html", "Distribuição de resultados"],
-      ["/medias.html", "Média por posição e rodada"],
-      ["/ritmo.html", "Aceleração por posição"],
       ["/distancias.html", "Distância entre posições"],
-    ],
-  },
-  {
-    nome: "A reta final",
-    telas: [
-      ["/proximos.html", "Próximos jogos"],
-      ["/dificuldade.html", "Dificuldade de tabela"],
-      ["/blocos.html", "Blocos de 6 jogos"],
-      ["/simulador.html", "Simulador"],
+      ["/degraus.html", "Distâncias para a equipe de baixo"],
     ],
   },
   // Uma tela só: menu suspenso para um item é um clique cobrado à toa.

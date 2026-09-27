@@ -38,8 +38,10 @@ test("a capa e o index são a mesma página", () => {
 });
 
 test("cada tela sabe de que seção é", () => {
-  assert.equal(secaoDaTela("/gols.html").nome, "A edição");
-  assert.equal(secaoDaTela("/simulador.html").nome, "A reta final");
+  assert.equal(secaoDaTela("/gols.html").nome, "Edições");
+  assert.equal(secaoDaTela("/simulador.html").nome, "Edições");
+  assert.equal(secaoDaTela("/blocos.html").nome, "Clubes");
+  assert.equal(secaoDaTela("/degraus.html").nome, "Comparações");
   assert.equal(secaoDaTela("/"), null, "a capa não é de seção nenhuma");
 });
 
@@ -47,7 +49,7 @@ test("o menu marca a tela aberta e a seção dela", () => {
   const html = montarMenu("/media-movel.html");
 
   assert.match(html, /<a href="\/media-movel\.html" aria-current="page">/);
-  assert.match(html, /data-aqui="sim">Um clube</);
+  assert.match(html, /data-aqui="sim">Clubes</);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1,
     "só a tela aberta fica marcada");
   assert.doesNotMatch(html, /class="menu-inicio" href="\/" aria-current/);
