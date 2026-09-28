@@ -36,7 +36,7 @@ const LARGURA_MAXIMA = 400;
 const ordinal = (n) => `${n}º`;
 
 export function montarCartao(estado) {
-  const { ranking, paginaAtual, clubes, titulo, nota, destaque,
+  const { ranking, paginaAtual, clubes, titulo, destaque,
           aoDestacar } = estado;
   if (!ranking?.length) return null;
 
@@ -55,7 +55,9 @@ export function montarCartao(estado) {
              + `${quantas > 1 ? ` · página ${atual} de ${quantas}` : ""}`,
     arquivo: `campanhas-${primeira}-${ultima}`,
     numeros: [],
-    nota,
+    // Sem nota: o rodapé de um ranking é linha de rodapé em cima de
+    // linha de ranking, e o que ela explicava está na tela, fora do card.
+    nota: "",
     corpo: async (ctx, y) => {
       const topo = y + 34;
       const base = CARD.altura - 84;
@@ -67,19 +69,21 @@ export function montarCartao(estado) {
       const disponivel = CARD.largura - MARGEM * 2 - VAO * (usadas - 1);
       const largura = Math.min(LARGURA_MAXIMA, disponivel / usadas);
       const x0 = (CARD.largura - (largura * usadas + VAO * (usadas - 1))) / 2;
-      // E a linha estica até a altura do card, pelo mesmo motivo: treze
-      // campanhas com a altura de cem deixariam metade do card em branco. O
-      // teto impede que três linhas virem três faixas.
-      const emUso = Math.min(LINHAS, Math.ceil(linhas.length / usadas));
-      const altura = Math.min(ALTURA_LINHA, (base - topo) / emUso);
+      // Achadas as colunas, as linhas se repartem por igual entre elas: com
+      // quarenta e quatro clubes em duas colunas são vinte e duas em cada, e
+      // não vinte e cinco na primeira e dezenove na segunda. É esse número que
+      // manda na altura da linha — usar um e empilhar outro foi o que fez o
+      // ranking vazar pelo pé do card.
+      const porColuna = Math.ceil(linhas.length / usadas);
+      const altura = Math.min(ALTURA_LINHA, (base - topo) / porColuna);
 
       const alvos = [];
       for (const [i, linha] of linhas.entries()) {
-        const coluna = Math.floor(i / LINHAS);
+        const coluna = Math.floor(i / porColuna);
         const x = x0 + coluna * (largura + VAO);
-        const yl = topo + (i % LINHAS) * altura;
+        const yl = topo + (i % porColuna) * altura;
 
-        if (i % LINHAS === 0) cabecalho(ctx, { x, largura, y: topo - 14 });
+        if (i % porColuna === 0) cabecalho(ctx, { x, largura, y: topo - 14 });
         await desenharLinha(ctx, {
           linha, clubes, x, largura, y: yl, altura,
           aceso: Boolean(destaque) && linha.equipe === destaque,

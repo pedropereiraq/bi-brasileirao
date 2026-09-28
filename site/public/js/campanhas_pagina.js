@@ -37,7 +37,7 @@ const estado = {
   posicaoDe: 1, posicaoAte: POSICOES,
   regiao: "", uf: "", equipe: "",
   paginaAtual: 1, ranking: [], semTapetao: false,
-  titulo: "", nota: "", destaque: "",
+  titulo: "", destaque: "",
   aoDestacar: (equipe) => {
     // Clicar no clube já aceso apaga: é o mesmo gesto, e sem isso só o botão
     // de limpar desfaria o que um clique fez.
@@ -296,17 +296,6 @@ function tituloDoRanking() {
 
 const preposicao = (uf) => `de ${uf}`;
 
-function notaDoRanking() {
-  const base = estado.porRodada
-    ? "O recorte por rodada pega os jogos daquelas rodadas, tenham sido "
-      + "jogados quando tiverem sido."
-    : "O recorte por ordem pega os primeiros jogos de cada campanha, na ordem "
-      + "em que aconteceram.";
-  const punicao = estado.porRodada && estado.mando === "todos"
-    ? "" : " Ponto tirado no tapetão fica de fora: punição não tem jogo nem mando.";
-  return base + punicao;
-}
-
 /* -------------------------------------------------------------- páginas */
 function virar(passo) {
   const quantas = paginas(estado.ranking.length);
@@ -338,7 +327,6 @@ function aplicar() {
   const quantas = paginas(estado.ranking.length);
   estado.paginaAtual = Math.min(Math.max(1, estado.paginaAtual), quantas);
   estado.titulo = tituloDoRanking();
-  estado.nota = notaDoRanking();
 
   // Clube aceso que sumiu do recorte deixa de estar aceso: manter o destaque
   // num clube que não aparece em lugar nenhum é prometer uma marca invisível.

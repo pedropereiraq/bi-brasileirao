@@ -25,7 +25,7 @@ const estado = {
   porRodada: true, de: 1, ate: 38, etapas: 38,
   regiao: "", uf: "",
   paginaAtual: 1, ranking: [], semTapetao: false,
-  titulo: "", nota: "", destaque: "",
+  titulo: "", destaque: "",
   aoDestacar: (equipe) => {
     estado.destaque = estado.destaque === equipe ? "" : equipe;
     aplicar();
@@ -205,12 +205,6 @@ function tituloDoRanking() {
   return partes.join(" ");
 }
 
-function notaDoRanking() {
-  return "A soma junta todas as edições do recorte, e por isso vêm junto as "
-       + "edições, os jogos e o aproveitamento: quem participou mais soma mais "
-       + "sem ter sido melhor.";
-}
-
 /* -------------------------------------------------------------- páginas */
 function virar(passo) {
   const quantas = paginas(estado.ranking.length, POR_PAGINA_EQUIPES);
@@ -235,7 +229,6 @@ function aplicar() {
   const quantas = paginas(estado.ranking.length, POR_PAGINA_EQUIPES);
   estado.paginaAtual = Math.min(Math.max(1, estado.paginaAtual), quantas);
   estado.titulo = tituloDoRanking();
-  estado.nota = notaDoRanking();
 
   const aceso = estado.ranking.find((e) => e.equipe === estado.destaque);
   if (estado.destaque && !aceso) estado.destaque = "";
