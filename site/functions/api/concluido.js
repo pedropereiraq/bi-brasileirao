@@ -29,6 +29,11 @@ export async function onRequestPost({ request, env }) {
     situacao: corpo.erro ? "falhou" : "concluído",
     em: new Date().toISOString(),
     ...corpo,
+    // O erro guardado é do pedido anterior, e um aviso de conclusão o encerra.
+    // Sem esta linha ele sobrevive ao `...corrente` e a tela passa a mostrar
+    // "concluído · HTTP 401" — um sucesso com a causa de uma falha velha ao
+    // lado.
+    erro: corpo.erro ?? null,
   });
   return json(200, { ok: true });
 }
