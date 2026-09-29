@@ -26,6 +26,7 @@ async function atualizar() {
   progresso.hidden = false;
   dizer("", "");
 
+  let entrega = null;
   try {
     // Uma série de cada vez: a barra fica honesta e a fonte não leva rajada.
     for (const [indice, serie] of SERIES.entries()) {
@@ -35,19 +36,33 @@ async function atualizar() {
       });
 
       andar(base + 47, `Série ${serie}: entregando ${eventos.length} registros`);
-      await depositar(serie, ano, eventos);
+      entrega = await depositar(serie, ano, eventos);
 
       if (semTabela.length) {
         console.info(`Série ${serie}: rodadas sem tabela publicada`, semTabela);
       }
     }
 
-    andar(100, "Recálculo pedido");
-    dizer(
-      "Dados entregues. O recálculo está rodando e leva alguns minutos — " +
-        "pode fechar a aba, ele não depende dela.",
-      "bom"
-    );
+    // O depósito e o pedido de recálculo são duas coisas, e podem terminar
+    // diferente: o bruto é guardado antes, e o pedido ao GitHub pode falhar
+    // depois. Anunciar "está rodando" nesse caso é a própria tela mentindo —
+    // foi o que escondeu um token vencido por dois dias.
+    if (entrega?.recalculo === "pedido") {
+      andar(100, "Recálculo pedido");
+      dizer(
+        "Dados entregues. O recálculo está rodando e leva alguns minutos — " +
+          "pode fechar a aba, ele não depende dela.",
+        "bom"
+      );
+    } else {
+      andar(100, "Dados entregues, recálculo não");
+      dizer(
+        `Os dados foram entregues e estão guardados, mas o recálculo não foi `
+          + `pedido: ${entrega?.recalculo ?? "motivo desconhecido"}. Os números `
+          + `do site continuam os de antes até o pedido passar.`,
+        "ruim"
+      );
+    }
   } catch (e) {
     andar(0, "");
     dizer(e.message, "ruim");
@@ -86,10 +101,13 @@ async function mostrarEstado() {
     );
   }
 
+  // O motivo da falha vem junto no estado; escondê-lo deixava a tela dizendo
+  // "não foi possível pedir" sem dizer por quê, que é a única coisa que
+  // importa quando isso acontece.
   const r = estado.recalculo;
   escrever(
     "recalculo",
-    r ? `${r.situacao} · ${quando(r.em)}` : "—"
+    r ? [r.situacao, r.erro, quando(r.em)].filter(Boolean).join(" · ") : "—"
   );
 }
 
