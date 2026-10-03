@@ -226,3 +226,89 @@ export function pagina(ranking, numero, porPagina = POR_PAGINA) {
   const atual = Math.min(Math.max(1, numero || 1), quantas);
   return (ranking ?? []).slice((atual - 1) * porPagina, atual * porPagina);
 }
+
+/* ----------------------------------------------------------------- turnos */
+/** Os dois turnos, na ordem em que acontecem. */
+export const TURNOS = [1, 2];
+
+/**
+ * Quantas rodadas a edição teve.
+ *
+ * Sai da maior rodada que algum clube jogou: o arquivo guarda a rodada de
+ * cada jogo, e não o tamanho da tabela.
+ */
+export function rodadasDaEdicao(edicao) {
+  return Math.max(0, ...(edicao?.rodadas ?? [])
+    .map((r) => (r.length ? r[r.length - 1] : 0)));
+}
+
+/**
+ * O intervalo de rodadas de um turno.
+ *
+ * A metade exata, como manda o returno: numa edição de 38 rodadas o primeiro
+ * turno vai da 1ª à 19ª e o segundo da 20ª à 38ª. Edição de tamanho ímpar
+ * deixa a rodada do meio no segundo, que é onde ela cai na prática — o
+ * primeiro turno termina quando todos já se enfrentaram uma vez.
+ */
+export function rodadasDoTurno(rodadas, turno) {
+  const metade = Math.floor(rodadas / 2);
+  return turno === 1 ? { de: 1, ate: metade } : { de: metade + 1, ate: rodadas };
+}
+
+/**
+ * O ranking dos turnos, uma linha por clube por turno.
+ *
+ * A unidade deixa de ser a campanha e passa a ser **meia** campanha: o mesmo
+ * clube na mesma edição vira duas linhas, e elas competem entre si como
+ * quaisquer outras. É o que permite perguntar se o melhor primeiro turno da
+ * história foi melhor que o melhor segundo.
+ *
+ * Aqui não há recorte de trecho: o turno **é** o trecho. Somar um recorte de
+ * rodadas por cima dele seria um filtro que ninguém consegue pensar.
+ */
+export function montarRankingDeTurnos(dados, {
+  serie, deAno = -Infinity, ateAno = Infinity, equipes = null,
+  turnos = TURNOS, posicaoDe = 1, posicaoAte = Infinity,
+  ordem = "melhor", mando = "todos", semTapetao = false, descontosDoAno,
+} = {}) {
+  const abertoDeTudo = posicaoDe <= 1 && !Number.isFinite(posicaoAte);
+  const saida = [];
+
+  for (const ano of anosDaSerie(dados, serie)) {
+    if (ano < deAno || ano > ateAno) continue;
+    const edicao = dados.series[serie][String(ano)];
+    const fim = fimDaEdicao(edicao, semTapetao) ?? [];
+    const descontos = descontosDoAno?.(ano) ?? [];
+    const rodadas = rodadasDaEdicao(edicao);
+
+    for (const [i, equipe] of (edicao.clubes ?? []).entries()) {
+      if (equipes && !equipes.has(equipe)) continue;
+      const desfecho = fim[i] ?? null;
+      const posicaoFinal = desfecho ? desfecho[0] : null;
+      if (posicaoFinal === null
+        ? !abertoDeTudo
+        : posicaoFinal < posicaoDe || posicaoFinal > posicaoAte) continue;
+
+      for (const turno of turnos) {
+        const recorte = { porRodada: true, mando, ...rodadasDoTurno(rodadas, turno) };
+        const { pontos, jogos } = pontosNoRecorte(edicao, i, recorte);
+        if (!jogos) continue;
+
+        saida.push({
+          ano, equipe, turno, jogos,
+          encerrada: Boolean(edicao.encerrada),
+          pontos: pontos + descontoNoRecorte(descontos, equipe, recorte),
+          posicaoFinal,
+          pontosFinais: desfecho ? desfecho[1] : null,
+        });
+      }
+    }
+  }
+
+  const sinal = ordem === "pior" ? -1 : 1;
+  return saida
+    .sort((a, b) => sinal * (b.pontos - a.pontos)
+      || a.ano - b.ano || a.turno - b.turno
+      || a.equipe.localeCompare(b.equipe, "pt-BR"))
+    .map((l, i) => ({ ...l, posicao: i + 1 }));
+}

@@ -13,7 +13,8 @@ import assert from "node:assert/strict";
 
 import {
   POR_PAGINA, campanhasDaSerie, descontoNoRecorte, montarRanking,
-  montarRankingDeEquipes, pagina, paginas, pontosNoRecorte,
+  montarRankingDeEquipes, montarRankingDeTurnos, pagina, paginas,
+  pontosNoRecorte, rodadasDaEdicao, rodadasDoTurno,
 } from "../public/js/campanhas_historicas.js";
 
 /**
@@ -222,4 +223,63 @@ test("o recorte vale igual no ranking por equipe", () => {
   // Recorte sem jogo nenhum não devolve clubes zerados.
   assert.deepEqual(montarRankingDeEquipes(dados,
     { serie: "A", porRodada: true, de: 9, ate: 9 }), []);
+});
+
+test("o turno é a metade exata da edição", () => {
+  assert.deepEqual(rodadasDoTurno(38, 1), { de: 1, ate: 19 });
+  assert.deepEqual(rodadasDoTurno(38, 2), { de: 20, ate: 38 });
+
+  // Edição ímpar: a rodada do meio cai no segundo turno.
+  assert.deepEqual(rodadasDoTurno(5, 1), { de: 1, ate: 2 });
+  assert.deepEqual(rodadasDoTurno(5, 2), { de: 3, ate: 5 });
+
+  // O tamanho sai da maior rodada jogada, e não de um número guardado.
+  assert.equal(rodadasDaEdicao(edicao(2024)), 3);
+  assert.equal(rodadasDaEdicao(undefined), 0);
+});
+
+test("cada clube vira duas linhas, uma por turno", () => {
+  const todos = montarRankingDeTurnos(dados, { serie: "A", deAno: 2024, ateAno: 2024 });
+
+  // Três clubes, dois turnos: seis linhas, menos as que não tiveram jogo.
+  assert.equal(todos.length, 6);
+  assert.deepEqual([...new Set(todos.map((l) => l.turno))].sort(), [1, 2]);
+
+  // 2024 tem 3 rodadas: o 1º turno é só a 1ª e o 2º é a 2ª e a 3ª.
+  const alfa1 = todos.find((l) => l.equipe === "ALFA (SP)" && l.turno === 1);
+  const alfa2 = todos.find((l) => l.equipe === "ALFA (SP)" && l.turno === 2);
+  assert.deepEqual([alfa1.pontos, alfa1.jogos], [3, 1]);
+  assert.deepEqual([alfa2.pontos, alfa2.jogos], [4, 2], "1 e 3");
+
+  // A numeração é do ranking inteiro, misturando os dois turnos.
+  assert.deepEqual(todos.map((l) => l.posicao), [1, 2, 3, 4, 5, 6]);
+  assert.ok(todos[0].pontos >= todos[1].pontos);
+});
+
+test("o filtro de turno tira o que não foi pedido", () => {
+  const so1 = montarRankingDeTurnos(dados, { serie: "A", turnos: [1] });
+  assert.ok(so1.every((l) => l.turno === 1));
+
+  const so2 = montarRankingDeTurnos(dados, { serie: "A", turnos: [2] });
+  assert.ok(so2.every((l) => l.turno === 2));
+
+  assert.deepEqual(montarRankingDeTurnos(dados, { serie: "A", turnos: [] }), []);
+});
+
+test("o turno carrega o desfecho da edição, e o mando recorta junto", () => {
+  const linhas = montarRankingDeTurnos(dados,
+    { serie: "A", deAno: 2024, ateAno: 2024 });
+  const alfa = linhas.find((l) => l.equipe === "ALFA (SP)" && l.turno === 1);
+  assert.equal(alfa.posicaoFinal, 1, "a posição final é da edição inteira");
+
+  // ALFA 2024 é CFC: em casa, o 1º turno tem só o jogo da 1ª rodada.
+  const emCasa = montarRankingDeTurnos(dados,
+    { serie: "A", deAno: 2024, ateAno: 2024, mando: "casa" })
+    .find((l) => l.equipe === "ALFA (SP)" && l.turno === 1);
+  assert.deepEqual([emCasa.pontos, emCasa.jogos], [3, 1]);
+
+  // E a edição em andamento só passa com a faixa de posição aberta.
+  assert.ok(montarRankingDeTurnos(dados, { serie: "A" }).some((l) => l.ano === 2026));
+  assert.ok(!montarRankingDeTurnos(dados,
+    { serie: "A", posicaoDe: 1, posicaoAte: 1 }).some((l) => l.ano === 2026));
 });
