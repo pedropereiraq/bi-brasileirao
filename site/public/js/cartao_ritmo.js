@@ -1,10 +1,12 @@
 /**
  * Card: quem acelera e quem desacelera, por posição.
  *
- * O sujeito é a posição, e não um clube. O ritmo até a rodada é o do time que
- * estava lá; o ritmo depois é o que a posição rendeu até o fim, e no caminho
- * ela troca de dono várias vezes. Por isso, onde aparece clube, aparecem os
- * dois: quem ocupava a posição na rodada analisada e quem terminou nela.
+ * O sujeito é a posição, e não um clube. O ritmo de uma posição numa rodada é
+ * a pontuação dela dividida pela rodada; o antes é essa conta na rodada
+ * escolhida e o depois é a média dela nas rodadas seguintes. No caminho a
+ * posição troca de dono várias vezes, e por isso, onde aparece clube, aparecem
+ * os dois: quem ocupava a posição na rodada analisada e quem terminou nela.
+ * Nenhum dos dois é dono do número.
  *
  * A tabela da esquerda é a resposta inteira em vinte linhas, com a mudança
  * média em barra que cresce para os dois lados do zero. O que a média esconde
@@ -28,6 +30,11 @@ const num = (v, casas = 2) =>
   (v === null || v === undefined ? "—" : v.toFixed(casas).replace(".", ","));
 const comSinal = (v, casas = 2) => (v === null || v === undefined ? "—"
   : `${v > 0 ? "+" : v < 0 ? "−" : ""}${num(Math.abs(v), casas)}`);
+
+// A mudança é a diferença entre dois acumulados vizinhos, e acumulado anda
+// devagar: com duas casas, metade da tabela virava "±0,00" e a coluna parava
+// de discriminar. Três casas é o que esta conta tem para dizer.
+const CASAS_DA_MUDANCA = 3;
 
 function mistura(de, para, t) {
   const canal = (cor, i) => parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
@@ -59,17 +66,17 @@ export function montarCartao(estado) {
     subtitulo: "",
     arquivo: `ritmo-${serie}-r${rodada}`,
     numeros: [
-      { valor: comSinal(acelera?.diferenca), destaque: "azul",
+      { valor: comSinal(acelera?.diferenca, CASAS_DA_MUDANCA), destaque: "azul",
         nome: acelera ? `quem mais acelera · ${ordinal(acelera.posicao)}`
                       : "quem mais acelera" },
-      { valor: comSinal(desacelera?.diferenca),
+      { valor: comSinal(desacelera?.diferenca, CASAS_DA_MUDANCA),
         nome: desacelera ? `quem mais desacelera · ${ordinal(desacelera.posicao)}`
                          : "quem mais desacelera" },
       { valor: `${amostras}`, nome: "edições encerradas na conta" },
     ],
     // Sem instrução de clique: o card é publicado como imagem, e numa
     // imagem não há o que clicar.
-    nota: "Ritmo é a média de pontos conquistados por rodada.",
+    nota: "Ritmo da posição é a pontuação dela dividida pela rodada; o depois é a média desse ritmo nas rodadas seguintes.",
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
       const cheia = CARD.largura - MARGEM * 2;
@@ -150,7 +157,8 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
     const forte = Math.abs(linha.diferenca ?? 0) / extremo > .55;
     caixa(ctx, colunas.chip.de, meio - 12, l, 24,
           corDaMudanca(linha.diferenca, extremo), 5);
-    texto(ctx, comSinal(linha.diferenca), colunas.chip.de + l / 2, meio + 5,
+    texto(ctx, comSinal(linha.diferenca, CASAS_DA_MUDANCA),
+          colunas.chip.de + l / 2, meio + 5,
           { tamanho: 12.5, peso: 800, alinha: "center",
             cor: forte ? COR.branco : COR.azulEscuro });
 
@@ -182,7 +190,7 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       x, y: yLinha, l: largura, a: alturaLinha - 2,
       itens: [],
       diferenca: {
-        rotulo: comSinal(linha.diferenca),
+        rotulo: comSinal(linha.diferenca, CASAS_DA_MUDANCA),
         texto: `${num(linha.antes)} → ${num(linha.depois)} pontos por rodada `
              + `da posição`,
         cor: (linha.diferenca ?? 0) >= 0 ? COR.verde : COR.negativo,
@@ -331,7 +339,7 @@ async function porEdicao(ctx, { linha, clubes, x, largura, y, base }) {
           detalhe: "terminou a edição nesta posição" },
       ],
       diferenca: {
-        rotulo: comSinal(edicao.diferenca),
+        rotulo: comSinal(edicao.diferenca, CASAS_DA_MUDANCA),
         texto: `${num(edicao.antes)} → ${num(edicao.depois)} pontos por rodada`,
         cor: acelerou ? COR.verde : COR.negativo,
       },

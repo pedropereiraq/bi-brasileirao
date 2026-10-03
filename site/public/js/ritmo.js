@@ -95,9 +95,11 @@ function trocarSerie(serie, url = {}) {
 /**
  * As edições encerradas da série, na rodada escolhida.
  *
- * Cada célula junta as duas pontas da mesma posição: quem estava nela naquela
- * rodada e quem terminou nela. São quase sempre clubes diferentes, e é o par
- * que impede de ler a conta como se fosse de um time só.
+ * Cada célula junta as duas pontas da mesma posição — quem estava nela naquela
+ * rodada e quem terminou nela, quase sempre clubes diferentes — e `seguintes`,
+ * que é a pontuação **daquela posição** em cada rodada depois da escolhida. O
+ * depois sai da média dos ritmos de `seguintes`, e por isso ele precisa da
+ * coluna inteira do trecho final, e não só da última.
  */
 function colunasDaRodada(serie, rodada) {
   const anos = estado.posicoes.series?.[serie] ?? {};
@@ -110,6 +112,14 @@ function colunasDaRodada(serie, rodada) {
 
     const fim = desfechoDaEdicao(estado.posicoes,
       { serie, ano, semTapetao: !tapetaoLigado() });
+
+    const posteriores = [];
+    for (let r = rodada + 1; r <= edicao.rodadas; r++) {
+      const outra = colunaDaEdicao(estado.posicoes,
+        { serie, ano, rodada: r, semTapetao: !tapetaoLigado() });
+      if (outra) posteriores.push({ rodada: r, celulas: outra.celulas });
+    }
+
     saida.push({
       ano: Number(ano), rodadas: edicao.rodadas,
       celulas: coluna.celulas.map((celula, i) => ({
@@ -118,6 +128,9 @@ function colunasDaRodada(serie, rodada) {
         pontos: celula.pontos,
         equipeFim: fim[i]?.equipe ?? null,
         pontosFim: fim[i]?.pontos ?? null,
+        seguintes: posteriores
+          .map((p) => ({ rodada: p.rodada, pontos: p.celulas[i]?.pontos }))
+          .filter((p) => p.pontos !== undefined),
       })),
     });
   }
