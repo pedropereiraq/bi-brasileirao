@@ -13,6 +13,12 @@
  * Medido em 28/08/2026: 14 de 14 requisições em 4,5 s, Séries A e B, rodadas 1
  * a 38, sem limite de taxa.
  *
+ * **03/10/2026: o endereço mudou.** `api.sofascore.com` passou a responder 403
+ * a tudo — de IP residencial, de 5G, de outra pessoa em outra casa, e até de
+ * dentro do site deles com o Referer certo. O site do Sofascore continuou
+ * funcionando porque ele passou a chamar `www.sofascore.com/api/v1`, mesmos
+ * caminhos e mesmo CORS aberto. É o host daqui de baixo.
+ *
  * O que sai daqui é o JSON íntegro, sem tratamento nenhum. Normalizar é
  * trabalho do motor Python, que é o que está provado contra a matriz do Excel.
  */
@@ -20,7 +26,7 @@
 const TORNEIOS = { A: 325, B: 390 };
 const TEMPORADAS = { "A:2026": 87678, "B:2026": 89840 };
 const RODADAS = 38;
-const BASE = "https://api.sofascore.com/api/v1";
+const BASE = "https://www.sofascore.com/api/v1";
 
 // Sem Referer, sem cookie, sem cache — é o que a fonte aceita.
 const OPCOES = { referrerPolicy: "no-referrer", credentials: "omit", cache: "no-store" };
@@ -29,10 +35,14 @@ export async function buscarJson(caminho) {
   const resposta = await fetch(BASE + caminho, OPCOES);
   if (resposta.status === 404) return null; // rodada ainda não sorteada
   if (!resposta.ok) {
+    // O 403 tem duas causas possíveis, e o teste que as separa é trocar de
+    // conexão: se só a sua falha, é a conexão; se nenhuma funciona, mudou do
+    // lado deles — foi o que aconteceu em 03/10/2026, e a mensagem antiga,
+    // que só falava em VPN, mandou todo mundo para o lado errado.
     throw new Error(
-      `HTTP ${resposta.status} em ${caminho}. Se for 403, esta conexão está ` +
-      `sendo recusada pela fonte — VPN corporativa ou saída em datacenter ` +
-      `costumam causar isso. Tente de uma conexão doméstica.`
+      `HTTP ${resposta.status} em ${caminho}. Se for 403: teste de outra ` +
+      `conexão, porque VPN e saída em datacenter costumam ser recusadas. Se ` +
+      `nenhuma conexão funcionar, a mudança foi do lado da fonte.`
     );
   }
   return resposta.json();
