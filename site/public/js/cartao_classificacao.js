@@ -69,13 +69,15 @@ export function montarCartao(estado) {
       desenharCabecalho(ctx, { colunas, y: topo, altura: alturaCabecalho });
 
       const alvos = [];
+      const quadrados = [];
       for (const [i, clube] of linhas.entries()) {
         const yLinha = topo + alturaCabecalho + i * alturaLinha;
         const zona = zonaDaPosicao(clube.pos, serie, limites, total);
-        await desenharLinha(ctx, {
+        quadrados.push(...await desenharLinha(ctx, {
           clube, zona, colunas, indice: i, y: yLinha, altura: alturaLinha,
           clubes: estado.clubes, porAproveitamento,
-        });
+          forma: estado.forma?.get(clube.equipe),
+        }));
         alvos.push({
           n: nomeBonito(clube.equipe),
           x: MARGEM, y: yLinha, l: CARD.largura - MARGEM * 2, a: alturaLinha,
@@ -84,7 +86,9 @@ export function montarCartao(estado) {
       }
 
       spec.hover = {
-        pontos: alvos, eixo: "caixa", unidade: "",
+        // Os quadradinhos vêm antes das linhas: o alvo é o primeiro retângulo
+        // que contém o cursor, e a linha inteira engoliria todos eles.
+        pontos: [...quadrados, ...alvos], eixo: "caixa", unidade: "",
         topo, alturaPlot: base - topo,
         x0: MARGEM, x1: CARD.largura - MARGEM, largura: 20,
       };
@@ -176,6 +180,17 @@ function montarColunas(porAproveitamento) {
 const LARGURA_POS = 46;
 const LARGURA_ESCUDO = 34;
 
+// Os seis quadradinhos de forma, encostados à esquerda da pontuação: é para
+// lá que a sequência aponta. O mais antigo fica à esquerda, e o bloco é
+// alinhado à direita para o jogo mais recente cair sempre na mesma coluna —
+// sem isso, comparar duas linhas obrigaria a procurar onde cada uma termina.
+const FORMA = { lado: 16, vao: 4, jogos: 6 };
+const LARGURA_FORMA = FORMA.jogos * FORMA.lado + (FORMA.jogos - 1) * FORMA.vao;
+const VAO_FORMA = 18;
+
+const corDoResultado = (resultado) => (resultado === "T" ? COR.positivo
+  : resultado === "E" ? COR.cinzaEscuro : COR.negativo);
+
 /** O x em que cada coluna numérica termina, medido a partir da direita. */
 function posicoesDasColunas(colunas) {
   const fim = CARD.largura - MARGEM - 8;
@@ -196,6 +211,11 @@ function desenharCabecalho(ctx, { colunas, y, altura }) {
         { tamanho: 10, peso: 700, maiuscula: true, espaco: .9,
           cor: COR.cinzaEscuro });
 
+  const xForma = posicoesDasColunas(colunas)[0].x - VAO_FORMA - LARGURA_FORMA;
+  texto(ctx, "últimos 6", xForma + LARGURA_FORMA / 2, y + altura - 8,
+        { tamanho: 10, peso: 700, alinha: "center", maiuscula: true,
+          espaco: .9, cor: COR.cinzaEscuro });
+
   for (const coluna of posicoesDasColunas(colunas)) {
     texto(ctx, coluna.rotulo, coluna.centro, y + altura - 8,
           { tamanho: 10, peso: 700, alinha: "center", maiuscula: true,
@@ -206,7 +226,7 @@ function desenharCabecalho(ctx, { colunas, y, altura }) {
 
 async function desenharLinha(ctx, o) {
   const { clube, zona, colunas, indice, y, altura, clubes,
-          porAproveitamento } = o;
+          porAproveitamento, forma } = o;
   const meio = y + altura / 2;
   const largura = CARD.largura - MARGEM * 2;
 
@@ -227,7 +247,11 @@ async function desenharLinha(ctx, o) {
 
   const xNome = MARGEM + LARGURA_POS + LARGURA_ESCUDO + 12;
   const colunasX = posicoesDasColunas(colunas);
-  const cabeNome = colunasX[0].x - xNome - 16;
+  const xForma = colunasX[0].x - VAO_FORMA - LARGURA_FORMA;
+  const alvosDaForma = desenharForma(ctx, {
+    jogos: forma ?? [], x: xForma, meio, altura,
+  });
+  const cabeNome = xForma - xNome - 16;
   const nome = nomeBonito(clube.equipe);
   texto(ctx, cortar(ctx, nome, cabeNome - 34, 15, 700), xNome, meio + 5,
         { tamanho: 15, peso: 700, cor: COR.azulEscuro });
@@ -261,6 +285,52 @@ async function desenharLinha(ctx, o) {
             cor: coluna.chave === "pts" ? COR.azulEscuro : COR.cinzaTexto });
   }
   void porAproveitamento;
+  return alvosDaForma;
+}
+
+/**
+ * Os últimos jogos como uma fileira de quadradinhos.
+ *
+ * Azul de triunfo, cinza de empate, vermelho de derrota — o mesmo trio de
+ * todos os cards, que vira verde no Podcast45 porque lá o azul é identidade e
+ * não elogio. Clube com menos de seis jogos no recorte desenha o que tem, pela
+ * direita: é o jogo mais recente que ancora a leitura.
+ */
+function desenharForma(ctx, { jogos, x, meio, altura }) {
+  const lado = Math.min(FORMA.lado, altura - 10);
+  const passo = FORMA.lado + FORMA.vao;
+  const vazios = FORMA.jogos - jogos.length;
+  const alvos = [];
+
+  for (const [i, jogo] of jogos.entries()) {
+    const xq = x + (vazios + i) * passo + (FORMA.lado - lado) / 2;
+    const yq = meio - lado / 2;
+    caixa(ctx, xq, yq, lado, lado, corDoResultado(jogo.resultado), 3);
+    alvos.push({ x: xq, y: yq, l: lado, a: lado, ...dicaDoJogo(jogo) });
+  }
+  return alvos;
+}
+
+/** A dica de um quadradinho: contra quem, quanto e onde. */
+function dicaDoJogo(jogo) {
+  const marca = marcaAtual();
+  const desfecho = jogo.resultado === "T" ? marca.triunfo
+    : jogo.resultado === "E" ? "empate" : "derrota";
+  return {
+    n: `${jogo.rodada}ª rodada · ${dataBr(jogo.data)}`,
+    itens: [{
+      rotulo: nomeBonito(jogo.adversario),
+      cor: corDoResultado(jogo.resultado),
+      pontos: null,
+      texto: `${jogo.gp}×${jogo.gc}`,
+      detalhe: jogo.mando === "casa" ? "em casa" : "fora de casa",
+    }],
+    diferenca: {
+      rotulo: desfecho,
+      texto: `${jogo.pts} ${jogo.pts === 1 ? "ponto" : "pontos"}`,
+      cor: corDoResultado(jogo.resultado),
+    },
+  };
 }
 
 /* ----------------------------------------------------------------- hover */

@@ -166,6 +166,29 @@ export function descontosNoRecorte(descontos, { rodadaDe, rodadaAte } = {}) {
     && (rodadaAte == null || d.rodada <= rodadaAte));
 }
 
+/**
+ * Os últimos jogos de cada clube, em ordem cronológica.
+ *
+ * É o `ultimos` que `filtrar` já faz, agrupado por clube e devolvido na ordem
+ * em que os jogos aconteceram — da esquerda para a direita, o mais antigo
+ * primeiro, que é como uma sequência de resultados se lê.
+ *
+ * Vale **dentro do recorte**: numa tabela da 5ª à 12ª rodada, os últimos seis
+ * são os últimos seis daquele trecho. Mostrar forma de fora do recorte seria
+ * o card contando duas histórias ao mesmo tempo.
+ */
+export function formaRecente(jogos, quantos, filtros = {}) {
+  const teto = Math.min(quantos, filtros.ultimos ?? quantos);
+  const porClube = new Map();
+
+  for (const linha of filtrar(formatoLongo(jogos), { ...filtros, ultimos: teto })) {
+    if (!porClube.has(linha.equipe)) porClube.set(linha.equipe, []);
+    porClube.get(linha.equipe).push(linha);
+  }
+  for (const lista of porClube.values()) lista.sort(comparaCronologico);
+  return porClube;
+}
+
 /** Todos os clubes da edição, inclusive os de jogos ainda não realizados. */
 export function clubesDaEdicao(jogos) {
   const nomes = new Set();

@@ -12,7 +12,7 @@
  * quem está olhando, são o regulamento daquele ano. Quem mudar o limite muda
  * para todo mundo que abrir o card depois.
  */
-import { clubesDaEdicao, tabela } from "/js/motor.js";
+import { clubesDaEdicao, formaRecente, tabela } from "/js/motor.js";
 import {
   aoMudarTapetao, descontosDe,
 } from "/js/tapetao.js";
@@ -25,6 +25,9 @@ import { faixasDaSerie, limitesPadrao, limitesValidos } from "/js/vagas.js";
 import {
   ligarSeletorDeRodadas, ligarSeletorDeUltimos,
 } from "/js/seletor_posicoes.js";
+
+/** Quantos quadradinhos de resultado cabem ao lado da pontuação. */
+const JOGOS_NA_FORMA = 6;
 
 const COR_DA_FAIXA = {
   verdeEscuro: "#38761D",
@@ -337,6 +340,7 @@ function aplicar() {
   if (form.ultimos < edicao.rodadas) filtros.ultimos = form.ultimos;
 
   estado.classificacao = tabela(jogos, clubesDaEdicao(jogos), filtros, descontos());
+  estado.forma = formaRecente(jogos, JOGOS_NA_FORMA, filtros);
   estado.recorte = filtros;
   resumir(filtros);
   atualizarUrl();
