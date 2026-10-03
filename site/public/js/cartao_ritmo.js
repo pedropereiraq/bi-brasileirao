@@ -31,10 +31,28 @@ const num = (v, casas = 2) =>
 const comSinal = (v, casas = 2) => (v === null || v === undefined ? "—"
   : `${v > 0 ? "+" : v < 0 ? "−" : ""}${num(Math.abs(v), casas)}`);
 
-// A mudança é a diferença entre dois acumulados vizinhos, e acumulado anda
-// devagar: com duas casas, metade da tabela virava "±0,00" e a coluna parava
-// de discriminar. Três casas é o que esta conta tem para dizer.
-const CASAS_DA_MUDANCA = 3;
+/**
+ * O ritmo em aproveitamento, que é como se lê campanha no Brasil.
+ *
+ * É o mesmo número dividido por três — ponto por rodada e aproveitamento são
+ * a mesma medida em escalas diferentes —, e a escala em que alguém diz "o
+ * líder costuma fazer 69%".
+ */
+const aproveitamento = (ritmo) =>
+  (ritmo === null || ritmo === undefined ? "—"
+    : `${(ritmo / 3 * 100).toFixed(1).replace(".", ",")}%`);
+
+/**
+ * A mudança em variação relativa.
+ *
+ * A diferença entre dois acumulados vizinhos é sempre miúda — um centésimo de
+ * ponto por rodada — e a tabela inteira virava "±0,00". A variação diz a mesma
+ * coisa num número que se lê: o 19º passa a render 4,6% mais do que vinha
+ * rendendo.
+ */
+const variacao = (v) => (v === null || v === undefined ? "—"
+  : `${v > 0 ? "+" : v < 0 ? "−" : ""}`
+    + `${(Math.abs(v) * 100).toFixed(1).replace(".", ",")}%`);
 
 function mistura(de, para, t) {
   const canal = (cor, i) => parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
@@ -66,17 +84,19 @@ export function montarCartao(estado) {
     subtitulo: "",
     arquivo: `ritmo-${serie}-r${rodada}`,
     numeros: [
-      { valor: comSinal(acelera?.diferenca, CASAS_DA_MUDANCA), destaque: "azul",
+      { valor: variacao(acelera?.variacao), destaque: "azul",
         nome: acelera ? `quem mais acelera · ${ordinal(acelera.posicao)}`
                       : "quem mais acelera" },
-      { valor: comSinal(desacelera?.diferenca, CASAS_DA_MUDANCA),
+      { valor: variacao(desacelera?.variacao),
         nome: desacelera ? `quem mais desacelera · ${ordinal(desacelera.posicao)}`
                          : "quem mais desacelera" },
       { valor: `${amostras}`, nome: "edições encerradas na conta" },
     ],
     // Sem instrução de clique: o card é publicado como imagem, e numa
     // imagem não há o que clicar.
-    nota: "Ritmo da posição é a pontuação dela dividida pela rodada; o depois é a média desse ritmo nas rodadas seguintes.",
+    nota: "Aproveitamento da posição numa rodada é a pontuação dela dividida "
+        + "pelo máximo até ali; o depois é a média disso nas rodadas seguintes, "
+        + "e a mudança é quanto ele variou.",
     corpo: async (ctx, y) => {
       const base = CARD.altura - 84;
       const cheia = CARD.largura - MARGEM * 2;
@@ -120,7 +140,7 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
 
   const topo = y + 30;
   const alturaLinha = (base - topo) / linhas.length;
-  const extremo = Math.max(.01, ...linhas.map((l) => Math.abs(l.diferenca ?? 0)));
+  const extremo = Math.max(.001, ...linhas.map((l) => Math.abs(l.variacao ?? 0)));
 
   const cabecalho = (conteudo, xr, alinha = "right") =>
     texto(ctx, conteudo, xr, y + 18,
@@ -128,7 +148,9 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
             alinha, cor: COR.cinzaEscuro });
 
   cabecalho("posição", x + 12, "left");
-  cabecalho(`ritmo até a ${rodada}ª`, colunas.antes);
+  // Abreviado porque a coluna tem 138 pixels até o rótulo da posição, e o
+  // nome inteiro passava por cima dele. O rodapé diz o que é aproveitamento.
+  cabecalho(`aprov até a ${rodada}ª`, colunas.antes);
   cabecalho("depois", colunas.depois);
   cabecalho("mudança", colunas.chip.ate);
   if (barra) {
@@ -148,16 +170,16 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
     texto(ctx, ordinal(linha.posicao), colunas.posicao, meio + 5,
           { tamanho: 14, peso: 800, alinha: "right", cor: COR.azulEscuro });
 
-    texto(ctx, num(linha.antes), colunas.antes, meio + 5,
+    texto(ctx, aproveitamento(linha.antes), colunas.antes, meio + 5,
           { tamanho: 13, peso: 700, alinha: "right", cor: COR.cinzaTexto });
-    texto(ctx, num(linha.depois), colunas.depois, meio + 5,
+    texto(ctx, aproveitamento(linha.depois), colunas.depois, meio + 5,
           { tamanho: 13, peso: 700, alinha: "right", cor: COR.cinzaTexto });
 
     const l = colunas.chip.ate - colunas.chip.de;
-    const forte = Math.abs(linha.diferenca ?? 0) / extremo > .55;
+    const forte = Math.abs(linha.variacao ?? 0) / extremo > .55;
     caixa(ctx, colunas.chip.de, meio - 12, l, 24,
-          corDaMudanca(linha.diferenca, extremo), 5);
-    texto(ctx, comSinal(linha.diferenca, CASAS_DA_MUDANCA),
+          corDaMudanca(linha.variacao, extremo), 5);
+    texto(ctx, variacao(linha.variacao),
           colunas.chip.de + l / 2, meio + 5,
           { tamanho: 12.5, peso: 800, alinha: "center",
             cor: forte ? COR.branco : COR.azulEscuro });
@@ -177,8 +199,8 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       ctx.restore();
 
       const meia = (barra.ate - barra.de) / 2 - 12;
-      const comprimento = (Math.abs(linha.diferenca ?? 0) / extremo) * meia;
-      const acelerou = (linha.diferenca ?? 0) >= 0;
+      const comprimento = (Math.abs(linha.variacao ?? 0) / extremo) * meia;
+      const acelerou = (linha.variacao ?? 0) >= 0;
       caixa(ctx, acelerou ? meioBarra : meioBarra - comprimento, meio - 8,
             Math.max(2, comprimento), 16,
             acelerou ? COR.verde : COR.negativo, 3);
@@ -190,10 +212,10 @@ async function tabela(ctx, { linhas, posicao, rodada, x, largura, y, base }) {
       x, y: yLinha, l: largura, a: alturaLinha - 2,
       itens: [],
       diferenca: {
-        rotulo: comSinal(linha.diferenca, CASAS_DA_MUDANCA),
-        texto: `${num(linha.antes)} → ${num(linha.depois)} pontos por rodada `
-             + `da posição`,
-        cor: (linha.diferenca ?? 0) >= 0 ? COR.verde : COR.negativo,
+        rotulo: variacao(linha.variacao),
+        texto: `${aproveitamento(linha.antes)} → ${aproveitamento(linha.depois)}`
+             + `, ${comSinal((linha.diferenca ?? 0) / 3 * 100, 2)} p.p.`,
+        cor: (linha.variacao ?? 0) >= 0 ? COR.verde : COR.negativo,
       },
     });
   }
@@ -339,8 +361,9 @@ async function porEdicao(ctx, { linha, clubes, x, largura, y, base }) {
           detalhe: "terminou a edição nesta posição" },
       ],
       diferenca: {
-        rotulo: comSinal(edicao.diferenca, CASAS_DA_MUDANCA),
-        texto: `${num(edicao.antes)} → ${num(edicao.depois)} pontos por rodada`,
+        rotulo: variacao(edicao.variacao),
+        texto: `${aproveitamento(edicao.antes)} → `
+             + `${aproveitamento(edicao.depois)} de aproveitamento`,
         cor: acelerou ? COR.verde : COR.negativo,
       },
     });

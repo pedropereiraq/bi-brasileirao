@@ -116,6 +116,19 @@ test("rodada no fim da edição não deixa depois nenhum", () => {
   assert.equal(noFim[0].diferenca, null);
 });
 
+test("a variação é relativa ao que a posição vinha rendendo", () => {
+  // 1ª posição: 2,5 antes e 2,15 depois, que é 14% menos.
+  assert.equal(arredondar(linhas[0].variacao * 100), -14.17);
+  assert.equal(arredondar(linhas[1].variacao * 100), 35.44);
+
+  // Posição que não pontuou nada até a rodada não tem de quanto variar.
+  const zerada = ritmoDasPosicoes([edicao(2020, [
+    { posicao: 1, equipe: "ALFA", pontos: 0, pontosFim: 10, equipeFim: "ALFA",
+      seguintes: [{ rodada: 6, pontos: 3 }] },
+  ])], { rodada: 5, posicoes: 1 });
+  assert.equal(zerada[0].variacao, null);
+});
+
 test("os extremos são a manchete: quem mais acelera e quem mais desacelera", () => {
   const { acelera, desacelera } = extremosDoRitmo(linhas);
   assert.equal(acelera.posicao, 2);
