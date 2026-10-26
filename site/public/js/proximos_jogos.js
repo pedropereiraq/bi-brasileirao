@@ -73,3 +73,44 @@ export function escalaDeDificuldade(medias) {
     return (media - menor) / (maior - menor);
   };
 }
+
+/**
+ * Os próximos jogos separados pelo mando.
+ *
+ * A média geral esconde a metade que interessa: tabela dura em casa e leve
+ * fora é uma reta final, o contrário é outra, e as duas podem dar a mesma
+ * média. Quem tem seis dos próximos oito fora tem um problema que o número
+ * único não conta.
+ */
+export function jogosPorMando(jogos) {
+  return {
+    casa: jogos.filter((passo) => passo.jogo.mando === "casa"),
+    fora: jogos.filter((passo) => passo.jogo.mando !== "casa"),
+  };
+}
+
+/**
+ * Quais dos próximos jogos são contra clubes que também estão na tela.
+ *
+ * Confronto direto vale dobrado na conta da reta final: são seis pontos em
+ * disputa entre dois concorrentes, e não três contra um terceiro. O mesmo jogo
+ * aparece nas duas colunas — é confronto direto para os dois lados, e cada
+ * coluna conta os seus.
+ */
+export function confrontosDiretos(jogos, equipes) {
+  const naTela = new Set(equipes);
+  return jogos.filter((passo) => naTela.has(passo.jogo.adversario));
+}
+
+/**
+ * Até quantos clubes o card ainda consegue marcar os confrontos diretos.
+ *
+ * Com treze colunas ou mais a largura de cada uma cai abaixo de cem pixels: a
+ * borda de realce fica mais grossa que o espaço entre as linhas e a contagem
+ * não tem onde ser escrita. Acima do teto as duas coisas somem, em vez de
+ * sair amassadas.
+ */
+export const TETO_CONFRONTOS = 12;
+
+export const cabemConfrontos = (quantosClubes) =>
+  quantosClubes > 0 && quantosClubes <= TETO_CONFRONTOS;

@@ -7,13 +7,18 @@
  * explica a diferença de calendário. E sem jogo pela frente não há média: zero
  * ali se leria como "adversários fortíssimos".
  *
+ * O confronto direto também precisa de guarda: ele conta nas duas colunas, e
+ * só o adversário que está na tela entra — o filtro é uma faixa de posições, e
+ * quem caiu fora dela não é concorrente de ninguém ali.
+ *
  *     node --test site/testes/
  */
 import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  clubesNaFaixa, escalaDeDificuldade, mediaDosAdversarios, proximosJogos,
+  TETO_CONFRONTOS, cabemConfrontos, clubesNaFaixa, confrontosDiretos,
+  escalaDeDificuldade, jogosPorMando, mediaDosAdversarios, proximosJogos,
   tamanhoDaLista,
 } from "../public/js/proximos_jogos.js";
 
@@ -93,3 +98,53 @@ test("sem nada para comparar, a dificuldade fica no meio", () => {
   assert.equal(escalaDeDificuldade([7, 7])(7), .5, "empate geral");
   assert.equal(escalaDeDificuldade([])(3), .5, "lista vazia não estoura");
 });
+
+test("o mando separa os próximos jogos em duas metades", () => {
+  // O ajudante alterna o mando pela paridade de `n`: 36 é fora, 37 é casa.
+  const jogos = proximosJogos(agenda(35, ["ALFA (SP)", "BETA (RJ)", "GAMA (MG)"]));
+  const { casa, fora } = jogosPorMando(jogos);
+  assert.deepEqual(casa.map((p) => p.n), [37]);
+  assert.deepEqual(fora.map((p) => p.n), [36, 38]);
+  assert.equal(casa.length + fora.length, jogos.length, "ninguém se perde");
+});
+
+test("sem jogo pela frente as duas metades ficam vazias", () => {
+  assert.deepEqual(jogosPorMando([]), { casa: [], fora: [] });
+});
+
+test("a média por mando é a média geral restrita àquela metade", () => {
+  const posicaoDe = (equipe) =>
+    classificacao.find((c) => c.equipe === equipe)?.pos;
+  // 36 fora contra ALFA (1º), 37 em casa contra DELTA (9º), 38 fora contra ÔMEGA (20º).
+  const jogos = proximosJogos(agenda(35, ["ALFA (SP)", "DELTA (BA)", "ÔMEGA (CE)"]));
+  const { casa, fora } = jogosPorMando(jogos);
+  assert.equal(mediaDosAdversarios(casa, posicaoDe), 9);
+  assert.equal(mediaDosAdversarios(fora, posicaoDe), (1 + 20) / 2);
+});
+
+test("confronto direto é só contra quem está na tela", () => {
+  const naTela = ["ALFA (SP)", "BETA (RJ)", "GAMA (MG)"];
+  const jogos = proximosJogos(
+    agenda(35, ["BETA (RJ)", "DELTA (BA)", "GAMA (MG)"]));
+  assert.deepEqual(confrontosDiretos(jogos, naTela).map((p) => p.jogo.adversario),
+    ["BETA (RJ)", "GAMA (MG)"], "DELTA está fora da faixa e não conta");
+  assert.equal(confrontosDiretos(jogos, []).length, 0, "tela vazia, nada direto");
+});
+
+test("o mesmo jogo é confronto direto para os dois lados", () => {
+  const naTela = ["ALFA (SP)", "BETA (RJ)"];
+  const doAlfa = proximosJogos(agenda(37, ["BETA (RJ)"]));
+  const doBeta = proximosJogos(agenda(37, ["ALFA (SP)"]));
+  assert.equal(confrontosDiretos(doAlfa, naTela).length, 1);
+  assert.equal(confrontosDiretos(doBeta, naTela).length, 1);
+});
+
+test("o realce dos confrontos diretos tem teto de doze clubes", () => {
+  assert.equal(TETO_CONFRONTOS, 12);
+  assert.ok(cabemConfrontos(1), "uma coluna só já marca");
+  assert.ok(cabemConfrontos(12), "doze ainda cabe");
+  assert.ok(!cabemConfrontos(13), "treze já não");
+  assert.ok(!cabemConfrontos(20), "a tabela inteira muito menos");
+  assert.ok(!cabemConfrontos(0), "sem clube não há o que marcar");
+});
+

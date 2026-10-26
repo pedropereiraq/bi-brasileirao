@@ -16,6 +16,16 @@
  * Entre concorrentes diretos a pergunta nunca é "9,1 é duro?", e sim "quem
  * pegou a pior parte?" — e a cor absoluta deixava oito colunas quase iguais.
  *
+ * Abaixo do índice vem a mesma conta partida pelo mando, porque a média geral
+ * esconde a metade que decide: tabela dura em casa e leve fora é uma reta
+ * final, o contrário é outra, e as duas dão o mesmo número.
+ *
+ * E o jogo contra alguém que também está na tela ganha uma borda de realce,
+ * com a contagem no fim da coluna. Ele vale o dobro na conta: são seis pontos
+ * disputados entre dois concorrentes, e não três contra um terceiro. As duas
+ * coisas só aparecem até doze colunas — acima disso a coluna fica estreita
+ * demais para carregar borda e contagem sem amassar o resto.
+ *
  * Com muitos clubes na faixa a coluna estreita, e a linha de jogo cede peça
  * por peça em vez de amassar tudo: o nome inteiro vira sigla, a sigla sai, sai
  * a etiqueta de posição, sai a pílula de mando. O escudo fica até o fim — é o
@@ -29,13 +39,22 @@ import {
 import { nomeBonito } from "/js/nomes.js";
 import { campanhaCompleta } from "/js/grafico_campanha.js";
 import {
-  clubesNaFaixa, escalaDeDificuldade, mediaDosAdversarios, proximosJogos,
-  tamanhoDaLista,
+  cabemConfrontos, clubesNaFaixa, confrontosDiretos, escalaDeDificuldade,
+  jogosPorMando, mediaDosAdversarios, proximosJogos, tamanhoDaLista,
 } from "/js/proximos_jogos.js";
 
 const POSICOES = 20;
 const VAO = 12;
 const ALTURA_MINIMA_DO_JOGO = 21;
+
+// O rodapé: o índice, as duas linhas de mando e — quando cabe — a contagem de
+// confrontos diretos. Reservar a altura aqui evita a lista crescer e encolher
+// conforme o recorte muda de tamanho.
+const RODAPE = { comDiretos: 134, semDiretos: 104 };
+
+// Abaixo desta largura a linha de mando perde o "· 3j" e fica só com o rótulo
+// e o número: é a mesma lógica da linha de jogo, que cede peça por peça.
+const LARGURA_MANDO_COMPLETO = 92;
 
 // As peças da linha de jogo, em largura útil (já com o respiro à direita).
 const PECA = { mando: 40, escudo: 26, rotulo: 40, badge: 40 };
@@ -126,6 +145,11 @@ export function montarCartao(estado) {
   const naTabela = (equipe) => classificacao.find((c) => c.equipe === equipe);
   const posicaoDe = (equipe) => naTabela(equipe)?.pos;
 
+  // Quem está na tela é quem está na faixa: é contra esses que o confronto é
+  // direto, e é o tamanho desse grupo que decide se o realce cabe.
+  const naTela = escolhidos.map((c) => c.equipe);
+  const marcarDiretos = cabemConfrontos(escolhidos.length);
+
   const colunas = escolhidos.map((clube) => {
     const agenda = campanhaCompleta(jogos, clube.equipe);
     return { clube, agenda, proximos: proximosJogos(agenda) };
@@ -144,7 +168,8 @@ export function montarCartao(estado) {
         return;
       }
       spec.hover = await colunasDosClubes(ctx, {
-        colunas, posicaoDe, naTabela, clubes, y: y + 12,
+        colunas, posicaoDe, naTabela, clubes, naTela, marcarDiretos,
+        y: y + 12,
       });
     },
   };
@@ -161,13 +186,13 @@ function semClubes(ctx, { y, faixa }) {
 
 /* ------------------------------------------------------------- colunas */
 async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
-                                      clubes, y }) {
+                                      clubes, naTela, marcarDiretos, y }) {
   const largura =
     (CARD.largura - MARGEM * 2 - VAO * (colunas.length - 1)) / colunas.length;
   const xDaColuna = (i) => MARGEM + i * (largura + VAO);
 
   const alturaTopo = 104;
-  const alturaRodape = 60;
+  const alturaRodape = marcarDiretos ? RODAPE.comDiretos : RODAPE.semDiretos;
   const disponivel = CARD.altura - 96 - y - alturaTopo - alturaRodape - 16;
 
   // O teto sai da altura, e não de um número redondo. Com teto fixo em 10, o
@@ -203,10 +228,20 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
   texto(ctx, "posição média dos adversários", MARGEM, yRodape + 10,
         { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
           cor: COR.cinzaEscuro });
+  if (marcarDiretos) {
+    texto(ctx, "confrontos diretos", MARGEM, yRodape + 110,
+          { tamanho: 9.5, peso: 700, maiuscula: true, espaco: .7,
+            cor: COR.destaque });
+  }
 
   for (const [i, coluna] of colunas.entries()) {
     const x = xDaColuna(i);
     await cabecalhoDoClube(ctx, { coluna, clubes, cabe, x, largura, y });
+
+    // Os confrontos diretos desta coluna, pelo número do jogo: é o que a
+    // linha consulta para saber se leva borda.
+    const diretos = new Set(marcarDiretos
+      ? confrontosDiretos(coluna.proximos, naTela).map((p) => p.n) : []);
 
     for (let k = 0; k < quantos; k++) {
       const passo = coluna.proximos[k];
@@ -215,21 +250,30 @@ async function colunasDosClubes(ctx, { colunas, posicaoDe, naTabela,
             k % 2 ? COR.fundo : COR.branco, 4);
       if (!passo) continue;
 
+      const direto = diretos.has(passo.n);
       await linhaDeJogo(ctx, {
-        passo, posicao: posicaoDe(passo.jogo.adversario), clubes, cabe,
+        passo, posicao: posicaoDe(passo.jogo.adversario), clubes, cabe, direto,
         x, largura, y: yJogo, altura: alturaJogo - 2,
       });
 
       alvos.push({
         n: `${nomeBonito(coluna.clube.equipe)} · jogo ${passo.n}`,
         x, y: yJogo, l: largura, a: alturaJogo - 2,
-        ...dicaDoJogo(passo, naTabela(passo.jogo.adversario)),
+        ...dicaDoJogo(passo, naTabela(passo.jogo.adversario), direto),
       });
     }
 
+    const mando = jogosPorMando(coluna.proximos);
     rodapeDaColuna(ctx, {
       media: medias[i], cor: corDaFracao(escala(medias[i])),
       restantes: coluna.proximos.length,
+      mando: {
+        casa: { quantos: mando.casa.length,
+                media: mediaDosAdversarios(mando.casa, posicaoDe) },
+        fora: { quantos: mando.fora.length,
+                media: mediaDosAdversarios(mando.fora, posicaoDe) },
+      },
+      diretos: marcarDiretos ? diretos.size : null,
       x, largura, y: yRodape,
     });
   }
@@ -273,11 +317,25 @@ async function cabecalhoDoClube(ctx, { coluna, clubes, cabe, x, largura,
         { tamanho: 11, peso: 700, alinha: "center", cor: COR.cinzaEscuro });
 }
 
-async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, x, largura, y,
-                                  altura }) {
+async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, direto,
+                                  x, largura, y, altura }) {
   const meio = y + altura / 2;
   const emCasa = passo.jogo.mando === "casa";
   const cor = typeof posicao === "number" ? corDaPosicao(posicao) : null;
+
+  // A borda de realce do confronto direto. É um contorno, e não um
+  // preenchimento, justamente porque a cor de dentro da linha já está falando
+  // de outra coisa — a dificuldade do adversário. Nenhum outro elemento do
+  // card é um anel, e é isso que faz a marca ser lida de relance.
+  if (direto) {
+    ctx.save();
+    ctx.strokeStyle = COR.destaque;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x + 1, y + 1, largura - 2, altura - 2, 4);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // Sem etiqueta de posição, a cor dela vira uma tira na borda: a dificuldade
   // do jogo é o assunto da coluna e não pode sair junto com o número.
@@ -338,7 +396,8 @@ async function linhaDeJogo(ctx, { passo, posicao, clubes, cabe, x, largura, y,
         { tamanho, peso: 800, alinha: "center", cor: COR.branco });
 }
 
-function rodapeDaColuna(ctx, { media, cor, restantes, x, largura, y }) {
+function rodapeDaColuna(ctx, { media, cor, restantes, mando, diretos,
+                               x, largura, y }) {
   if (media === null) {
     texto(ctx, "sem jogos", x + largura / 2, y + 36,
           { tamanho: 15, peso: 700, alinha: "center", cor: COR.cinza });
@@ -348,8 +407,41 @@ function rodapeDaColuna(ctx, { media, cor, restantes, x, largura, y }) {
   texto(ctx, num(media), x + largura / 2, y + 37,
         { tamanho: 17, peso: 800, alinha: "center", cor: COR.branco });
   texto(ctx, `em ${restantes} ${restantes === 1 ? "jogo" : "jogos"}`,
-        x + largura / 2, y + 60,
+        x + largura / 2, y + 59,
         { tamanho: 10, alinha: "center", cor: COR.cinzaEscuro });
+
+  linhaDeMando(ctx, { rotulo: "casa", ...mando.casa, x, largura, y: y + 66 });
+  linhaDeMando(ctx, { rotulo: "fora", ...mando.fora, x, largura, y: y + 82 });
+
+  if (diretos === null) return;
+  caixa(ctx, x, y + 114, largura, 16,
+        mistura(COR.branco, COR.destaque, .16), 4);
+  texto(ctx, diretos === 0 ? "nenhum"
+             : `${diretos} ${diretos === 1 ? "jogo" : "jogos"}`,
+        x + largura / 2, y + 125,
+        { tamanho: 9.5, peso: 800, alinha: "center", maiuscula: true,
+          espaco: .4, cor: COR.destaque });
+}
+
+/**
+ * A tabela de um lado só: quantos jogos e quanto pesam.
+ *
+ * Duas linhas finas em vez de duas colunas lado a lado — com dezesseis clubes
+ * na tela a metade de uma coluna não comporta rótulo, contagem e número, e
+ * empilhado cada linha ainda tem a largura inteira para trabalhar.
+ */
+function linhaDeMando(ctx, { rotulo, quantos, media, x, largura, y }) {
+  const altura = 15;
+  const meio = y + altura / 2;
+  caixa(ctx, x, y, largura, altura, COR.branco, 3);
+
+  const completo = largura >= LARGURA_MANDO_COMPLETO;
+  texto(ctx, completo ? `${rotulo} · ${quantos}j` : rotulo, x + 5, meio + 3.5,
+        { tamanho: 9, peso: 700, maiuscula: true, espaco: .5,
+          cor: COR.cinzaEscuro });
+  texto(ctx, media === null ? "—" : num(media), x + largura - 5, meio + 4,
+        { tamanho: 11.5, peso: 800, alinha: "right",
+          cor: media === null ? COR.cinza : COR.azulEscuro });
 }
 
 const dataBr = (iso) => {
@@ -357,7 +449,7 @@ const dataBr = (iso) => {
   return `${d}/${m}/${a}`;
 };
 
-function dicaDoJogo(passo, adversario) {
+function dicaDoJogo(passo, adversario, direto) {
   const emCasa = passo.jogo.mando === "casa";
   const posicao = adversario?.pos;
   return {
@@ -367,7 +459,10 @@ function dicaDoJogo(passo, adversario) {
       // Os pontos do adversário, e não os do dono da coluna: a dica é sobre o
       // jogo que vem, e quem interessa ali é quem vai estar do outro lado.
       pontos: adversario?.pts ?? null,
-      detalhe: `${emCasa ? "em casa" : "fora"} · ${dataBr(passo.jogo.data)}`,
+      // O confronto direto vai na dica porque a borda sozinha não se explica:
+      // é aqui que ela ganha nome, sem precisar de nota no rodapé do card.
+      detalhe: `${emCasa ? "em casa" : "fora"} · ${dataBr(passo.jogo.data)}`
+             + (direto ? " · confronto direto" : ""),
     }],
     diferenca: typeof posicao !== "number" ? null : {
       rotulo: ordinal(posicao),
