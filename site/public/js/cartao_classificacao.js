@@ -69,11 +69,11 @@ export function montarCartao(estado) {
       desenharCabecalho(ctx, { colunas, y: topo, altura: alturaCabecalho });
 
       const alvos = [];
-      const quadrados = [];
+      const bolinhas = [];
       for (const [i, clube] of linhas.entries()) {
         const yLinha = topo + alturaCabecalho + i * alturaLinha;
         const zona = zonaDaPosicao(clube.pos, serie, limites, total);
-        quadrados.push(...await desenharLinha(ctx, {
+        bolinhas.push(...await desenharLinha(ctx, {
           clube, zona, colunas, indice: i, y: yLinha, altura: alturaLinha,
           clubes: estado.clubes, porAproveitamento,
           forma: estado.forma?.get(clube.equipe),
@@ -86,9 +86,9 @@ export function montarCartao(estado) {
       }
 
       spec.hover = {
-        // Os quadradinhos vêm antes das linhas: o alvo é o primeiro retângulo
+        // As bolinhas vêm antes das linhas: o alvo é o primeiro retângulo
         // que contém o cursor, e a linha inteira engoliria todos eles.
-        pontos: [...quadrados, ...alvos], eixo: "caixa", unidade: "",
+        pontos: [...bolinhas, ...alvos], eixo: "caixa", unidade: "",
         topo, alturaPlot: base - topo,
         x0: MARGEM, x1: CARD.largura - MARGEM, largura: 20,
       };
@@ -180,12 +180,13 @@ function montarColunas(porAproveitamento) {
 const LARGURA_POS = 46;
 const LARGURA_ESCUDO = 34;
 
-// Os seis quadradinhos de forma, encostados à esquerda da pontuação: é para
-// lá que a sequência aponta. O mais antigo fica à esquerda, e o bloco é
-// alinhado à direita para o jogo mais recente cair sempre na mesma coluna —
-// sem isso, comparar duas linhas obrigaria a procurar onde cada uma termina.
-const FORMA = { lado: 16, vao: 4, jogos: 6 };
-const LARGURA_FORMA = FORMA.jogos * FORMA.lado + (FORMA.jogos - 1) * FORMA.vao;
+// As seis bolinhas de forma, encostadas à esquerda da pontuação: é para lá
+// que a sequência aponta. O mais antigo fica à esquerda, e o bloco é alinhado
+// à direita para o jogo mais recente cair sempre na mesma coluna — sem isso,
+// comparar duas linhas obrigaria a procurar onde cada uma termina.
+const FORMA = { diametro: 16, vao: 4, jogos: 6 };
+const LARGURA_FORMA =
+  FORMA.jogos * FORMA.diametro + (FORMA.jogos - 1) * FORMA.vao;
 const VAO_FORMA = 18;
 
 const corDoResultado = (resultado) => (resultado === "T" ? COR.positivo
@@ -289,29 +290,41 @@ async function desenharLinha(ctx, o) {
 }
 
 /**
- * Os últimos jogos como uma fileira de quadradinhos.
+ * Os últimos jogos como uma fileira de bolinhas.
  *
  * Azul de triunfo, cinza de empate, vermelho de derrota — o mesmo trio de
  * todos os cards, que vira verde no Podcast45 porque lá o azul é identidade e
  * não elogio. Clube com menos de seis jogos no recorte desenha o que tem, pela
  * direita: é o jogo mais recente que ancora a leitura.
+ *
+ * O alvo do hover continua quadrado, e de propósito: ele é o retângulo que
+ * circunscreve a bolinha, e perseguir a borda redonda com o mouse só tornaria
+ * a dica mais difícil de abrir.
  */
 function desenharForma(ctx, { jogos, x, meio, altura }) {
-  const lado = Math.min(FORMA.lado, altura - 10);
-  const passo = FORMA.lado + FORMA.vao;
+  const diametro = Math.min(FORMA.diametro, altura - 10);
+  const passo = FORMA.diametro + FORMA.vao;
   const vazios = FORMA.jogos - jogos.length;
   const alvos = [];
 
   for (const [i, jogo] of jogos.entries()) {
-    const xq = x + (vazios + i) * passo + (FORMA.lado - lado) / 2;
-    const yq = meio - lado / 2;
-    caixa(ctx, xq, yq, lado, lado, corDoResultado(jogo.resultado), 3);
-    alvos.push({ x: xq, y: yq, l: lado, a: lado, ...dicaDoJogo(jogo) });
+    const xq = x + (vazios + i) * passo + (FORMA.diametro - diametro) / 2;
+    const yq = meio - diametro / 2;
+    const raio = diametro / 2;
+
+    ctx.save();
+    ctx.fillStyle = corDoResultado(jogo.resultado);
+    ctx.beginPath();
+    ctx.arc(xq + raio, yq + raio, raio, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    alvos.push({ x: xq, y: yq, l: diametro, a: diametro, ...dicaDoJogo(jogo) });
   }
   return alvos;
 }
 
-/** A dica de um quadradinho: contra quem, quanto e onde. */
+/** A dica de uma bolinha: contra quem, quanto e onde. */
 function dicaDoJogo(jogo) {
   const marca = marcaAtual();
   const desfecho = jogo.resultado === "T" ? marca.triunfo
